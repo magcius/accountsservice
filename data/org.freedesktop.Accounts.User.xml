@@ -1,0 +1,95 @@
+<!DOCTYPE node PUBLIC
+"-//freedesktop//DTD D-BUS Object Introspection 1.0//EN"
+"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd" >
+<node name="/" xmlns:doc="http://www.freedesktop.org/dbus/1.0/doc.dtd">
+  <interface name="org.freedesktop.Accounts.User">
+
+  <method name="SetUserName">
+    <annotation name="org.freedesktop.DBus.GLib.Async" value=""/>
+    <arg name="name" direction="in" type="s"/>
+  </method>
+
+  <method name="SetRealName">
+    <annotation name="org.freedesktop.DBus.GLib.Async" value=""/>
+    <arg name="name" direction="in" type="s"/>
+  </method>
+
+  <method name="SetEmail">
+    <annotation name="org.freedesktop.DBus.GLib.Async" value=""/>
+    <arg name="email" direction="in" type="s"/>
+  </method>
+
+  <method name="SetLanguage">
+    <annotation name="org.freedesktop.DBus.GLib.Async" value=""/>
+    <arg name="language" direction="in" type="s"/>
+  </method>
+
+  <method name="SetLocation">
+    <annotation name="org.freedesktop.DBus.GLib.Async" value=""/>
+    <arg name="location" direction="in" type="s"/>
+  </method>
+
+  <method name="SetHomeDirectory">
+    <annotation name="org.freedesktop.DBus.GLib.Async" value=""/>
+    <arg name="homedir" direction="in" type="s"/>
+  </method>
+
+  <method name="SetShell">
+    <annotation name="org.freedesktop.DBus.GLib.Async" value=""/>
+    <arg name="shell" direction="in" type="s"/>
+  </method>
+
+  <method name="SetIconFile">
+    <annotation name="org.freedesktop.DBus.GLib.Async" value=""/>
+    <arg name="filename" direction="in" type="s"/>
+  </method>
+
+  <method name="SetIconData">
+    <annotation name="org.freedesktop.DBus.GLib.Async" value=""/>
+    <arg name="width" direction="in" type="i"/>
+    <arg name="height" direction="in" type="i"/>
+    <arg name="channels" direction="in" type="i"/>
+    <arg name="rowstride" direction="in" type="i"/>
+    <arg name="data" direction="in" type="ay"/>
+  </method>
+
+  <method name="SetLocked">
+    <annotation name="org.freedesktop.DBus.GLib.Async" value=""/>
+    <arg name="locked" direction="in" type="b"/>
+  </method>
+
+  <method name="SetAccountType">
+    <annotation name="org.freedesktop.DBus.GLib.Async" value=""/>
+    <arg name="accountType" direction="in" type="i"/>
+  </method>
+
+  <method name="SetPasswordMode">
+    <annotation name="org.freedesktop.DBus.GLib.Async" value=""/>
+    <arg name="mode" direction="in" type="i"/>
+  </method>
+
+  <method name="SetPassword">
+    <annotation name="org.freedesktop.DBus.GLib.Async" value=""/>
+    <arg name="password" direction="in" type="s"/>
+    <arg name="hint" direction="in" type="s"/>
+  </method>
+
+  <property name="Uid" type="t" access="read"/>
+  <property name="UserName" type="s" access="read"/>
+  <property name="RealName" type="s" access="read"/>
+  <property name="AccountType" type="i" access="read"/>
+  <property name="HomeDirectory" type="s" access="read"/>
+  <property name="Shell" type="s" access="read"/>
+  <property name="Email" type="s" access="read"/>
+  <property name="Language" type="s" access="read"/>
+  <property name="Location" type="s" access="read"/>
+  <property name="LoginFrequency" type="t" access="read"/>
+  <property name="IconFile" type="s" access="read"/>
+  <property name="Locked" type="b" access="read"/>
+  <property name="PasswordMode" type="i" access="read"/>
+  <property name="PasswordHint" type="s" access="read"/>
+
+  <signal name="Changed"/>
+
+  </interface>
+</node>

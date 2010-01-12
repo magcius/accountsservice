@@ -1,0 +1,25 @@
+General
+-------
+
+- what privileges do we need ? anything beyond change-yourself vs.
+  change-other-user ?
+
+- document dbus interfaces
+
+- document polkit privileges
+
+Code changes
+------------
+
+- add supervisor user to supervised accounts
+
+Other
+-----
+
+- move service to fd.o
+
+- approach IPA guys to 'make infopipe like this service'
+
+- push forward to minimal, but functional state
+
+
