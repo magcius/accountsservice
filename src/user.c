@@ -30,6 +30,7 @@
 #include <glib.h>
 #include <glib/gi18n.h>
 #include <glib-object.h>
+#include <glib/gstdio.h>
 
 #include <gdk-pixbuf/gdk-pixbuf.h>
 
@@ -545,7 +546,7 @@ user_local_update_from_keyfile (User     *user,
         g_object_thaw_notify (G_OBJECT (user));
 }
 
-void
+static void
 user_local_save_to_keyfile (User     *user,
                             GKeyFile *keyfile)
 {
@@ -628,7 +629,7 @@ compute_object_path (User *user)
 {
         gchar *object_path;
 
-        object_path = g_strdup_printf ("/org/freedesktop/Accounts/User%ld", user->uid);
+        object_path = g_strdup_printf ("/org/freedesktop/Accounts/User%ld", (gint64) user->uid);
 
         return object_path;
 }
@@ -1460,7 +1461,7 @@ user_set_icon_data (User                  *user,
         icon_data->channels = channels;
         icon_data->rowstride = rowstride;
         /* slightly nasty, we steal the array data here */
-        icon_data->data = data->data;
+        icon_data->data = (guchar *) data->data;
         data->data = NULL;
         data->len = 0;
 
@@ -1649,7 +1650,7 @@ user_set_account_type (User                  *user,
 {
         if (account_type < 0 || account_type > ACCOUNT_TYPE_LAST) {
                 throw_error (context, ERROR_FAILED, "unknown account type: %d", account_type);
-                return;
+                return FALSE;
         }
 
         daemon_local_check_auth (user->daemon,
@@ -1740,12 +1741,12 @@ user_set_password_mode (User                  *user,
 
         if (mode < 0 || mode > PASSWORD_MODE_LAST) {
                 throw_error (context, ERROR_FAILED, "unknown password mode: %d", mode);
-                return;
+                return FALSE;
         }
 
         if (user->locked) {
                 throw_error (context, ERROR_FAILED, "account is locked");
-                return;
+                return FALSE;
         }
 
         connection = dbus_g_connection_get_connection (user->system_bus_connection);
@@ -1850,7 +1851,7 @@ user_set_password (User                  *user,
 
         if (user->locked) {
                 throw_error (context, ERROR_FAILED, "account is locked");
-                return;
+                return FALSE;
         }
 
         connection = dbus_g_connection_get_connection (user->system_bus_connection);

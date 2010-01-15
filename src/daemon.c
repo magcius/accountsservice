@@ -30,6 +30,7 @@
 #include <glib.h>
 #include <glib/gi18n.h>
 #include <glib-object.h>
+#include <glib/gstdio.h>
 #include <gio/gio.h>
 #include <dbus/dbus-glib.h>
 #include <dbus/dbus-glib-lowlevel.h>
@@ -140,8 +141,6 @@ get_property (GObject    *object,
               GValue     *value,
               GParamSpec *pspec)
 {
-        Daemon *daemon = DAEMON (object);
-
         switch (prop_id) {
         case PROP_DAEMON_VERSION:
                 g_value_set_string (value, VERSION);
@@ -447,7 +446,6 @@ reload_passwd (Daemon *daemon)
         GSList *old_users;
         GSList *new_users;
         GSList *list;
-        GSList *dup;
         FILE *fp;
         User *user = NULL;
 
@@ -541,7 +539,6 @@ reload_data (Daemon *daemon)
         User *user;
         GKeyFile *key_file;
         gchar *filename;
-        gchar *s;
 
         g_hash_table_iter_init (&iter, daemon->priv->users);
         while (g_hash_table_iter_next (&iter, (gpointer *)&name, (gpointer *)&user)) {
@@ -644,7 +641,6 @@ static void
 daemon_finalize (GObject *object)
 {
         Daemon *daemon;
-        GList *l;
 
         g_return_if_fail (IS_DAEMON (object));
 
@@ -905,8 +901,6 @@ daemon_create_user_authorized_cb (Daemon                *daemon,
         GError *error;
         gchar *std_err, *std_out;
         gint status;
-        gchar *name;
-        gchar *filename;
 
         user = daemon_local_find_user_by_name (daemon, cd->user_name);
 
