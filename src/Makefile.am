@@ -4,7 +4,8 @@ INCLUDES = 			\
 	$(GIO_CFLAGS)	 	\
 	$(GLIB_CFLAGS)		\
 	$(GDK_PIXBUF_CFLAGS)	\
-	$(POLKIT_CFLAGS)
+	$(POLKIT_CFLAGS)	\
+	$(WARN_CFLAGS)
 
 BUILT_SOURCES = 		\
 	daemon-glue.h		\
