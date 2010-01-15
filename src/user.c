@@ -646,6 +646,20 @@ user_local_update_from_keyfile (User     *user,
                 user->icon_file = s;
         }
 
+        s = g_key_file_get_string (keyfile, "User", "PasswordMode", NULL);
+        if (s != NULL) {
+                if (strcmp (s, "SetAtLogin") == 0)
+                        user->password_mode = PASSWORD_MODE_SET_AT_LOGIN;
+                else if (strcmp (s, "None") == 0)
+                        user->password_mode = PASSWORD_MODE_NONE;
+                else if (strcmp (s, "DisableAccount") == 0)
+                        user->password_mode = PASSWORD_MODE_DISABLE_ACCOUNT;
+                else
+                        user->password_mode = PASSWORD_MODE_REGULAR;
+        } else {
+                user->password_mode = PASSWORD_MODE_REGULAR;
+        }
+
         g_object_thaw_notify (G_OBJECT (user));
 }
 
@@ -670,6 +684,18 @@ user_local_save_to_keyfile (User     *user,
 
         if (user->icon_file)
                 g_key_file_set_string (keyfile, "User", "Icon", user->icon_file);
+
+        switch (user->password_mode) {
+            case PASSWORD_MODE_NONE:
+                    g_key_file_set_string (keyfile, "User", "PasswordMode", "None");
+                    break;
+            case PASSWORD_MODE_SET_AT_LOGIN:
+                    g_key_file_set_string (keyfile, "User", "PasswordMode", "SetAtLogin");
+                    break;
+            case PASSWORD_MODE_DISABLE_ACCOUNT:
+                    g_key_file_set_string (keyfile, "User", "PasswordMode", "DisableAccount");
+                    break;
+        }
 }
 
 static void
@@ -1709,10 +1735,11 @@ user_change_password_mode_authorized_cb (Daemon                *daemon,
                 g_object_freeze_notify (G_OBJECT (user));
 
                 if (mode == PASSWORD_MODE_SET_AT_LOGIN ||
-                    mode == PASSWORD_MODE_NONE) {
+                    mode == PASSWORD_MODE_NONE ||
+                    mode == PASSWORD_MODE_DISABLE_ACCOUNT) {
 
                         argv[0] = "/usr/bin/passwd";
-                        argv[1] = "-d";
+                        argv[1] = (mode == PASSWORD_MODE_DISABLE_ACCOUNT ? "-l" : "-d");
                         argv[2] = user->user_name;
                         argv[3] = NULL;
 
