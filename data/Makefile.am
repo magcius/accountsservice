@@ -1,5 +1,5 @@
 
-dbusifdir   = $(dateadir)/dbus-1/interfaces
+dbusifdir   = $(datadir)/dbus-1/interfaces
 dbusif_DATA = \
 	org.freedesktop.Accounts.xml 		\
 	org.freedesktop.Accounts.User.xml
@@ -25,3 +25,7 @@ EXTRA_DIST = 			\
 	$(dbusconf_DATA)	\
 	$(service_in_files)	\
 	$(policy_in_files)
+
+DISTCLEANFILES = 		\
+	$(service_DATA)		\
+	$(policy_DATA)
