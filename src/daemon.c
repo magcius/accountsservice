@@ -19,6 +19,8 @@
  * Written by: Matthias Clasen <mclasen@redhat.com>
  */
 
+#include "config.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/types.h>
