@@ -936,7 +936,9 @@ daemon_create_user_authorized_cb (Daemon                *daemon,
         g_free (std_out);
         g_free (std_err);
 
-        dbus_g_method_return (context);
+        user = daemon_local_find_user_by_name (daemon, cd->user_name);
+
+        dbus_g_method_return (context, user_local_get_object_path (user));
 }
 
 gboolean
