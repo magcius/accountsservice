@@ -16,8 +16,6 @@ Code changes
 Other
 -----
 
-- move service to fd.o
-
 - approach IPA guys to 'make infopipe like this service'
 
 - push forward to minimal, but functional state
