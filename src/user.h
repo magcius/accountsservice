@@ -111,6 +111,9 @@ gboolean       user_set_password       (User                  *user,
                                         const gchar           *password,
                                         const gchar           *hint,
                                         DBusGMethodInvocation *context);
+gboolean       user_set_automatic_login(User                  *user,
+                                        gboolean               enabled,
+                                        DBusGMethodInvocation *context);
 
 G_END_DECLS
 

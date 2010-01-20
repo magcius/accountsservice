@@ -74,6 +74,11 @@
     <arg name="hint" direction="in" type="s"/>
   </method>
 
+  <method name="SetAutomaticLogin">
+    <annotation name="org.freedesktop.DBus.GLib.Async" value=""/>
+    <arg name="enabled" direction="in" type="b"/>
+  </method>
+
   <property name="Uid" type="t" access="read"/>
   <property name="UserName" type="s" access="read"/>
   <property name="RealName" type="s" access="read"/>
@@ -88,6 +93,7 @@
   <property name="Locked" type="b" access="read"/>
   <property name="PasswordMode" type="i" access="read"/>
   <property name="PasswordHint" type="s" access="read"/>
+  <property name="AutomaticLogin" type="b" access="read"/>
 
   <signal name="Changed"/>
 

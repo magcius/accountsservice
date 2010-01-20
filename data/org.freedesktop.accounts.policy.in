@@ -67,4 +67,15 @@
     </defaults>
   </action>
 
+  <action id="org.freedesktop.accounts.set-login-option">
+    <_description>Change the login screen configuration</_description>
+    <_message>Authentication is required to change the login screen configuration</_message>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>auth_admin_keep</allow_active>
+    </defaults>
+    <annotate key="org.gnome.gconf.defaults.set-mandatory.prefix">/apps/gdm/simple-greeter</annotate>
+  </action>
+
 </policyconfig>

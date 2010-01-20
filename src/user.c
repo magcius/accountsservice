@@ -58,7 +58,8 @@ enum {
         PROP_PASSWORD_HINT,
         PROP_LOGIN_FREQUENCY,
         PROP_ICON_FILE,
-        PROP_LOCKED
+        PROP_LOCKED,
+	PROP_AUTOMATIC_LOGIN
 };
 
 enum {
@@ -91,6 +92,7 @@ struct User {
         guint64       login_frequency;
         gchar        *icon_file;
         gboolean      locked;
+        gboolean      automatic_login;
 };
 
 typedef struct UserClass
@@ -122,6 +124,9 @@ user_set_property (GObject      *object,
                 break;
         case PROP_LOGIN_FREQUENCY:
                 user->login_frequency = g_value_get_uint64 (value);
+                break;
+        case PROP_AUTOMATIC_LOGIN:
+                user->automatic_login = g_value_get_boolean (value);
                 break;
         default:
                 G_OBJECT_WARN_INVALID_PROPERTY_ID (object, param_id, pspec);
@@ -179,6 +184,9 @@ user_get_property (GObject    *object,
                 break;
         case PROP_LOCKED:
                 g_value_set_boolean (value, user->locked);
+                break;
+        case PROP_AUTOMATIC_LOGIN:
+                g_value_set_boolean (value, user->automatic_login);
                 break;
         default:
                 G_OBJECT_WARN_INVALID_PROPERTY_ID (object, param_id, pspec);
@@ -319,6 +327,13 @@ user_class_init (UserClass *class)
                                                                FALSE,
                                                               G_PARAM_READABLE));
 
+        g_object_class_install_property (gobject_class,
+                                         PROP_AUTOMATIC_LOGIN,
+                                         g_param_spec_boolean ("automatic-login",
+                                                               "Automatic Login",
+                                                               "Automatic Login",
+                                                               FALSE,
+                                                               G_PARAM_READWRITE));
 }
 
 
@@ -339,6 +354,7 @@ user_init (User *user)
         user->password_mode = PASSWORD_MODE_REGULAR;
         user->password_hint = NULL;
         user->locked = FALSE;
+        user->automatic_login = FALSE;
 }
 
 static void
@@ -1887,3 +1903,39 @@ user_set_password (User                  *user,
 
         return TRUE;
 }
+
+static void
+user_change_automatic_login_authorized_cb (Daemon                *daemon,
+                                           User                  *user,
+                                           DBusGMethodInvocation *context,
+                                           gpointer               data)
+{
+	gboolean enabled = GPOINTER_TO_INT (data);
+	GError *error = NULL;
+
+	if (!daemon_local_set_automatic_login (daemon, user, enabled, &error)) {
+                throw_error (context, ERROR_FAILED, "failed to change automatic login: %s", error->message);
+		g_error_free (error);
+                return;
+	}
+
+        dbus_g_method_return (context);
+}
+
+gboolean
+user_set_automatic_login (User                  *user,
+                          gboolean               enabled,
+                          DBusGMethodInvocation *context)
+{
+        daemon_local_check_auth (user->daemon,
+                                 user,
+                                 "org.freedesktop.accounts.set-login-option",
+                                 TRUE,
+                                 user_change_automatic_login_authorized_cb,
+                                 context,
+                                 GINT_TO_POINTER (enabled),
+                                 NULL);
+
+        return TRUE;
+}
+

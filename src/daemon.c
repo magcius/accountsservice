@@ -89,10 +89,13 @@ struct DaemonPrivate {
         GHashTable *users;
         GHashTable *exclusions;
 
+	User *autologin;
+
         GFileMonitor *passwd_monitor;
 
         guint reload_id;
         guint ck_history_id;
+        guint autologin_id;
 
         PolkitAuthority *authority;
 };
@@ -570,6 +573,44 @@ reload_users_timeout (Daemon *daemon)
         return FALSE;
 }
 
+static gboolean load_autologin (Daemon    *daemon,
+                                gchar    **name,
+                                gboolean  *enabled,
+                                GError   **error);
+
+static gboolean
+reload_autologin_timeout (Daemon *daemon)
+{
+	gboolean enabled;
+	gchar *name;
+	GError *error = NULL;
+	User *user;
+
+        daemon->priv->autologin_id = 0;
+
+	if (!load_autologin (daemon, &name, &enabled, &error)) {
+		g_warning ("failed to load gdms custom.conf: %s", error->message);
+		g_error_free (error);
+		g_free (name);
+
+		return FALSE;
+	}
+
+	if (enabled) {
+		g_print ("automatic login is enabled for '%s'\n", name);
+		user = daemon_local_find_user_by_name (daemon, name);
+		g_object_set (user, "automatic-login", TRUE, NULL);
+		daemon->priv->autologin = g_object_ref (user);
+	}
+	else {
+		g_print ("automatic login is disabled\n");
+	}
+
+	g_free (name);
+
+	return FALSE;
+}
+
 static void
 queue_reload_users (Daemon *daemon)
 {
@@ -578,6 +619,16 @@ queue_reload_users (Daemon *daemon)
         }
 
         daemon->priv->reload_id = g_idle_add ((GSourceFunc)reload_users_timeout, daemon);
+}
+
+static void
+queue_reload_autologin (Daemon *daemon)
+{
+        if (daemon->priv->autologin_id > 0) {
+                return;
+        }
+
+        daemon->priv->autologin_id = g_idle_add ((GSourceFunc)reload_autologin_timeout, daemon);
 }
 
 static void
@@ -636,7 +687,7 @@ daemon_init (Daemon *daemon)
         g_object_unref (file);
 
         queue_reload_users (daemon);
-
+	queue_reload_autologin (daemon);
 }
 
 static void
@@ -1155,3 +1206,118 @@ daemon_local_check_auth (Daemon                *daemon,
 
         g_object_unref (subject);
 }
+
+gboolean
+load_autologin (Daemon      *daemon,
+                gchar      **name,
+                gboolean    *enabled,
+                GError     **error)
+{
+	GKeyFile *keyfile;
+	const gchar *filename;
+	GError *local_error;
+	gchar *string;
+
+	filename = "/etc/gdm/custom.conf";
+
+	keyfile = g_key_file_new ();
+	if (!g_key_file_load_from_file (keyfile,
+                                        filename,
+                                        G_KEY_FILE_KEEP_COMMENTS,
+                                        error)) {
+		g_key_file_free (keyfile);
+		return FALSE;
+	}
+
+	local_error = NULL;
+	string = g_key_file_get_string (keyfile, "daemon", "AutomaticLoginEnable", &local_error);
+	if (local_error) {
+		g_propagate_error (error, local_error);
+		g_key_file_free (keyfile);
+		g_free (string);
+		return FALSE;
+	}
+	if (g_strcmp0 (string, "True") == 0) {
+		*enabled = TRUE;
+	}
+	else {
+		*enabled = FALSE;
+	}
+	g_free (string);
+
+	*name = g_key_file_get_string (keyfile, "daemon", "AutomaticLogin", &local_error);
+	if (local_error) {
+		g_propagate_error (error, local_error);
+		g_key_file_free (keyfile);
+		return FALSE;
+	}
+
+	g_key_file_free (keyfile);
+
+	return TRUE;
+}
+
+static gboolean
+save_autologin (Daemon      *daemon,
+                const gchar *name,
+                gboolean     enabled,
+                GError     **error)
+{
+	GKeyFile *keyfile;
+	const gchar *filename;
+	gchar *data;
+	gboolean result;
+
+	filename = "/etc/gdm/custom.conf";
+
+	keyfile = g_key_file_new ();
+	if (!g_key_file_load_from_file (keyfile,
+                                        filename,
+                                        G_KEY_FILE_KEEP_COMMENTS,
+                                        error)) {
+		g_key_file_free (keyfile);
+		return FALSE;
+	}
+
+	g_key_file_set_string (keyfile, "daemon", "AutomaticLoginEnable", enabled ? "True" : "False");
+	g_key_file_set_string (keyfile, "daemon", "AutomaticLogin", name);
+
+	data = g_key_file_to_data (keyfile, NULL, NULL);
+	result = g_file_set_contents (filename, data, -1, error);
+
+	g_key_file_free (keyfile);
+	g_free (data);
+
+	return result;
+}
+
+gboolean
+daemon_local_set_automatic_login (Daemon    *daemon,
+                                  User      *user,
+                                  gboolean   enabled,
+                                  GError   **error)
+{
+        if (daemon->priv->autologin == user && enabled) {
+                return TRUE;
+        }
+
+        if (!save_autologin (daemon, user_local_get_user_name (user), enabled, error)) {
+		return FALSE;
+	}
+
+        if (daemon->priv->autologin != NULL) {
+                g_object_set (daemon->priv->autologin, "automatic-login", FALSE, NULL);
+		g_signal_emit_by_name (daemon->priv->autologin, "changed", 0);
+                g_object_unref (daemon->priv->autologin);
+        }
+
+        if (enabled) {
+                g_object_ref (user);
+                g_object_set (daemon->priv->autologin, "automatic-login", TRUE, NULL);
+                daemon->priv->autologin = user;
+		g_signal_emit_by_name (daemon->priv->autologin, "changed", 0);
+        }
+
+	return TRUE;
+}
+

@@ -88,6 +88,11 @@ void         daemon_local_check_auth (Daemon                *daemon,
                                       gpointer               data,
                                       GDestroyNotify         destroy_notify);
 
+gboolean   daemon_local_set_automatic_login (Daemon         *daemon,
+                                             User           *user,
+                                             gboolean        enabled,
+                                             GError        **error);
+
 /* exported methods */
 
 gboolean daemon_find_user_by_id   (Daemon                *daemon,
