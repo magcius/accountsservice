@@ -1,4 +1,4 @@
-AC_INIT(AccountsService, 0.2)
+AC_INIT(AccountsService, 0.3)
 AM_INIT_AUTOMAKE(dist-bzip2 foreign)
 
 GETTEXT_PACKAGE=accounts-service
