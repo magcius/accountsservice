@@ -4,8 +4,6 @@ General
 - what privileges do we need ? anything beyond change-yourself vs.
   change-other-user ?
 
-- document dbus interfaces
-
 - document polkit privileges
 
 Code changes
