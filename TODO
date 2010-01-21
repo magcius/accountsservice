@@ -1,8 +1,7 @@
 General
 -------
 
-- what privileges do we need ? anything beyond change-yourself vs.
-  change-other-user ?
+- rationalize polkit privileges
 
 - document polkit privileges
 
