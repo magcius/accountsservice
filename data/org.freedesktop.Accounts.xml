@@ -15,7 +15,10 @@
       <doc:doc>
         <doc:description>
           <doc:para>
-            List users which have logged into the system locally before.
+            Lists users which have logged into the system locally before.
+            This is not meant to return an exhaustive list of all users.
+            It is possible for <doc:ref type="method" to="FindUserByName">FindUserByName()</doc:ref>
+            to return a user that's not on the list.
           </doc:para>
         </doc:description>
       </doc:doc>
@@ -33,9 +36,12 @@
       <doc:doc>
         <doc:description>
           <doc:para>
-            Find a user by uid.
+            Finds a user by uid.
           </doc:para>
         </doc:description>
+        <doc:errors>
+          <doc:error name="org.freedesktop.Accounts.Error.Failed">if no user with the given uid exists</doc:error>
+        </doc:errors>
       </doc:doc>
     </method>
 
@@ -51,20 +57,23 @@
       <doc:doc>
         <doc:description>
           <doc:para>
-            Find a user by its username.
+            Finds a user by its username.
           </doc:para>
         </doc:description>
+        <doc:errors>
+          <doc:error name="org.freedesktop.Accounts.Error.Failed">if no user with the given username exists</doc:error>
+        </doc:errors>
       </doc:doc>
     </method>
 
     <method name="CreateUser">
       <annotation name="org.freedesktop.DBus.GLib.Async" value=""/>
       <arg name="name" direction="in" type="s">
-        <doc:doc><doc:summary>The username to use</doc:summary></doc:doc>
+        <doc:doc><doc:summary>The username for the new user</doc:summary></doc:doc>
       </arg>
       <annotation name="org.freedesktop.DBus.GLib.Async" value=""/>
       <arg name="fullname" direction="in" type="s">
-        <doc:doc><doc:summary>The real name to use</doc:summary></doc:doc>
+        <doc:doc><doc:summary>The real name for the new user</doc:summary></doc:doc>
       </arg>
       <arg name="user" direction="out" type="o">
         <doc:doc><doc:summary>Object path of the new user</doc:summary></doc:doc>
@@ -73,9 +82,16 @@
       <doc:doc>
         <doc:description>
           <doc:para>
-            Create a new user account.
+            Creates a new user account.
           </doc:para>
         </doc:description>
+        <doc:permission>
+          The caller needs the org.freedesktop.accounts.create-user PolicyKit authorization.
+        </doc:permission>
+        <doc:errors>
+          <doc:error name="org.freedesktop.Accounts.Error.PermissionDenied">if the caller lacks the appropriate PolicyKit authorization</doc:error>
+          <doc:error name="org.freedesktop.Accounts.Error.Failed">if the operation failed</doc:error>
+        </doc:errors>
       </doc:doc>
     </method>
 
@@ -91,25 +107,67 @@
       <doc:doc>
         <doc:description>
           <doc:para>
-            Delete a user account.
+            Deletes a user account.
           </doc:para>
         </doc:description>
+        <doc:permission>
+          The caller needs the org.freedesktop.accounts.delete-user PolicyKit authorization.
+        </doc:permission>
+        <doc:errors>
+          <doc:error name="org.freedesktop.Accounts.Error.PermissionDenied">if the caller lacks the appropriate PolicyKit authorization</doc:error>
+          <doc:error name="org.freedesktop.Accounts.Error.Failed">if the operation failed</doc:error>
+        </doc:errors>
       </doc:doc>
     </method>
 
     <signal name="UserAdded">
-      <arg name="user" type="o"/>
+      <arg name="user" type="o">
+        <doc:doc><doc:summary>Object path of the user that was added.</doc:summary></doc:doc>
+      </arg>
+      <doc:doc>
+        <doc:description>
+          <doc:para>
+            Emitted when a user is added.
+          </doc:para>
+        </doc:description>
+      </doc:doc>
     </signal>
 
     <signal name="UserDeleted">
-      <arg name="user" type="o"/>
+      <arg name="user" type="o">
+        <doc:doc><doc:summary>Object path of the user that was deleted.</doc:summary></doc:doc>
+      </arg>
+      <doc:doc>
+        <doc:description>
+          <doc:para>
+            Emitted when a user is deleted.
+          </doc:para>
+        </doc:description>
+      </doc:doc>
     </signal>
 
     <signal name="UserChanged">
-      <arg name="user" type="o"/>
+      <arg name="user" type="o">
+        <doc:doc><doc:summary>Object path of the user that was changed.</doc:summary></doc:doc>
+      </arg>
+      <doc:doc>
+        <doc:description>
+          <doc:para>
+            Emitted when a user is changed.
+          </doc:para>
+        </doc:description>
+      </doc:doc>
     </signal>
 
-   <property name="DaemonVersion" type="s" access="read"/>
+   <property name="DaemonVersion" type="s" access="read">
+     <doc:doc>
+       <doc:description>
+         <doc:para>
+           The version of the running daemon.
+         </doc:para>
+       </doc:description>
+     </doc:doc>
+   </property>
 
   </interface>
 </node>
