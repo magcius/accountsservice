@@ -341,7 +341,7 @@ process_ck_history_line (Daemon      *daemon,
                 return;
         }
 
-        g_object_set (user, "login-frequency", frequency, NULL);
+        g_object_set (user, "login-frequency", (guint64) frequency, NULL);
         g_free (username);
 }
 
