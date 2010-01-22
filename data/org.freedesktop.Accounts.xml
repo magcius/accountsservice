@@ -86,7 +86,7 @@
           </doc:para>
         </doc:description>
         <doc:permission>
-          The caller needs the org.freedesktop.accounts.create-user PolicyKit authorization.
+          The caller needs the org.freedesktop.accounts.user-administration PolicyKit authorization.
         </doc:permission>
         <doc:errors>
           <doc:error name="org.freedesktop.Accounts.Error.PermissionDenied">if the caller lacks the appropriate PolicyKit authorization</doc:error>
@@ -111,7 +111,7 @@
           </doc:para>
         </doc:description>
         <doc:permission>
-          The caller needs the org.freedesktop.accounts.delete-user PolicyKit authorization.
+          The caller needs the org.freedesktop.accounts.user-administration PolicyKit authorization.
         </doc:permission>
         <doc:errors>
           <doc:error name="org.freedesktop.Accounts.Error.PermissionDenied">if the caller lacks the appropriate PolicyKit authorization</doc:error>

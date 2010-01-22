@@ -813,7 +813,7 @@ user_set_real_name (User                  *user,
         if (user->uid == uid)
                 action_id = "org.freedesktop.accounts.change-own-user-data";
         else
-                action_id = "org.freedesktop.accounts.change-user-data";
+                action_id = "org.freedesktop.accounts.user-administration";
 
         daemon_local_check_auth (user->daemon,
                                  user,
@@ -909,7 +909,7 @@ user_set_user_name (User                  *user,
         if (user->uid == uid)
                 action_id = "org.freedesktop.accounts.change-own-user-data";
         else
-                action_id = "org.freedesktop.accounts.change-user-data";
+                action_id = "org.freedesktop.accounts.user-administration";
 
         daemon_local_check_auth (user->daemon,
                                  user,
@@ -978,7 +978,7 @@ user_set_email (User                  *user,
         if (user->uid == uid)
                 action_id = "org.freedesktop.accounts.change-own-user-data";
         else
-                action_id = "org.freedesktop.accounts.change-user-data";
+                action_id = "org.freedesktop.accounts.user-administration";
 
         daemon_local_check_auth (user->daemon,
                                  user,
@@ -1047,7 +1047,7 @@ user_set_language (User                  *user,
         if (user->uid == uid)
                 action_id = "org.freedesktop.accounts.change-own-user-data";
         else
-                action_id = "org.freedesktop.accounts.change-user-data";
+                action_id = "org.freedesktop.accounts.user-administration";
 
         daemon_local_check_auth (user->daemon,
                                  user,
@@ -1114,7 +1114,7 @@ user_set_location (User                  *user,
         if (user->uid == uid)
                 action_id = "org.freedesktop.accounts.change-own-user-data";
         else
-                action_id = "org.freedesktop.accounts.change-user-data";
+                action_id = "org.freedesktop.accounts.user-administration";
 
         daemon_local_check_auth (user->daemon,
                                  user,
@@ -1202,10 +1202,7 @@ user_set_home_directory (User                  *user,
                 return TRUE;
         }
 
-        if (user->uid == uid)
-                action_id = "org.freedesktop.accounts.change-own-user-data";
-        else
-                action_id = "org.freedesktop.accounts.change-user-data";
+        action_id = "org.freedesktop.accounts.user-administration";
 
         daemon_local_check_auth (user->daemon,
                                  user,
@@ -1294,10 +1291,7 @@ user_set_shell (User                  *user,
                 return TRUE;
         }
 
-        if (user->uid == uid)
-                action_id = "org.freedesktop.accounts.change-own-user-data";
-        else
-                action_id = "org.freedesktop.accounts.change-user-data";
+        action_id = "org.freedesktop.accounts.user-administration";
 
         daemon_local_check_auth (user->daemon,
                                  user,
@@ -1362,7 +1356,7 @@ user_set_icon_file (User                  *user,
         if (user->uid == uid)
                 action_id = "org.freedesktop.accounts.change-own-user-data";
         else
-                action_id = "org.freedesktop.accounts.change-user-data";
+                action_id = "org.freedesktop.accounts.user-administration";
 
         daemon_local_check_auth (user->daemon,
                                  user,
@@ -1471,7 +1465,7 @@ user_set_icon_data (User                  *user,
         if (user->uid == uid)
                 action_id = "org.freedesktop.accounts.change-own-user-data";
         else
-                action_id = "org.freedesktop.accounts.change-user-data";
+                action_id = "org.freedesktop.accounts.user-administration";
 
         icon_data = g_new0 (IconData, 1);
         icon_data->width = width;
@@ -1554,7 +1548,7 @@ user_set_locked (User                  *user,
 {
         daemon_local_check_auth (user->daemon,
                                  user,
-                                 "org.freedesktop.accounts.lock-user",
+                                 "org.freedesktop.accounts.user-administration",
                                  TRUE,
                                  user_change_locked_authorized_cb,
                                  context,
@@ -1673,7 +1667,7 @@ user_set_account_type (User                  *user,
 
         daemon_local_check_auth (user->daemon,
                                  user,
-                                 "org.freedesktop.accounts.change-account-type",
+                                 "org.freedesktop.accounts.user-administration",
                                  TRUE,
                                  user_change_account_type_authorized_cb,
                                  context,
@@ -1778,10 +1772,7 @@ user_set_password_mode (User                  *user,
                 return TRUE;
         }
 
-        if (user->uid == uid)
-                action_id = "org.freedesktop.accounts.change-own-user-data";
-        else
-                action_id = "org.freedesktop.accounts.change-user-data";
+        action_id = "org.freedesktop.accounts.user-administration";
 
         daemon_local_check_auth (user->daemon,
                                  user,
@@ -1883,23 +1874,29 @@ user_set_password (User                  *user,
                 return TRUE;
         }
 
-        if (user->uid == uid)
-                action_id = "org.freedesktop.accounts.change-own-user-data";
-        else
-                action_id = "org.freedesktop.accounts.change-user-data";
-
         data = g_new (gchar *, 3);
         data[0] = g_strdup (password);
         data[1] = g_strdup (hint);
         data[2] = NULL;
-        daemon_local_check_auth (user->daemon,
-                                 user,
-                                 action_id,
-                                 TRUE,
-                                 user_change_password_authorized_cb,
-                                 context,
-                                 data,
-                                 (GDestroyNotify)g_strfreev);
+
+        if (user->uid == uid) {
+		user_change_password_authorized_cb (user->daemon,
+						    user,
+						    context,
+						    data);
+		g_strfreev (data);
+	}
+        else {
+                action_id = "org.freedesktop.accounts.user-administration";
+        	daemon_local_check_auth (user->daemon,
+                	                 user,
+                        	         action_id,
+                                	 TRUE,
+                   	              	 user_change_password_authorized_cb,
+               	                  	 context,
+                                 	 data,
+                                 	 (GDestroyNotify)g_strfreev);
+	}
 
         return TRUE;
 }

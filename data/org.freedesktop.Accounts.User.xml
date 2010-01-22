@@ -28,7 +28,7 @@
             <doc:definition>To change his own username</doc:definition>
           </doc:item>
           <doc:item>
-            <doc:term>org.freedesktop.accounts.change-user-data</doc:term>
+            <doc:term>org.freedesktop.accounts.user-administration</doc:term>
             <doc:definition>To change the username of another user</doc:definition>
           </doc:item>
         </doc:list>
@@ -63,7 +63,7 @@
             <doc:definition>To change his own name</doc:definition>
           </doc:item>
           <doc:item>
-            <doc:term>org.freedesktop.accounts.change-user-data</doc:term>
+            <doc:term>org.freedesktop.accounts.user-administration</doc:term>
             <doc:definition>To change the name of another user</doc:definition>
           </doc:item>
         </doc:list>
@@ -103,7 +103,7 @@
             <doc:definition>To change his own email address</doc:definition>
           </doc:item>
           <doc:item>
-            <doc:term>org.freedesktop.accounts.change-user-data</doc:term>
+            <doc:term>org.freedesktop.accounts.user-administration</doc:term>
             <doc:definition>To change the email address of another user</doc:definition>
           </doc:item>
         </doc:list>
@@ -142,7 +142,7 @@
             <doc:definition>To change his own language</doc:definition>
           </doc:item>
           <doc:item>
-            <doc:term>org.freedesktop.accounts.change-user-data</doc:term>
+            <doc:term>org.freedesktop.accounts.user-administration</doc:term>
             <doc:definition>To change the language of another user</doc:definition>
           </doc:item>
         </doc:list>
@@ -177,7 +177,7 @@
             <doc:definition>To change his own location</doc:definition>
           </doc:item>
           <doc:item>
-            <doc:term>org.freedesktop.accounts.change-user-data</doc:term>
+            <doc:term>org.freedesktop.accounts.user-administration</doc:term>
             <doc:definition>To change the location of another user</doc:definition>
           </doc:item>
         </doc:list>
@@ -213,12 +213,8 @@
         The caller needs one of the following PolicyKit authorizations:
         <doc:list>
           <doc:item>
-            <doc:term>org.freedesktop.accounts.change-own-user-data</doc:term>
-            <doc:definition>To change his own home directory</doc:definition>
-          </doc:item>
-          <doc:item>
-            <doc:term>org.freedesktop.accounts.change-user-data</doc:term>
-            <doc:definition>To change the home directory of another user</doc:definition>
+            <doc:term>org.freedesktop.accounts.user-administration</doc:term>
+            <doc:definition>To change the home directory of a user</doc:definition>
           </doc:item>
         </doc:list>
       </doc:permission>
@@ -252,12 +248,8 @@
         The caller needs one of the following PolicyKit authorizations:
         <doc:list>
           <doc:item>
-            <doc:term>org.freedesktop.accounts.change-own-user-data</doc:term>
-            <doc:definition>To change his own shell</doc:definition>
-          </doc:item>
-          <doc:item>
-            <doc:term>org.freedesktop.accounts.change-user-data</doc:term>
-            <doc:definition>To change the shell of another user</doc:definition>
+            <doc:term>org.freedesktop.accounts.user-administration</doc:term>
+            <doc:definition>To change the shell of a user</doc:definition>
           </doc:item>
         </doc:list>
       </doc:permission>
@@ -291,7 +283,7 @@
             <doc:definition>To change his own icon</doc:definition>
           </doc:item>
           <doc:item>
-            <doc:term>org.freedesktop.accounts.change-user-data</doc:term>
+            <doc:term>org.freedesktop.accounts.user-administration</doc:term>
             <doc:definition>To change the icon of another user</doc:definition>
           </doc:item>
         </doc:list>
@@ -355,7 +347,7 @@
             <doc:definition>To change his own icon</doc:definition>
           </doc:item>
           <doc:item>
-            <doc:term>org.freedesktop.accounts.change-user-data</doc:term>
+            <doc:term>org.freedesktop.accounts.user-administration</doc:term>
             <doc:definition>To change the icon of another user</doc:definition>
           </doc:item>
         </doc:list>
@@ -389,12 +381,8 @@
         The caller needs one of the following PolicyKit authorizations:
         <doc:list>
           <doc:item>
-            <doc:term>org.freedesktop.accounts.change-own-user-data</doc:term>
-            <doc:definition>To lock his own account</doc:definition>
-          </doc:item>
-          <doc:item>
-            <doc:term>org.freedesktop.accounts.change-user-data</doc:term>
-            <doc:definition>To lock the account of another user</doc:definition>
+            <doc:term>org.freedesktop.accounts.user-administration</doc:term>
+            <doc:definition>To lock or unlock user accounts</doc:definition>
           </doc:item>
         </doc:list>
       </doc:permission>
@@ -438,7 +426,7 @@
         The caller needs one of the following PolicyKit authorizations:
         <doc:list>
           <doc:item>
-            <doc:term>org.freedesktop.accounts.change-account-type</doc:term>
+            <doc:term>org.freedesktop.accounts.user-administration</doc:term>
             <doc:definition>To change an account type</doc:definition>
           </doc:item>
         </doc:list>
@@ -483,12 +471,8 @@
         The caller needs one of the following PolicyKit authorizations:
         <doc:list>
           <doc:item>
-            <doc:term>org.freedesktop.accounts.change-own-user-data</doc:term>
-            <doc:definition>To change his own password mode</doc:definition>
-          </doc:item>
-          <doc:item>
-            <doc:term>org.freedesktop.accounts.change-user-data</doc:term>
-            <doc:definition>To change another users password mode</doc:definition>
+            <doc:term>org.freedesktop.accounts.user-administration</doc:term>
+            <doc:definition>To change a users password mode</doc:definition>
           </doc:item>
         </doc:list>
       </doc:permission>
@@ -520,17 +504,16 @@
         <doc:para>
           Sets a new password for this user.
         </doc:para>
+        <doc:para>
+          Users are always allowed to change their own password.
+        </doc:para>
       </doc:description>
       <doc:permission>
         The caller needs one of the following PolicyKit authorizations:
         <doc:list>
           <doc:item>
-            <doc:term>org.freedesktop.accounts.change-own-user-data</doc:term>
-            <doc:definition>To change his own shell</doc:definition>
-          </doc:item>
-          <doc:item>
-            <doc:term>org.freedesktop.accounts.change-user-data</doc:term>
-            <doc:definition>To change the shell of another user</doc:definition>
+            <doc:term>org.freedesktop.accounts.user-administration</doc:term>
+            <doc:definition>To change the password of another user</doc:definition>
           </doc:item>
         </doc:list>
       </doc:permission>

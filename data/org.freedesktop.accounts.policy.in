@@ -9,7 +9,7 @@
 
   <action id="org.freedesktop.accounts.change-own-user-data">
     <_description>Change your own user data</_description>
-    <_message>Authentication is required to change user data</_message>
+    <_message>Authentication is required to change your own user data</_message>
     <defaults>
       <allow_any>no</allow_any>
       <allow_inactive>no</allow_inactive>
@@ -17,49 +17,9 @@
     </defaults>
   </action>
 
-  <action id="org.freedesktop.accounts.change-user-data">
-    <_description>Change user data</_description>
+  <action id="org.freedesktop.accounts.user-administration">
+    <_description>Administer user accounts</_description>
     <_message>Authentication is required to change user data</_message>
-    <defaults>
-      <allow_any>no</allow_any>
-      <allow_inactive>no</allow_inactive>
-      <allow_active>auth_admin_keep</allow_active>
-    </defaults>
-  </action>
-
-  <action id="org.freedesktop.accounts.create-user">
-    <_description>Create a user account</_description>
-    <_message>Authentication is required to create a user account</_message>
-    <defaults>
-      <allow_any>no</allow_any>
-      <allow_inactive>no</allow_inactive>
-      <allow_active>auth_admin_keep</allow_active>
-    </defaults>
-  </action>
-
-  <action id="org.freedesktop.accounts.delete-user">
-    <_description>Delete a user account</_description>
-    <_message>Authentication is required to delete a user account</_message>
-    <defaults>
-      <allow_any>no</allow_any>
-      <allow_inactive>no</allow_inactive>
-      <allow_active>auth_admin_keep</allow_active>
-    </defaults>
-  </action>
-
-  <action id="org.freedesktop.accounts.lock-user">
-    <_description>Lock a user account</_description>
-    <_message>Authentication is required to lock a user account</_message>
-    <defaults>
-      <allow_any>no</allow_any>
-      <allow_inactive>no</allow_inactive>
-      <allow_active>auth_admin_keep</allow_active>
-    </defaults>
-  </action>
-
-  <action id="org.freedesktop.accounts.change-account-type">
-    <_description>Change a users account type</_description>
-    <_message>Authentication is required to change an account type</_message>
     <defaults>
       <allow_any>no</allow_any>
       <allow_inactive>no</allow_inactive>
