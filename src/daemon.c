@@ -582,7 +582,7 @@ static gboolean
 reload_autologin_timeout (Daemon *daemon)
 {
 	gboolean enabled;
-	gchar *name;
+	gchar *name = NULL;
 	GError *error = NULL;
 	User *user;
 
