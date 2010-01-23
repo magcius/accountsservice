@@ -141,20 +141,20 @@ main (int argc, char *argv[])
 
         context = g_option_context_new ("");
         g_option_context_set_translation_domain (context, GETTEXT_PACKAGE);
-	g_option_context_set_summary (context, _("Provides D-Bus interfaces for querying and manipulating\nuser account information."));
+        g_option_context_set_summary (context, _("Provides D-Bus interfaces for querying and manipulating\nuser account information."));
         g_option_context_add_main_entries (context, entries, NULL);
-	error = NULL;
+        error = NULL;
         if (!g_option_context_parse (context, &argc, &argv, &error)) {
-		g_warning ("%s", error->message);
-		g_error_free (error);
-		goto out;
-	}
+                g_warning ("%s", error->message);
+                g_error_free (error);
+                goto out;
+        }
         g_option_context_free (context);
 
         if (show_version) {
                 g_print ("accounts-daemon " VERSION "\n");
                 ret = 0;
-		goto out;
+                goto out;
         }
 
         bus = dbus_g_bus_get (DBUS_BUS_SYSTEM, &error);

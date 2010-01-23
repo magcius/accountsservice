@@ -59,7 +59,7 @@ enum {
         PROP_LOGIN_FREQUENCY,
         PROP_ICON_FILE,
         PROP_LOCKED,
-	PROP_AUTOMATIC_LOGIN
+        PROP_AUTOMATIC_LOGIN
 };
 
 enum {
@@ -432,7 +432,8 @@ user_local_update_from_pwent (User          *user,
                 if (g_utf8_validate (pwent->pw_gecos, -1, NULL)) {
                         valid_utf8_name = pwent->pw_gecos;
                         first_comma = g_utf8_strchr (valid_utf8_name, -1, ',');
-                } else {
+                }
+                else {
                         g_warning ("User %s has invalid UTF-8 in GECOS field. "
                                    "It would be a good thing to check /etc/passwd.",
                                    pwent->pw_name ? pwent->pw_name : "");
@@ -441,9 +442,11 @@ user_local_update_from_pwent (User          *user,
                 if (first_comma) {
                         real_name = g_strndup (valid_utf8_name,
                                                   (first_comma - valid_utf8_name));
-                } else if (valid_utf8_name) {
+                }
+                else if (valid_utf8_name) {
                         real_name = g_strdup (valid_utf8_name);
-                } else {
+                }
+                else {
                         real_name = NULL;
                 }
 
@@ -451,17 +454,16 @@ user_local_update_from_pwent (User          *user,
                         g_free (real_name);
                         real_name = NULL;
                 }
-        } else {
+        }
+        else {
                 real_name = NULL;
         }
-        if ((real_name && !user->real_name) ||
-            (!real_name && user->real_name) ||
-            (real_name && user->real_name &&
-             strcmp (real_name, user->real_name) != 0)) {
+        if (g_strcmp0 (real_name, user->real_name) != 0) {
                 g_free (user->real_name);
                 user->real_name = real_name;
                 g_object_notify (G_OBJECT (user), "real-name");
-        } else {
+        }
+        else {
                 g_free (real_name);
         }
 
@@ -477,30 +479,21 @@ user_local_update_from_pwent (User          *user,
         user->account_type = account_type_from_groups (pwent);
 
         /* Username */
-        if ((pwent->pw_name && !user->user_name) ||
-            (!pwent->pw_name && user->user_name) ||
-            (pwent->pw_name && user->user_name &&
-             strcmp (user->user_name, pwent->pw_name) != 0)) {
+        if (g_strcmp0 (user->user_name, pwent->pw_name) != 0) {
                 g_free (user->user_name);
                 user->user_name = g_strdup (pwent->pw_name);
                 g_object_notify (G_OBJECT (user), "user-name");
         }
 
         /* Home Directory */
-        if ((pwent->pw_dir && !user->home_dir) ||
-            (!pwent->pw_dir && user->home_dir) ||
-            (pwent->pw_dir && user->home_dir &&
-             strcmp (user->home_dir, pwent->pw_dir) != 0)) {
+        if (g_strcmp0 (user->home_dir, pwent->pw_dir) != 0) {
                 g_free (user->home_dir);
                 user->home_dir = g_strdup (pwent->pw_dir);
                 g_object_notify (G_OBJECT (user), "home-directory");
         }
 
         /* Shell */
-        if ((pwent->pw_shell && !user->shell) ||
-            (!pwent->pw_shell && user->shell) ||
-            (pwent->pw_shell && user->shell &&
-             strcmp (user->shell, pwent->pw_shell) != 0)) {
+        if (g_strcmp0 (user->shell, pwent->pw_shell) != 0) {
                 g_free (user->shell);
                 user->shell = g_strdup (pwent->pw_shell);
                 g_object_notify (G_OBJECT (user), "shell");
@@ -543,7 +536,6 @@ user_local_update_from_keyfile (User     *user,
         }
 
         s = g_key_file_get_string (keyfile, "User", "Icon", NULL);
-        g_print ("icon: %s\n", s);
         if (s != NULL) {
                 g_free (user->icon_file);
                 user->icon_file = s;
@@ -630,11 +622,9 @@ move_extra_data (const gchar *old_name,
         gchar *new_filename;
 
         old_filename = g_build_filename ("/var/lib/AccountsService/users",
-                                         old_name,
-                                         NULL);
+                                         old_name, NULL);
         new_filename = g_build_filename ("/var/lib/AccountsService/users",
-                                         new_name,
-                                         NULL);
+                                         new_name, NULL);
 
         g_rename (old_filename, new_filename);
 
@@ -647,7 +637,8 @@ compute_object_path (User *user)
 {
         gchar *object_path;
 
-        object_path = g_strdup_printf ("/org/freedesktop/Accounts/User%ld", (gint64) user->uid);
+        object_path = g_strdup_printf ("/org/freedesktop/Accounts/User%ld",
+                                       (gint64) user->uid);
 
         return object_path;
 }
@@ -736,10 +727,10 @@ throw_error (DBusGMethodInvocation *context,
 }
 
 static void
-user_change_real_name_authorized_cb (Daemon *daemon,
-                                     User   *user,
+user_change_real_name_authorized_cb (Daemon                *daemon,
+                                     User                  *user,
                                      DBusGMethodInvocation *context,
-                                     gpointer data)
+                                     gpointer               data)
 
 {
         gchar *name = data;
@@ -924,19 +915,17 @@ user_set_user_name (User                  *user,
 }
 
 static void
-user_change_email_authorized_cb (Daemon *daemon,
-                                 User   *user,
+user_change_email_authorized_cb (Daemon                *daemon,
+                                 User                  *user,
                                  DBusGMethodInvocation *context,
-                                 gpointer data)
+                                 gpointer               data)
 
 {
         gchar *email = data;
 
         if (g_strcmp0 (user->email, email) != 0) {
                 g_warning ("Changing email of user %s from %s to %s",
-                           user->user_name,
-                           user->email,
-                           email);
+                           user->user_name, user->email, email);
 
                 g_free (user->email);
                 user->email = g_strdup (email);
@@ -993,19 +982,17 @@ user_set_email (User                  *user,
 }
 
 static void
-user_change_language_authorized_cb (Daemon *daemon,
-                                    User   *user,
+user_change_language_authorized_cb (Daemon                *daemon,
+                                    User                  *user,
                                     DBusGMethodInvocation *context,
-                                    gpointer data)
+                                    gpointer               data)
 
 {
         gchar *language = data;
 
         if (g_strcmp0 (user->language, language) != 0) {
                 g_warning ("Changing language of user %s from %s to %s",
-                           user->user_name,
-                           user->language,
-                           language);
+                           user->user_name, user->language, language);
 
                 g_free (user->language);
                 user->language = g_strdup (language);
@@ -1062,19 +1049,17 @@ user_set_language (User                  *user,
 }
 
 static void
-user_change_location_authorized_cb (Daemon *daemon,
-                                    User   *user,
+user_change_location_authorized_cb (Daemon                *daemon,
+                                    User                  *user,
                                     DBusGMethodInvocation *context,
-                                    gpointer data)
+                                    gpointer               data)
 
 {
         gchar *location = data;
 
         if (g_strcmp0 (user->location, location) != 0) {
                 g_warning ("Changing location of user %s from %s to %s",
-                           user->user_name,
-                           user->location,
-                           location);
+                           user->user_name, user->location, location);
 
                 g_free (user->location);
                 user->location = g_strdup (location);
@@ -1880,23 +1865,23 @@ user_set_password (User                  *user,
         data[2] = NULL;
 
         if (user->uid == uid) {
-		user_change_password_authorized_cb (user->daemon,
-						    user,
-						    context,
-						    data);
-		g_strfreev (data);
-	}
+                user_change_password_authorized_cb (user->daemon,
+                                                    user,
+                                                    context,
+                                                    data);
+                g_strfreev (data);
+        }
         else {
                 action_id = "org.freedesktop.accounts.user-administration";
-        	daemon_local_check_auth (user->daemon,
-                	                 user,
-                        	         action_id,
-                                	 TRUE,
-                   	              	 user_change_password_authorized_cb,
-               	                  	 context,
-                                 	 data,
-                                 	 (GDestroyNotify)g_strfreev);
-	}
+                daemon_local_check_auth (user->daemon,
+                                         user,
+                                         action_id,
+                                         TRUE,
+                                         user_change_password_authorized_cb,
+                                         context,
+                                         data,
+                                         (GDestroyNotify)g_strfreev);
+        }
 
         return TRUE;
 }
@@ -1907,14 +1892,14 @@ user_change_automatic_login_authorized_cb (Daemon                *daemon,
                                            DBusGMethodInvocation *context,
                                            gpointer               data)
 {
-	gboolean enabled = GPOINTER_TO_INT (data);
-	GError *error = NULL;
+        gboolean enabled = GPOINTER_TO_INT (data);
+        GError *error = NULL;
 
-	if (!daemon_local_set_automatic_login (daemon, user, enabled, &error)) {
+        if (!daemon_local_set_automatic_login (daemon, user, enabled, &error)) {
                 throw_error (context, ERROR_FAILED, "failed to change automatic login: %s", error->message);
-		g_error_free (error);
+                g_error_free (error);
                 return;
-	}
+        }
 
         dbus_g_method_return (context);
 }
