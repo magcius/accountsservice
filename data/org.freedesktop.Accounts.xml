@@ -78,7 +78,27 @@
       <arg name="user" direction="out" type="o">
         <doc:doc><doc:summary>Object path of the new user</doc:summary></doc:doc>
       </arg>
-
+      <arg name="accountType" direction="in" type="i">
+        <doc:doc>
+          <doc:summary>
+            The account type, encoded as an integer:
+            <doc:list>
+              <doc:item>
+                <doc:term>0</doc:term>
+                <doc:definition>Standard user</doc:definition>
+              </doc:item>
+              <doc:item>
+                <doc:term>1</doc:term>
+                <doc:definition>Administrator</doc:definition>
+              </doc:item>
+              <doc:item>
+                <doc:term>2</doc:term>
+                <doc:definition>Supervised user</doc:definition>
+              </doc:item>
+            </doc:list>
+          </doc:summary>
+        </doc:doc>
+      </arg>
       <doc:doc>
         <doc:description>
           <doc:para>

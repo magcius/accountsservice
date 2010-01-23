@@ -106,6 +106,7 @@ gboolean daemon_list_cached_users (Daemon                *daemon,
 gboolean daemon_create_user       (Daemon                *daemon,
                                    const gchar           *user_name,
                                    const gchar           *real_name,
+                                   gint                   account_type,
                                    DBusGMethodInvocation *context);
 gboolean daemon_delete_user       (Daemon                *daemon,
                                    gint64                 uid,

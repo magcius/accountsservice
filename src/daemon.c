@@ -929,6 +929,7 @@ daemon_list_cached_users (Daemon                *daemon,
 typedef struct {
         gchar *user_name;
         gchar *real_name;
+        gint account_type;
 } CreateUserData;
 
 static void
@@ -954,6 +955,7 @@ daemon_create_user_authorized_cb (Daemon                *daemon,
         GError *error;
         gchar *std_err, *std_out;
         gint status;
+        const gchar *grouparg;
 
         user = daemon_local_find_user_by_name (daemon, cd->user_name);
 
@@ -963,7 +965,16 @@ daemon_create_user_authorized_cb (Daemon                *daemon,
                 return;
         }
 
-        cmdline = g_strdup_printf ("/usr/sbin/useradd -m -c '%s' %s", cd->real_name, cd->user_name);
+        if (cd->account_type == ACCOUNT_TYPE_ADMINISTRATOR) {
+                grouparg = "-g desktop_admin_r";
+        }
+        else if (cd->account_type == ACCOUNT_TYPE_STANDARD) {
+                grouparg = "-g desktop_user_r";
+        }
+        else {
+                grouparg = "";
+        }
+        cmdline = g_strdup_printf ("/usr/sbin/useradd -m -c '%s' %s %s", cd->real_name, grouparg, cd->user_name);
 
         std_out = NULL;
         std_err = NULL;
@@ -996,6 +1007,7 @@ gboolean
 daemon_create_user (Daemon                *daemon,
                     const gchar           *user_name,
                     const gchar           *real_name,
+                    gint                   account_type,
                     DBusGMethodInvocation *context)
 {
         CreateUserData *data;
@@ -1003,6 +1015,7 @@ daemon_create_user (Daemon                *daemon,
         data = g_new0 (CreateUserData, 1);
         data->user_name = g_strdup (user_name);
         data->real_name = g_strdup (real_name);
+        data->account_type = account_type;
 
         daemon_local_check_auth (daemon,
                                  NULL,
