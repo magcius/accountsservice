@@ -131,6 +131,8 @@ error_get_type (void)
       static const GEnumValue values[] =
         {
           ENUM_ENTRY (ERROR_FAILED, "Failed"),
+          ENUM_ENTRY (ERROR_USER_EXISTS, "UserExists"),
+          ENUM_ENTRY (ERROR_USER_DOES_NOT_EXIST, "UserDoesntExist"),
           ENUM_ENTRY (ERROR_PERMISSION_DENIED, "PermissionDenied"),
           ENUM_ENTRY (ERROR_NOT_SUPPORTED, "NotSupported"),
           { 0, 0, 0 }
@@ -963,10 +965,8 @@ daemon_create_user_authorized_cb (Daemon                *daemon,
         gint status;
         const gchar *grouparg;
 
-        user = daemon_local_find_user_by_name (daemon, cd->user_name);
-
-        if (user != NULL) {
-                throw_error (context, ERROR_FAILED, "user with name %s already exists", cd->user_name);
+        if (getpwnam (cd->user_name) != NULL) {
+                throw_error (context, ERROR_USER_EXISTS, "A user with name '%s' already exists", cd->user_name);
 
                 return;
         }
@@ -1059,22 +1059,21 @@ daemon_delete_user_authorized_cb (Daemon                *daemon,
         gint status;
         gchar *name;
         gchar *filename;
+        struct passwd *pwent;
 
-        user = daemon_local_find_user_by_id (daemon, ud->uid);
+        pwent = getpwuid (ud->uid);
 
-        if (user == NULL) {
-                throw_error (context, ERROR_FAILED, "no user with uid %d found", ud->uid);
+        if (pwent == NULL) {
+                throw_error (context, ERROR_USER_DOES_NOT_EXIST, "No user with uid %d found", ud->uid);
 
                 return;
         }
 
-        name = g_strdup (user_local_get_user_name (user));
-
         daemon_local_log (daemon, context,
                           "delete user '%s' (%d)",
-                          name, ud->uid);
+                          pwent->pw_name, ud->uid);
 
-        cmdline = g_strdup_printf ("/usr/sbin/userdel %s%s", ud->remove_files ? "-r " : "", name);
+        cmdline = g_strdup_printf ("/usr/sbin/userdel %s%s", ud->remove_files ? "-r " : "", pwent->pw_name);
 
         std_out = NULL;
         std_err = NULL;
@@ -1094,7 +1093,7 @@ daemon_delete_user_authorized_cb (Daemon                *daemon,
                 return;
         }
 
-        filename = g_build_filename (LOCALSTATE_DIR "/lib/AccountsService/users", name, NULL);
+        filename = g_build_filename (LOCALSTATE_DIR "/lib/AccountsService/users", pwent->pw_name, NULL);
         g_remove (filename);
 
         g_free (filename);

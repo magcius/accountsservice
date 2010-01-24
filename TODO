@@ -5,11 +5,6 @@ General
 
 - maybe prevent deleting / downgrading the last admin user
 
-- allow setting account type when creating an account
-
-Code changes
-------------
-
 - add supervisor user to supervised accounts
 
 Other

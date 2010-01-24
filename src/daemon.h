@@ -53,6 +53,8 @@ struct DaemonClass {
 
 typedef enum {
         ERROR_FAILED,
+        ERROR_USER_EXISTS,
+        ERROR_USER_DOES_NOT_EXIST,
         ERROR_PERMISSION_DENIED,
         ERROR_NOT_SUPPORTED,
         NUM_ERRORS
