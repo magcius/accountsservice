@@ -976,10 +976,10 @@ daemon_create_user_authorized_cb (Daemon                *daemon,
                           cd->user_name);
 
         if (cd->account_type == ACCOUNT_TYPE_ADMINISTRATOR) {
-                grouparg = "-g desktop_admin_r";
+                grouparg = "-G desktop_admin_r";
         }
         else if (cd->account_type == ACCOUNT_TYPE_STANDARD) {
-                grouparg = "-g desktop_user_r";
+                grouparg = "-G desktop_user_r";
         }
         else {
                 grouparg = "";
