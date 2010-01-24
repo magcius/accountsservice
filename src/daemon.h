@@ -93,6 +93,11 @@ gboolean   daemon_local_set_automatic_login (Daemon         *daemon,
                                              gboolean        enabled,
                                              GError        **error);
 
+void       daemon_local_log          (Daemon                *daemon,
+                                      DBusGMethodInvocation *context,
+                                      const gchar           *format,
+                                      ...);
+
 /* exported methods */
 
 gboolean daemon_find_user_by_id   (Daemon                *daemon,

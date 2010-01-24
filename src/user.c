@@ -740,8 +740,9 @@ user_change_real_name_authorized_cb (Daemon                *daemon,
         gchar *cmdline;
 
         if (g_strcmp0 (user->real_name, name) != 0) {
-                g_warning ("Changing real name of user %s to %s",
-                           user->user_name, name);
+                daemon_local_log (daemon, context,
+                                  "change real name of user '%s' (%d) to '%s'",
+                                  user->user_name, user->uid, name);
 
                 cmdline = g_strdup_printf ("/usr/sbin/usermod -c '%s' %s", name, user->user_name);
 
@@ -834,7 +835,9 @@ user_change_user_name_authorized_cb (Daemon                *daemon,
 
         if (g_strcmp0 (user->user_name, name) != 0) {
                 old_name = g_strdup (user->user_name);
-                g_warning ("Changing name of user %s to %s", old_name, name);
+                daemon_local_log (daemon, context,
+                                  "change name of user '%s' (%d) to '%s'",
+                                  old_name, user->uid, name);
 
                 cmdline = g_strdup_printf ("/usr/sbin/usermod -l %s %s", name, user->user_name);
 
@@ -924,9 +927,6 @@ user_change_email_authorized_cb (Daemon                *daemon,
         gchar *email = data;
 
         if (g_strcmp0 (user->email, email) != 0) {
-                g_warning ("Changing email of user %s from %s to %s",
-                           user->user_name, user->email, email);
-
                 g_free (user->email);
                 user->email = g_strdup (email);
 
@@ -991,9 +991,6 @@ user_change_language_authorized_cb (Daemon                *daemon,
         gchar *language = data;
 
         if (g_strcmp0 (user->language, language) != 0) {
-                g_warning ("Changing language of user %s from %s to %s",
-                           user->user_name, user->language, language);
-
                 g_free (user->language);
                 user->language = g_strdup (language);
 
@@ -1058,9 +1055,6 @@ user_change_location_authorized_cb (Daemon                *daemon,
         gchar *location = data;
 
         if (g_strcmp0 (user->location, location) != 0) {
-                g_warning ("Changing location of user %s from %s to %s",
-                           user->user_name, user->location, location);
-
                 g_free (user->location);
                 user->location = g_strdup (location);
 
@@ -1127,9 +1121,9 @@ user_change_home_dir_authorized_cb (Daemon                *daemon,
         gchar *cmdline;
 
         if (g_strcmp0 (user->home_dir, home_dir) != 0) {
-                g_warning ("Changing home directory of user %s to %s",
-                           user->user_name, home_dir);
-
+                daemon_local_log (daemon, context,
+                                  "change home directory of user '%s' (%d) to '%s'",
+                                  user->user_name, user->uid, home_dir);
                 cmdline = g_strdup_printf ("/usr/sbin/usermod -m -d '%s' %s", home_dir, user->user_name);
 
                 std_out = NULL;
@@ -1215,8 +1209,9 @@ user_change_shell_authorized_cb (Daemon                *daemon,
         gchar *cmdline;
 
         if (g_strcmp0 (user->shell, shell) != 0) {
-                g_warning ("Changing shell of user %s to %s",
-                           user->user_name, shell);
+                daemon_local_log (daemon, context,
+                                  "change shell of user '%s' (%d) to '%s'",
+                                  user->user_name, user->uid, shell);
 
                 cmdline = g_strdup_printf ("/usr/sbin/usermod -s '%s' %s", shell, user->user_name);
 
@@ -1300,9 +1295,6 @@ user_change_icon_file_authorized_cb (Daemon                *daemon,
         gchar *filename = data;
 
         if (g_strcmp0 (user->icon_file, filename) != 0) {
-                g_warning ("Changing icon of user %s to %s",
-                           user->user_name, filename);
-
                 g_free (user->icon_file);
                 user->icon_file = g_strdup (filename);
 
@@ -1381,8 +1373,6 @@ user_change_icon_data_authorized_cb (Daemon                *daemon,
         GdkPixbuf *pixbuf;
         gchar *filename;
         GError *error;
-
-        g_warning ("Changing icon of user %s", user->user_name);
 
         pixbuf = gdk_pixbuf_new_from_data (id->data,
                                            GDK_COLORSPACE_RGB,
@@ -1488,9 +1478,9 @@ user_change_locked_authorized_cb (Daemon                *daemon,
         gchar *cmdline;
 
         if (user->locked != locked) {
-                g_warning ("Changing lockedness of user %s to %d",
-                           user->user_name, locked);
-
+                daemon_local_log (daemon, context,
+                                  "%s account of user '%s' (%d)",
+                                  locked ? "locking" : "unlocking", user->user_name, user->uid);
                 cmdline = g_strdup_printf ("/usr/sbin/usermod -%c %s", locked ? 'L' : 'U',  user->user_name);
 
                 std_out = NULL;
@@ -1564,8 +1554,9 @@ user_change_account_type_authorized_cb (Daemon                *daemon,
         gint i;
 
         if (user->account_type != account_type) {
-                g_warning ("Changing account type of user %s to %d",
-                           user->user_name, account_type);
+                daemon_local_log (daemon, context,
+                                  "change account type of user '%s' (%d) to %d",
+                                  user->user_name, user->uid, account_type);
 
                 grp = getgrnam ("desktop_user_r");
                 if (grp == NULL) {
@@ -1676,8 +1667,9 @@ user_change_password_mode_authorized_cb (Daemon                *daemon,
         gchar *cmdline;
 
         if (user->password_mode != mode) {
-                g_warning ("Changing password mode of user %s to %d",
-                           user->user_name, mode);
+                daemon_local_log (daemon, context,
+                                  "change password mode of user '%s' (%d) to %d",
+                                  user->user_name, user->uid, mode);
 
                 if (mode == PASSWORD_MODE_SET_AT_LOGIN ||
                     mode == PASSWORD_MODE_NONE) {
@@ -1784,8 +1776,9 @@ user_change_password_authorized_cb (Daemon                *daemon,
         gchar *std_out, *std_err;
         gchar *cmdline;
 
-        g_warning ("Changing password of user %s, new hint: %s",
-                   user->user_name, strings[1]);
+        daemon_local_log (daemon, context,
+                          "set password and hint of user '%s' (%d)",
+                          user->user_name, user->uid);
 
         cmdline = g_strdup_printf ("/usr/sbin/usermod -p '%s' %s", strings[0], user->user_name);
 
@@ -1894,6 +1887,10 @@ user_change_automatic_login_authorized_cb (Daemon                *daemon,
 {
         gboolean enabled = GPOINTER_TO_INT (data);
         GError *error = NULL;
+
+        daemon_local_log (daemon, context,
+                          "%s automatic login for user '%s' (%d)",
+                          enabled ? "enable" : "disable", user->user_name, user->uid);
 
         if (!daemon_local_set_automatic_login (daemon, user, enabled, &error)) {
                 throw_error (context, ERROR_FAILED, "failed to change automatic login: %s", error->message);

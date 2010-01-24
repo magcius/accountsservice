@@ -28,6 +28,7 @@
 #include <pwd.h>
 #include <unistd.h>
 #include <errno.h>
+#include <syslog.h>
 
 #include <glib.h>
 #include <glib/gi18n.h>
@@ -89,7 +90,7 @@ struct DaemonPrivate {
         GHashTable *users;
         GHashTable *exclusions;
 
-	User *autologin;
+        User *autologin;
 
         GFileMonitor *passwd_monitor;
 
@@ -581,34 +582,34 @@ static gboolean load_autologin (Daemon    *daemon,
 static gboolean
 reload_autologin_timeout (Daemon *daemon)
 {
-	gboolean enabled;
-	gchar *name = NULL;
-	GError *error = NULL;
-	User *user;
+        gboolean enabled;
+        gchar *name = NULL;
+        GError *error = NULL;
+        User *user;
 
         daemon->priv->autologin_id = 0;
 
-	if (!load_autologin (daemon, &name, &enabled, &error)) {
-		g_warning ("failed to load gdms custom.conf: %s", error->message);
-		g_error_free (error);
-		g_free (name);
+        if (!load_autologin (daemon, &name, &enabled, &error)) {
+                g_warning ("failed to load gdms custom.conf: %s", error->message);
+                g_error_free (error);
+                g_free (name);
 
-		return FALSE;
-	}
+                return FALSE;
+        }
 
-	if (enabled) {
-		g_print ("automatic login is enabled for '%s'\n", name);
-		user = daemon_local_find_user_by_name (daemon, name);
-		g_object_set (user, "automatic-login", TRUE, NULL);
-		daemon->priv->autologin = g_object_ref (user);
-	}
-	else {
-		g_print ("automatic login is disabled\n");
-	}
+        if (enabled) {
+                g_print ("automatic login is enabled for '%s'\n", name);
+                user = daemon_local_find_user_by_name (daemon, name);
+                g_object_set (user, "automatic-login", TRUE, NULL);
+                daemon->priv->autologin = g_object_ref (user);
+        }
+        else {
+                g_print ("automatic login is disabled\n");
+        }
 
-	g_free (name);
+        g_free (name);
 
-	return FALSE;
+        return FALSE;
 }
 
 static void
@@ -687,7 +688,7 @@ daemon_init (Daemon *daemon)
         g_object_unref (file);
 
         queue_reload_users (daemon);
-	queue_reload_autologin (daemon);
+        queue_reload_autologin (daemon);
 }
 
 static void
@@ -770,6 +771,11 @@ daemon_new (void)
                 g_object_unref (daemon);
                 goto error;
         }
+
+        openlog ("accounts-daemon", LOG_PID, LOG_DAEMON);
+        syslog (LOG_INFO, "started daemon version %s", VERSION);
+        closelog ();
+        openlog ("accounts-daemon", 0, LOG_AUTHPRIV);
 
         return daemon;
 
@@ -965,6 +971,10 @@ daemon_create_user_authorized_cb (Daemon                *daemon,
                 return;
         }
 
+        daemon_local_log (daemon, context,
+                          "create user '%s'",
+                          cd->user_name);
+
         if (cd->account_type == ACCOUNT_TYPE_ADMINISTRATOR) {
                 grouparg = "-g desktop_admin_r";
         }
@@ -1059,6 +1069,10 @@ daemon_delete_user_authorized_cb (Daemon                *daemon,
         }
 
         name = g_strdup (user_local_get_user_name (user));
+
+        daemon_local_log (daemon, context,
+                          "delete user '%s' (%d)",
+                          name, ud->uid);
 
         cmdline = g_strdup_printf ("/usr/sbin/userdel %s%s", ud->remove_files ? "-r " : "", name);
 
@@ -1171,7 +1185,7 @@ check_auth_cb (PolkitAuthority *authority,
         }
 
         if (is_authorized) {
-        	(* cad->authorized_cb) (cad->daemon,
+                (* cad->authorized_cb) (cad->daemon,
                                         cad->user,
                                         cad->context,
                                         cad->data);
@@ -1226,48 +1240,48 @@ load_autologin (Daemon      *daemon,
                 gboolean    *enabled,
                 GError     **error)
 {
-	GKeyFile *keyfile;
-	const gchar *filename;
-	GError *local_error;
-	gchar *string;
+        GKeyFile *keyfile;
+        const gchar *filename;
+        GError *local_error;
+        gchar *string;
 
-	filename = "/etc/gdm/custom.conf";
+        filename = "/etc/gdm/custom.conf";
 
-	keyfile = g_key_file_new ();
-	if (!g_key_file_load_from_file (keyfile,
+        keyfile = g_key_file_new ();
+        if (!g_key_file_load_from_file (keyfile,
                                         filename,
                                         G_KEY_FILE_KEEP_COMMENTS,
                                         error)) {
-		g_key_file_free (keyfile);
-		return FALSE;
-	}
+                g_key_file_free (keyfile);
+                return FALSE;
+        }
 
-	local_error = NULL;
-	string = g_key_file_get_string (keyfile, "daemon", "AutomaticLoginEnable", &local_error);
-	if (local_error) {
-		g_propagate_error (error, local_error);
-		g_key_file_free (keyfile);
-		g_free (string);
-		return FALSE;
-	}
-	if (g_strcmp0 (string, "True") == 0) {
-		*enabled = TRUE;
-	}
-	else {
-		*enabled = FALSE;
-	}
-	g_free (string);
+        local_error = NULL;
+        string = g_key_file_get_string (keyfile, "daemon", "AutomaticLoginEnable", &local_error);
+        if (local_error) {
+                g_propagate_error (error, local_error);
+                g_key_file_free (keyfile);
+                g_free (string);
+                return FALSE;
+        }
+        if (g_strcmp0 (string, "True") == 0) {
+                *enabled = TRUE;
+        }
+        else {
+                *enabled = FALSE;
+        }
+        g_free (string);
 
-	*name = g_key_file_get_string (keyfile, "daemon", "AutomaticLogin", &local_error);
-	if (local_error) {
-		g_propagate_error (error, local_error);
-		g_key_file_free (keyfile);
-		return FALSE;
-	}
+        *name = g_key_file_get_string (keyfile, "daemon", "AutomaticLogin", &local_error);
+        if (local_error) {
+                g_propagate_error (error, local_error);
+                g_key_file_free (keyfile);
+                return FALSE;
+        }
 
-	g_key_file_free (keyfile);
+        g_key_file_free (keyfile);
 
-	return TRUE;
+        return TRUE;
 }
 
 static gboolean
@@ -1276,32 +1290,32 @@ save_autologin (Daemon      *daemon,
                 gboolean     enabled,
                 GError     **error)
 {
-	GKeyFile *keyfile;
-	const gchar *filename;
-	gchar *data;
-	gboolean result;
+        GKeyFile *keyfile;
+        const gchar *filename;
+        gchar *data;
+        gboolean result;
 
-	filename = "/etc/gdm/custom.conf";
+        filename = "/etc/gdm/custom.conf";
 
-	keyfile = g_key_file_new ();
-	if (!g_key_file_load_from_file (keyfile,
+        keyfile = g_key_file_new ();
+        if (!g_key_file_load_from_file (keyfile,
                                         filename,
                                         G_KEY_FILE_KEEP_COMMENTS,
                                         error)) {
-		g_key_file_free (keyfile);
-		return FALSE;
-	}
+                g_key_file_free (keyfile);
+                return FALSE;
+        }
 
-	g_key_file_set_string (keyfile, "daemon", "AutomaticLoginEnable", enabled ? "True" : "False");
-	g_key_file_set_string (keyfile, "daemon", "AutomaticLogin", name);
+        g_key_file_set_string (keyfile, "daemon", "AutomaticLoginEnable", enabled ? "True" : "False");
+        g_key_file_set_string (keyfile, "daemon", "AutomaticLogin", name);
 
-	data = g_key_file_to_data (keyfile, NULL, NULL);
-	result = g_file_set_contents (filename, data, -1, error);
+        data = g_key_file_to_data (keyfile, NULL, NULL);
+        result = g_file_set_contents (filename, data, -1, error);
 
-	g_key_file_free (keyfile);
-	g_free (data);
+        g_key_file_free (keyfile);
+        g_free (data);
 
-	return result;
+        return result;
 }
 
 gboolean
@@ -1315,12 +1329,12 @@ daemon_local_set_automatic_login (Daemon    *daemon,
         }
 
         if (!save_autologin (daemon, user_local_get_user_name (user), enabled, error)) {
-		return FALSE;
-	}
+                return FALSE;
+        }
 
         if (daemon->priv->autologin != NULL) {
                 g_object_set (daemon->priv->autologin, "automatic-login", FALSE, NULL);
-		g_signal_emit_by_name (daemon->priv->autologin, "changed", 0);
+                g_signal_emit_by_name (daemon->priv->autologin, "changed", 0);
                 g_object_unref (daemon->priv->autologin);
         }
 
@@ -1328,9 +1342,123 @@ daemon_local_set_automatic_login (Daemon    *daemon,
                 g_object_ref (user);
                 g_object_set (daemon->priv->autologin, "automatic-login", TRUE, NULL);
                 daemon->priv->autologin = user;
-		g_signal_emit_by_name (daemon->priv->autologin, "changed", 0);
+                g_signal_emit_by_name (daemon->priv->autologin, "changed", 0);
         }
 
-	return TRUE;
+        return TRUE;
+}
+
+static gchar *
+_polkit_subject_get_cmdline (PolkitSubject *subject, gint *pid, gint *uid)
+{
+  PolkitSubject *process;
+  gchar *ret;
+  gchar *filename;
+  gchar *contents;
+  gsize contents_len;
+  GError *error;
+  guint n;
+
+  g_return_val_if_fail (subject != NULL, NULL);
+
+  error = NULL;
+
+  ret = NULL;
+  process = NULL;
+  filename = NULL;
+  contents = NULL;
+
+  if (POLKIT_IS_UNIX_PROCESS (subject))
+   {
+      process = g_object_ref (subject);
+    }
+  else if (POLKIT_IS_SYSTEM_BUS_NAME (subject))
+    {
+      process = polkit_system_bus_name_get_process_sync (POLKIT_SYSTEM_BUS_NAME (subject),
+                                                         NULL,
+                                                         &error);
+      if (process == NULL)
+        {
+          g_warning ("Error getting process for system bus name `%s': %s",
+                     polkit_system_bus_name_get_name (POLKIT_SYSTEM_BUS_NAME (subject)),
+                     error->message);
+          g_error_free (error);
+          goto out;
+        }
+    }
+  else
+    {
+      g_warning ("Unknown subject type passed to guess_program_name()");
+      goto out;
+    }
+
+  *pid = polkit_unix_process_get_pid (POLKIT_UNIX_PROCESS (process));
+  *uid = polkit_unix_process_get_owner (POLKIT_UNIX_PROCESS (process), NULL);
+
+  filename = g_strdup_printf ("/proc/%d/cmdline", *pid);
+
+  if (!g_file_get_contents (filename,
+                            &contents,
+                            &contents_len,
+                            &error))
+    {
+      g_warning ("Error openeing `%s': %s",
+                 filename,
+                 error->message);
+      g_error_free (error);
+      goto out;
+    }
+  /* The kernel uses '\0' to separate arguments - replace those with a space. */
+  for (n = 0; n < contents_len - 1; n++)
+    {
+      if (contents[n] == '\0')
+        contents[n] = ' ';
+    }
+
+  ret = g_strdup (contents);
+  g_strstrip (ret);
+
+ out:
+  g_free (filename);
+  g_free (contents);
+  if (process != NULL)
+    g_object_unref (process);
+  return ret;
+}
+
+void daemon_local_log (Daemon                *daemon,
+                       DBusGMethodInvocation *context,
+                       const gchar           *format,
+                       ...)
+{
+        va_list args;
+        gchar *real_format;
+        gint pid;
+        gint uid;
+
+        if (context) {
+                PolkitSubject *subject;
+                gchar *cmdline;
+                gchar *id;
+
+                subject = polkit_system_bus_name_new (dbus_g_method_get_sender (context));
+                id = polkit_subject_to_string (subject);
+                cmdline = _polkit_subject_get_cmdline (subject, &pid, &uid);
+                if (cmdline == NULL) {
+                        cmdline = g_strdup ("<unknown>");
+                }
+
+                real_format = g_strdup_printf ("request by %s [%s pid:%d uid:%d]: %s", id, cmdline, pid, uid, format);
+
+                g_free (id);
+                g_free (cmdline);
+                g_object_unref (subject);
+        }
+
+        va_start (args, format);
+        vsyslog (LOG_NOTICE, real_format, args);
+        va_end (args);
+
+        g_free (real_format);
 }
 
