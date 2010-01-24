@@ -1052,12 +1052,10 @@ daemon_delete_user_authorized_cb (Daemon                *daemon,
 
 {
         DeleteUserData *ud = data;
-        User *user;
         gchar *cmdline;
         GError *error;
         gchar *std_err, *std_out;
         gint status;
-        gchar *name;
         gchar *filename;
         struct passwd *pwent;
 
@@ -1098,7 +1096,6 @@ daemon_delete_user_authorized_cb (Daemon                *daemon,
 
         g_free (filename);
         g_free (cmdline);
-        g_free (name);
 
         dbus_g_method_return (context);
 }
