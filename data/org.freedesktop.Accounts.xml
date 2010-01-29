@@ -17,7 +17,7 @@
           <doc:para>
             Lists users which have logged into the system locally before.
             This is not meant to return an exhaustive list of all users.
-            It is possible for <doc:ref type="method" to="FindUserByName">FindUserByName()</doc:ref>
+            It is possible for <doc:ref type="method" to="Accounts.FindUserByName">FindUserByName()</doc:ref>
             to return a user that's not on the list.
           </doc:para>
         </doc:description>
@@ -80,8 +80,17 @@
       </arg>
       <arg name="accountType" direction="in" type="i">
         <doc:doc>
-          <doc:summary>
-            The account type, encoded as an integer:
+          <doc:summary>The account type, encoded as an integer</doc:summary>
+        </doc:doc>
+      </arg>
+      <doc:doc>
+        <doc:description>
+          <doc:para>
+            Creates a new user account.
+          </doc:para>
+          <doc:para>
+          The accountType argument can take the following values:
+          </doc:para>
             <doc:list>
               <doc:item>
                 <doc:term>0</doc:term>
@@ -96,14 +105,6 @@
                 <doc:definition>Supervised user</doc:definition>
               </doc:item>
             </doc:list>
-          </doc:summary>
-        </doc:doc>
-      </arg>
-      <doc:doc>
-        <doc:description>
-          <doc:para>
-            Creates a new user account.
-          </doc:para>
         </doc:description>
         <doc:permission>
           The caller needs the org.freedesktop.accounts.user-administration PolicyKit authorization.
