@@ -28,11 +28,62 @@ GNOME_COMPILE_WARNINGS([maximum])
 GNOME_CXX_WARNINGS
 GNOME_MAINTAINER_MODE_DEFINES
 
+nl ---------------------------------------------------------------------------
+dnl - DocBook Documentation
+dnl ---------------------------------------------------------------------------
+
+AC_ARG_ENABLE(docbook-docs,
+        [AC_HELP_STRING([--enable-docbook-docs],
+                        [build documentation (requires xmlto)])],
+        enable_docbook_docs=$enableval,enable_docbook_docs=no)
+AC_PATH_PROG(XMLTO, xmlto, no)
+AC_MSG_CHECKING([whether to build DocBook documentation])
+if test x$XMLTO = xno ; then
+        have_docbook=no
+else
+        have_docbook=yes
+fi
+if test x$enable_docbook_docs = xauto ; then
+        if test x$have_docbook = xno ; then
+                enable_docbook_docs=no
+        else
+                enable_docbook_docs=yes
+        fi
+fi
+if test x$enable_docbook_docs = xyes; then
+        if test x$have_docbook = xno; then
+                AC_MSG_ERROR([Building DocBook docs explicitly required, but DocBook not found])
+        fi
+fi
+AM_CONDITIONAL(DOCBOOK_DOCS_ENABLED, test x$enable_docbook_docs = xyes)
+AC_MSG_RESULT(yes)
+AC_ARG_VAR([XMLTO],[Define/override the 'xmlto' location.])
+AC_ARG_VAR([XMLTO_FLAGS],[Define/override 'xmlto' options, like '--skip-validation'.])
+
+dnl ---------------------------------------------------------------------------
+dnl Check for xsltproc
+dnl ---------------------------------------------------------------------------
+AC_PATH_PROG([XSLTPROC], [xsltproc])
+
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES([
 Makefile
 po/Makefile.in
 data/Makefile
 src/Makefile
+doc/Makefile
+doc/dbus/Makefile
+doc/dbus/AccountsService.xml
 ])
 AC_OUTPUT
+
+echo
+AC_MSG_NOTICE([accountsservice was configured with the following options:])
+if test "x$enable_docbook_docs" = "xyes"; then
+        AC_MSG_NOTICE([** DocBook documentation build enabled])
+else
+        AC_MSG_NOTICE([** DocBook documentation build disabled])
+fi
+echo
+
+

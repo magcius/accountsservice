@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook XML V4.1.2//EN" "http://www.oasis-open.org/docbook/xml/4.1.2/docbookx.dtd" [
+<!ENTITY dbus-Accounts SYSTEM "@srcdir@/org.freedesktop.Accounts.ref.xml">
+<!ENTITY dbus-User SYSTEM "@srcdir@/org.freedesktop.Accounts.User.ref.xml">
+]>
+
+<book id="index">
+  <bookinfo>
+    <title>AccountsService @VERSION@ Documentation</title>
+    <releaseinfo>Version @VERSION@</releaseinfo>
+    <authorgroup>
+      <author>
+        <firstname>Matthias</firstname>
+        <surname>Clasen</surname>
+        <affiliation>
+          <address>
+            <email>mclasen@redhat.com</email>
+          </address>
+        </affiliation>
+      </author>
+    </authorgroup>
+  </bookinfo>
+
+<!--
+  <preface>
+    <title>Introduction</title>
+    <para>
+    </para>
+  </preface>
+
+  <part>
+    <title>Concepts</title>
+    <para>
+    </para>
+  </part>
+-->
+
+  <part>
+    <title>Reference</title>
+
+    <reference id="dbus-reference">
+      <title>D-Bus API Reference</title>
+
+      <partintro>
+        <para>
+        The AccountsService provides a D-Bus API for programs to obtain
+        information about user accounts that are present on a system.
+        </para>
+        <para>
+        Please see the other sections of this manual for an introduction to
+        these concepts.
+        </para>
+        <para>
+        This API is not yet stable and is likely to change in the future.
+        </para>
+      </partintro>
+
+      &dbus-Accounts;
+      &dbus-User;
+
+    </reference>
+  </part>
+
+  <index>
+    <title>Index</title>
+  </index>
+
+</book>
