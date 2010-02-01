@@ -917,19 +917,66 @@ enumerate_cb (gpointer key,
         g_ptr_array_add (object_paths, g_strdup (user_local_get_object_path (user)));
 }
 
+typedef struct {
+        Daemon *daemon;
+        DBusGMethodInvocation *context;
+} ListUserData;
+
+ListUserData *
+list_user_data_new (Daemon                *daemon,
+                    DBusGMethodInvocation *context)
+{
+        ListUserData *data;
+
+        data = g_new0 (ListUserData, 1);
+
+        data->daemon = g_object_ref (daemon);
+        data->context = context;
+
+        return data;
+}
+
+static void
+list_user_data_free (ListUserData *data)
+{
+        g_object_unref (data->daemon);
+        g_free (data);
+}
+
+static gboolean
+finish_list_cached_users (gpointer user_data)
+{
+        ListUserData *data = user_data;
+        GPtrArray *object_paths;
+
+        object_paths = g_ptr_array_new ();
+        g_hash_table_foreach (data->daemon->priv->users, enumerate_cb, object_paths);
+
+        dbus_g_method_return (data->context, object_paths);
+
+        g_ptr_array_foreach (object_paths, (GFunc) g_free, NULL);
+        g_ptr_array_free (object_paths, TRUE);
+
+        list_user_data_free (data);
+
+        return FALSE;
+}
+
 gboolean
 daemon_list_cached_users (Daemon                *daemon,
                           DBusGMethodInvocation *context)
 {
-        GPtrArray *object_paths;
+        ListUserData *data;
 
-        object_paths = g_ptr_array_new ();
-        g_hash_table_foreach (daemon->priv->users, enumerate_cb, object_paths);
+        data = list_user_data_new (daemon, context);
 
-        dbus_g_method_return (context, object_paths);
-
-        g_ptr_array_foreach (object_paths, (GFunc) g_free, NULL);
-        g_ptr_array_free (object_paths, TRUE);
+        if (daemon->priv->reload_id > 0) {
+                /* reload in progress, wait */
+                g_idle_add (finish_list_cached_users, data);
+        }
+        else {
+                finish_list_cached_users (data);
+        }
 
         return TRUE;
 }
