@@ -922,7 +922,7 @@ typedef struct {
         DBusGMethodInvocation *context;
 } ListUserData;
 
-ListUserData *
+static ListUserData *
 list_user_data_new (Daemon                *daemon,
                     DBusGMethodInvocation *context)
 {
@@ -1006,11 +1006,10 @@ daemon_create_user_authorized_cb (Daemon                *daemon,
 {
         CreateUserData *cd = data;
         User *user;
-        gchar *cmdline;
         GError *error;
         gchar *std_err, *std_out;
         gint status;
-        const gchar *grouparg;
+        gchar *argv[8];
 
         if (getpwnam (cd->user_name) != NULL) {
                 throw_error (context, ERROR_USER_EXISTS, "A user with name '%s' already exists", cd->user_name);
@@ -1022,22 +1021,32 @@ daemon_create_user_authorized_cb (Daemon                *daemon,
                           "create user '%s'",
                           cd->user_name);
 
+        argv[0] = "/usr/sbin/useradd";
+        argv[1] = "-m";
+        argv[2] = "-c";
+        argv[3] = cd->real_name;
         if (cd->account_type == ACCOUNT_TYPE_ADMINISTRATOR) {
-                grouparg = "-G desktop_admin_r";
+                argv[4] = "-G";
+                argv[5] = "desktop_admin_r";
+                argv[6] = cd->user_name;
+                argv[7] = NULL;
         }
         else if (cd->account_type == ACCOUNT_TYPE_STANDARD) {
-                grouparg = "-G desktop_user_r";
+                argv[4] = "-G";
+                argv[5] = "desktop_user_r";
+                argv[6] = cd->user_name;
+                argv[7] = NULL;
         }
         else {
-                grouparg = "";
+                argv[4] = cd->user_name;
+                argv[5] = NULL;
         }
-        cmdline = g_strdup_printf ("/usr/sbin/useradd -m -c '%s' %s %s", cd->real_name, grouparg, cd->user_name);
 
         std_out = NULL;
         std_err = NULL;
         error = NULL;
-        if (!g_spawn_command_line_sync (cmdline, &std_out, &std_err, &status, &error)) {
-                throw_error (context, ERROR_FAILED, "running '%s' failed: %s", cmdline, error->message);
+        if (!g_spawn_sync (NULL, argv, NULL, 0, NULL, NULL, &std_out, &std_err, &status, &error)) {
+                throw_error (context, ERROR_FAILED, "running '%s' failed: %s", argv[0], error->message);
                 g_error_free (error);
                 g_free (std_out);
                 g_free (std_err);
@@ -1051,7 +1060,6 @@ daemon_create_user_authorized_cb (Daemon                *daemon,
                 return;
         }
 
-        g_free (cmdline);
         g_free (std_out);
         g_free (std_err);
 
@@ -1099,12 +1107,12 @@ daemon_delete_user_authorized_cb (Daemon                *daemon,
 
 {
         DeleteUserData *ud = data;
-        gchar *cmdline;
         GError *error;
         gchar *std_err, *std_out;
         gint status;
         gchar *filename;
         struct passwd *pwent;
+        gchar *argv[4];
 
         pwent = getpwuid (ud->uid);
 
@@ -1118,13 +1126,22 @@ daemon_delete_user_authorized_cb (Daemon                *daemon,
                           "delete user '%s' (%d)",
                           pwent->pw_name, ud->uid);
 
-        cmdline = g_strdup_printf ("/usr/sbin/userdel %s%s", ud->remove_files ? "-r " : "", pwent->pw_name);
+        argv[0] = "/usr/sbin/userdel";
+        if (ud->remove_files) {
+                argv[1] = "-r";
+                argv[2] = pwent->pw_name;
+                argv[3] = NULL;
+        }
+        else {
+                argv[1] = pwent->pw_name;
+                argv[2] = NULL;
+        }
 
         std_out = NULL;
         std_err = NULL;
         error = NULL;
-        if (!g_spawn_command_line_sync (cmdline, &std_out, &std_err, &status, &error)) {
-                throw_error (context, ERROR_FAILED, "running '%s' failed: %s", cmdline, error->message);
+        if (!g_spawn_sync (NULL, argv, NULL, 0, NULL, NULL, &std_out, &std_err, &status, &error)) {
+                throw_error (context, ERROR_FAILED, "running '%s' failed: %s", argv[0], error->message);
                 g_error_free (error);
                 g_free (std_out);
                 g_free (std_err);
@@ -1142,7 +1159,6 @@ daemon_delete_user_authorized_cb (Daemon                *daemon,
         g_remove (filename);
 
         g_free (filename);
-        g_free (cmdline);
 
         dbus_g_method_return (context);
 }

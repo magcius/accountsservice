@@ -737,20 +737,24 @@ user_change_real_name_authorized_cb (Daemon                *daemon,
         GError *error;
         gint status;
         gchar *std_out, *std_err;
-        gchar *cmdline;
+        gchar *argv[5];
 
         if (g_strcmp0 (user->real_name, name) != 0) {
                 daemon_local_log (daemon, context,
                                   "change real name of user '%s' (%d) to '%s'",
                                   user->user_name, user->uid, name);
 
-                cmdline = g_strdup_printf ("/usr/sbin/usermod -c '%s' %s", name, user->user_name);
+                argv[0] = "/usr/sbin/usermod";
+                argv[1] = "-c";
+                argv[2] = name;
+                argv[3] = user->user_name;
+                argv[4] = NULL;
 
                 std_out = NULL;
                 std_err = NULL;
                 error = NULL;
-                if (!g_spawn_command_line_sync (cmdline, &std_out, &std_err, &status, &error)) {
-                        throw_error (context, ERROR_FAILED, "running '%s' failed: %s", cmdline, error->message);
+                if (!g_spawn_sync (NULL, argv, NULL, 0, NULL, NULL, &std_out, &std_err, &status, &error)) {
+                        throw_error (context, ERROR_FAILED, "running '%s' failed: %s", argv[0], error->message);
                         g_error_free (error);
                         g_free (std_out);
                         g_free (std_err);
@@ -761,13 +765,11 @@ user_change_real_name_authorized_cb (Daemon                *daemon,
                         throw_error (context, ERROR_FAILED, "usermod returned an error: %s", std_err);
                         g_free (std_out);
                         g_free (std_err);
-                        g_free (cmdline);
                         return;
                 }
 
                 g_free (std_out);
                 g_free (std_err);
-                g_free (cmdline);
 
                 g_free (user->real_name);
                 user->real_name = g_strdup (name);
@@ -831,7 +833,7 @@ user_change_user_name_authorized_cb (Daemon                *daemon,
         GError *error;
         gint status;
         gchar *std_out, *std_err;
-        gchar *cmdline;
+        gchar *argv[5];
 
         if (g_strcmp0 (user->user_name, name) != 0) {
                 old_name = g_strdup (user->user_name);
@@ -839,13 +841,17 @@ user_change_user_name_authorized_cb (Daemon                *daemon,
                                   "change name of user '%s' (%d) to '%s'",
                                   old_name, user->uid, name);
 
-                cmdline = g_strdup_printf ("/usr/sbin/usermod -l %s %s", name, user->user_name);
+                argv[0] = "/usr/sbin/usermod";
+                argv[1] = "-l";
+                argv[2] = name;
+                argv[3] = user->user_name;
+                argv[4] = NULL;
 
                 std_out = NULL;
                 std_err = NULL;
                 error = NULL;
-                if (!g_spawn_command_line_sync (cmdline, &std_out, &std_err, &status, &error)) {
-                        throw_error (context, ERROR_FAILED, "running '%s' failed: %s", cmdline, error->message);
+                if (!g_spawn_sync (NULL, argv, NULL, 0, NULL, NULL, &std_out, &std_err, &status, &error)) {
+                        throw_error (context, ERROR_FAILED, "running '%s' failed: %s", argv[0], error->message);
                         g_error_free (error);
                         g_free (std_out);
                         g_free (std_err);
@@ -856,13 +862,11 @@ user_change_user_name_authorized_cb (Daemon                *daemon,
                         throw_error (context, ERROR_FAILED, "usermod returned an error: %s", std_err);
                         g_free (std_out);
                         g_free (std_err);
-                        g_free (cmdline);
                         return;
                 }
 
                 g_free (std_out);
                 g_free (std_err);
-                g_free (cmdline);
 
                 g_free (user->user_name);
                 user->user_name = g_strdup (name);
@@ -1118,19 +1122,25 @@ user_change_home_dir_authorized_cb (Daemon                *daemon,
         GError *error;
         gint status;
         gchar *std_out, *std_err;
-        gchar *cmdline;
+        gchar *argv[6];
 
         if (g_strcmp0 (user->home_dir, home_dir) != 0) {
                 daemon_local_log (daemon, context,
                                   "change home directory of user '%s' (%d) to '%s'",
                                   user->user_name, user->uid, home_dir);
-                cmdline = g_strdup_printf ("/usr/sbin/usermod -m -d '%s' %s", home_dir, user->user_name);
+
+                argv[0] = "/usr/sbin/usermod";
+                argv[1] = "-m";
+                argv[2] = "-d";
+                argv[3] = home_dir;
+                argv[4] = user->user_name;
+                argv[5] = NULL;
 
                 std_out = NULL;
                 std_err = NULL;
                 error = NULL;
-                if (!g_spawn_command_line_sync (cmdline, &std_out, &std_err, &status, &error)) {
-                        throw_error (context, ERROR_FAILED, "running '%s' failed: %s", cmdline, error->message);
+                if (!g_spawn_sync (NULL, argv, NULL, 0, NULL, NULL, &std_out, &std_err, &status, &error)) {
+                        throw_error (context, ERROR_FAILED, "running '%s' failed: %s", argv[0], error->message);
                         g_error_free (error);
                         g_free (std_out);
                         g_free (std_err);
@@ -1141,13 +1151,11 @@ user_change_home_dir_authorized_cb (Daemon                *daemon,
                         throw_error (context, ERROR_FAILED, "usermod returned an error: %s", std_err);
                         g_free (std_out);
                         g_free (std_err);
-                        g_free (cmdline);
                         return;
                 }
 
                 g_free (std_out);
                 g_free (std_err);
-                g_free (cmdline);
 
                 g_free (user->home_dir);
                 user->home_dir = g_strdup (home_dir);
@@ -1159,6 +1167,7 @@ user_change_home_dir_authorized_cb (Daemon                *daemon,
 
         dbus_g_method_return (context);
 }
+
 gboolean
 user_set_home_directory (User                  *user,
                          const gchar           *home_dir,
@@ -1206,20 +1215,24 @@ user_change_shell_authorized_cb (Daemon                *daemon,
         GError *error;
         gint status;
         gchar *std_out, *std_err;
-        gchar *cmdline;
+        gchar *argv[5];
 
         if (g_strcmp0 (user->shell, shell) != 0) {
                 daemon_local_log (daemon, context,
                                   "change shell of user '%s' (%d) to '%s'",
                                   user->user_name, user->uid, shell);
 
-                cmdline = g_strdup_printf ("/usr/sbin/usermod -s '%s' %s", shell, user->user_name);
+                argv[0] = "/usr/sbin/usermod";
+                argv[1] = "-s";
+                argv[2] = shell;
+                argv[3] = user->user_name;
+                argv[4] = NULL;
 
                 std_out = NULL;
                 std_err = NULL;
                 error = NULL;
-                if (!g_spawn_command_line_sync (cmdline, &std_out, &std_err, &status, &error)) {
-                        throw_error (context, ERROR_FAILED, "running '%s' failed: %s", cmdline, error->message);
+                if (!g_spawn_sync (NULL, argv, NULL, 0, NULL, NULL, &std_out, &std_err, &status, &error)) {
+                        throw_error (context, ERROR_FAILED, "running '%s' failed: %s", argv[0], error->message);
                         g_error_free (error);
                         g_free (std_out);
                         g_free (std_err);
@@ -1230,13 +1243,11 @@ user_change_shell_authorized_cb (Daemon                *daemon,
                         throw_error (context, ERROR_FAILED, "usermod returned an error: %s", std_err);
                         g_free (std_out);
                         g_free (std_err);
-                        g_free (cmdline);
                         return;
                 }
 
                 g_free (std_out);
                 g_free (std_err);
-                g_free (cmdline);
 
                 g_free (user->shell);
                 user->shell = g_strdup (shell);
@@ -1475,19 +1486,22 @@ user_change_locked_authorized_cb (Daemon                *daemon,
         GError *error;
         gint status;
         gchar *std_out, *std_err;
-        gchar *cmdline;
+        gchar *argv[4];
 
         if (user->locked != locked) {
                 daemon_local_log (daemon, context,
                                   "%s account of user '%s' (%d)",
                                   locked ? "locking" : "unlocking", user->user_name, user->uid);
-                cmdline = g_strdup_printf ("/usr/sbin/usermod -%c %s", locked ? 'L' : 'U',  user->user_name);
+                argv[0] = "/usr/sbin/usermod";
+                argv[1] = locked ? "-L" : "-U";
+                argv[2] = user->user_name;
+                argv[3] = NULL;
 
                 std_out = NULL;
                 std_err = NULL;
                 error = NULL;
-                if (!g_spawn_command_line_sync (cmdline, &std_out, &std_err, &status, &error)) {
-                        throw_error (context, ERROR_FAILED, "running '%s' failed: %s", cmdline, error->message);
+                if (!g_spawn_sync (NULL, argv, NULL, 0, NULL, NULL, &std_out, &std_err, &status, &error)) {
+                        throw_error (context, ERROR_FAILED, "running '%s' failed: %s", argv[0], error->message);
                         g_error_free (error);
                         g_free (std_out);
                         g_free (std_err);
@@ -1498,13 +1512,11 @@ user_change_locked_authorized_cb (Daemon                *daemon,
                         throw_error (context, ERROR_FAILED, "usermod returned an error: %s", std_err);
                         g_free (std_out);
                         g_free (std_err);
-                        g_free (cmdline);
                         return;
                 }
 
                 g_free (std_out);
                 g_free (std_err);
-                g_free (cmdline);
 
                 user->locked = locked;
 
@@ -1544,7 +1556,6 @@ user_change_account_type_authorized_cb (Daemon                *daemon,
         GError *error;
         gint status;
         gchar *std_out, *std_err;
-        gchar *cmdline;
         gid_t groups[20];
         gint n_groups;
         GString *str;
@@ -1552,6 +1563,7 @@ user_change_account_type_authorized_cb (Daemon                *daemon,
         gid_t desktop_admin_r;
         struct group *grp;
         gint i;
+        gchar *argv[5];
 
         if (user->account_type != account_type) {
                 daemon_local_log (daemon, context,
@@ -1596,13 +1608,19 @@ user_change_account_type_authorized_cb (Daemon                *daemon,
                         g_string_truncate (str, str->len - 1);
                 }
 
-                cmdline = g_strdup_printf ("/usr/sbin/usermod -G %s %s", str->str, user->user_name);
+                argv[0] = "/usr/sbin/usermod";
+                argv[1] = "-G";
+                argv[2] = str->str;
+                argv[3] = user->user_name;
+                argv[4] = NULL;
+
+                g_string_free (str, FALSE);
 
                 std_out = NULL;
                 std_err = NULL;
                 error = NULL;
-                if (!g_spawn_command_line_sync (cmdline, &std_out, &std_err, &status, &error)) {
-                        throw_error (context, ERROR_FAILED, "running '%s' failed: %s", cmdline, error->message);
+                if (!g_spawn_sync (NULL, argv, NULL, 0, NULL, NULL, &std_out, &std_err, &status, &error)) {
+                        throw_error (context, ERROR_FAILED, "running '%s' failed: %s", argv[0], error->message);
                         g_error_free (error);
                         g_free (std_out);
                         g_free (std_err);
@@ -1613,13 +1631,11 @@ user_change_account_type_authorized_cb (Daemon                *daemon,
                         throw_error (context, ERROR_FAILED, "usermod returned an error: %s", std_err);
                         g_free (std_out);
                         g_free (std_err);
-                        g_free (cmdline);
                         return;
                 }
 
                 g_free (std_out);
                 g_free (std_err);
-                g_free (cmdline);
 
                 user->account_type = account_type;
 
@@ -1664,7 +1680,7 @@ user_change_password_mode_authorized_cb (Daemon                *daemon,
         GError *error;
         gint status;
         gchar *std_out, *std_err;
-        gchar *cmdline;
+        gchar *argv[4];
 
         if (user->password_mode != mode) {
                 daemon_local_log (daemon, context,
@@ -1674,13 +1690,16 @@ user_change_password_mode_authorized_cb (Daemon                *daemon,
                 if (mode == PASSWORD_MODE_SET_AT_LOGIN ||
                     mode == PASSWORD_MODE_NONE) {
 
-                        cmdline = g_strdup_printf ("/usr/bin/passwd -d %s", user->user_name);
+                        argv[0] = "/usr/bin/passwd";
+                        argv[1] = "-d";
+                        argv[2] = user->user_name;
+                        argv[3] = NULL;
 
                         std_out = NULL;
                         std_err = NULL;
                         error = NULL;
-                        if (!g_spawn_command_line_sync (cmdline, &std_out, &std_err, &status, &error)) {
-                                throw_error (context, ERROR_FAILED, "running '%s' failed: %s", cmdline, error->message);
+                        if (!g_spawn_sync (NULL, argv, NULL, 0, NULL, NULL, &std_out, &std_err, &status, &error)) {
+                                throw_error (context, ERROR_FAILED, "running '%s' failed: %s", argv[0], error->message);
                                 g_error_free (error);
                                 g_free (std_out);
                                 g_free (std_err);
@@ -1691,13 +1710,11 @@ user_change_password_mode_authorized_cb (Daemon                *daemon,
                                 throw_error (context, ERROR_FAILED, "usermod returned an error: %s", std_err);
                                 g_free (std_out);
                                 g_free (std_err);
-                                g_free (cmdline);
                                 return;
                         }
 
                         g_free (std_out);
                         g_free (std_err);
-                        g_free (cmdline);
 
                         g_free (user->password_hint);
                         user->password_hint = NULL;
@@ -1774,19 +1791,23 @@ user_change_password_authorized_cb (Daemon                *daemon,
         GError *error;
         gint status;
         gchar *std_out, *std_err;
-        gchar *cmdline;
+        gchar *argv[5];
 
         daemon_local_log (daemon, context,
                           "set password and hint of user '%s' (%d)",
                           user->user_name, user->uid);
 
-        cmdline = g_strdup_printf ("/usr/sbin/usermod -p '%s' %s", strings[0], user->user_name);
+        argv[0] = "/usr/sbin/usermod";
+        argv[1] = "-p";
+        argv[2] = strings[0];
+        argv[3] = user->user_name;
+        argv[4] = NULL;
 
         std_out = NULL;
         std_err = NULL;
         error = NULL;
-        if (!g_spawn_command_line_sync (cmdline, &std_out, &std_err, &status, &error)) {
-                throw_error (context, ERROR_FAILED, "running '%s' failed: %s", cmdline, error->message);
+        if (!g_spawn_sync (NULL, argv, NULL, 0, NULL, NULL, &std_out, &std_err, &status, &error)) {
+                throw_error (context, ERROR_FAILED, "running '%s' failed: %s", argv[0], error->message);
                 g_error_free (error);
                 g_free (std_out);
                 g_free (std_err);
@@ -1797,13 +1818,11 @@ user_change_password_authorized_cb (Daemon                *daemon,
                 throw_error (context, ERROR_FAILED, "usermod returned an error: %s", std_err);
                 g_free (std_out);
                 g_free (std_err);
-                g_free (cmdline);
                 return;
         }
 
         g_free (std_out);
         g_free (std_err);
-        g_free (cmdline);
 
         if (user->password_mode != PASSWORD_MODE_REGULAR) {
                 user->password_mode = PASSWORD_MODE_REGULAR;
