@@ -1,0 +1,6 @@
+Changes in 0.5
+==============
+
+* Make initial user list call work
+
+* Avoid extraneous commandline parsing
