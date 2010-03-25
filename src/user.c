@@ -425,7 +425,11 @@ user_local_update_from_pwent (User          *user,
 {
         struct spwd *spent;
         gchar *real_name;
+        gboolean changed;
+
         g_object_freeze_notify (G_OBJECT (user));
+
+        changed = FALSE;
 
         if (pwent->pw_gecos && pwent->pw_gecos[0] != '\0') {
                 gchar *first_comma = NULL;
@@ -463,6 +467,7 @@ user_local_update_from_pwent (User          *user,
         if (g_strcmp0 (real_name, user->real_name) != 0) {
                 g_free (user->real_name);
                 user->real_name = real_name;
+                changed = TRUE;
                 g_object_notify (G_OBJECT (user), "real-name");
         }
         else {
@@ -472,6 +477,7 @@ user_local_update_from_pwent (User          *user,
         /* UID */
         if (pwent->pw_uid != user->uid) {
                 user->uid = pwent->pw_uid;
+                changed = TRUE;
                 g_object_notify (G_OBJECT (user), "uid");
         }
 
@@ -484,6 +490,7 @@ user_local_update_from_pwent (User          *user,
         if (g_strcmp0 (user->user_name, pwent->pw_name) != 0) {
                 g_free (user->user_name);
                 user->user_name = g_strdup (pwent->pw_name);
+                changed = TRUE;
                 g_object_notify (G_OBJECT (user), "user-name");
         }
 
@@ -491,6 +498,7 @@ user_local_update_from_pwent (User          *user,
         if (g_strcmp0 (user->home_dir, pwent->pw_dir) != 0) {
                 g_free (user->home_dir);
                 user->home_dir = g_strdup (pwent->pw_dir);
+                changed = TRUE;
                 g_object_notify (G_OBJECT (user), "home-directory");
         }
 
@@ -498,6 +506,7 @@ user_local_update_from_pwent (User          *user,
         if (g_strcmp0 (user->shell, pwent->pw_shell) != 0) {
                 g_free (user->shell);
                 user->shell = g_strdup (pwent->pw_shell);
+                changed = TRUE;
                 g_object_notify (G_OBJECT (user), "shell");
         }
 
@@ -508,17 +517,22 @@ user_local_update_from_pwent (User          *user,
         if (pwent->pw_passwd && pwent->pw_passwd[0] == '!') {
                 if (!user->locked) {
                         user->locked = TRUE;
+                        changed = TRUE;
                         g_object_notify (G_OBJECT (user), "locked");
                 }
         }
         else {
                 if (user->locked) {
                         user->locked = FALSE;
+                        changed = TRUE;
                         g_object_notify (G_OBJECT (user), "locked");
                 }
         }
 
         g_object_thaw_notify (G_OBJECT (user));
+
+        if (changed)
+                g_signal_emit (user, signals[CHANGED], 0);
 }
 
 void

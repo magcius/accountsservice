@@ -43,6 +43,7 @@
 #include "daemon-glue.h"
 
 #define PATH_PASSWD "/etc/passwd"
+#define PATH_SHADOW "/etc/shadow"
 #define MINIMAL_UID 500
 
 static const char *default_excludes[] = {
@@ -93,6 +94,7 @@ struct DaemonPrivate {
         User *autologin;
 
         GFileMonitor *passwd_monitor;
+        GFileMonitor *shadow_monitor;
 
         guint reload_id;
         guint ck_history_id;
@@ -675,9 +677,17 @@ daemon_init (Daemon *daemon)
                                                      (GDestroyNotify) g_object_unref);
         file = g_file_new_for_path (PATH_PASSWD);
         daemon->priv->passwd_monitor = g_file_monitor_file (file,
-                                                             G_FILE_MONITOR_NONE,
-                                                             NULL,
-                                                             &error);
+                                                            G_FILE_MONITOR_NONE,
+                                                            NULL,
+                                                            &error);
+        g_object_unref (file);
+        file = g_file_new_for_path (PATH_SHADOW);
+        daemon->priv->shadow_monitor = g_file_monitor_file (file,
+                                                            G_FILE_MONITOR_NONE,
+                                                            NULL,
+                                                            &error);
+        g_object_unref (file);
+
         if (daemon->priv->passwd_monitor != NULL) {
                 g_signal_connect (daemon->priv->passwd_monitor,
                                   "changed",
@@ -687,7 +697,15 @@ daemon_init (Daemon *daemon)
                 g_warning ("Unable to monitor %s: %s", PATH_PASSWD, error->message);
                 g_error_free (error);
         }
-        g_object_unref (file);
+        if (daemon->priv->shadow_monitor != NULL) {
+                g_signal_connect (daemon->priv->shadow_monitor,
+                                  "changed",
+                                  G_CALLBACK (on_passwd_monitor_changed),
+                                  daemon);
+        } else {
+                g_warning ("Unable to monitor %s: %s", PATH_SHADOW, error->message);
+                g_error_free (error);
+       } 
 
         queue_reload_users (daemon);
         queue_reload_autologin (daemon);
