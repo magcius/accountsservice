@@ -427,6 +427,9 @@ user_local_update_from_pwent (User          *user,
         struct spwd *spent;
         gchar *real_name;
         gboolean changed;
+        const gchar *passwd;
+        gboolean locked;
+        gint mode;
 
         g_object_freeze_notify (G_OBJECT (user));
 
@@ -511,23 +514,41 @@ user_local_update_from_pwent (User          *user,
                 g_object_notify (G_OBJECT (user), "shell");
         }
 
+        passwd = pwent->pw_passwd;
         spent = getspnam (pwent->pw_name);
         if (spent)
-                pwent->pw_passwd = spent->sp_pwdp;
+                passwd = spent->sp_pwdp;
 
-        if (pwent->pw_passwd && pwent->pw_passwd[0] == '!') {
-                if (!user->locked) {
-                        user->locked = TRUE;
-                        changed = TRUE;
-                        g_object_notify (G_OBJECT (user), "locked");
-                }
+        if (passwd && passwd[0] == '!') {
+                locked = TRUE;
         }
         else {
-                if (user->locked) {
-                        user->locked = FALSE;
-                        changed = TRUE;
-                        g_object_notify (G_OBJECT (user), "locked");
+                locked = FALSE;
+        }
+
+        if (user->locked != locked) {
+                user->locked = locked;
+                changed = TRUE;
+                g_object_notify (G_OBJECT (user), "locked");
+        }
+
+        if (passwd[0] == 0) {
+                mode = PASSWORD_MODE_NONE;
+        }
+        else {
+                mode = PASSWORD_MODE_REGULAR;
+        }
+
+        if (spent) {
+                if (spent->sp_lstchg == 0) {
+                        mode = PASSWORD_MODE_SET_AT_LOGIN;
                 }
+        }
+
+        if (user->password_mode != mode) {
+                user->password_mode = mode;
+                changed = TRUE;
+                g_object_notify (G_OBJECT (user), "password-mode");
         }
 
         g_object_thaw_notify (G_OBJECT (user));
@@ -575,18 +596,6 @@ user_local_update_from_keyfile (User     *user,
                 user->icon_file = s;
         }
 
-        s = g_key_file_get_string (keyfile, "User", "PasswordMode", NULL);
-        if (s != NULL) {
-                if (strcmp (s, "SetAtLogin") == 0)
-                        user->password_mode = PASSWORD_MODE_SET_AT_LOGIN;
-                else if (strcmp (s, "None") == 0)
-                        user->password_mode = PASSWORD_MODE_NONE;
-                else
-                        user->password_mode = PASSWORD_MODE_REGULAR;
-        }
-        else
-                user->password_mode = PASSWORD_MODE_REGULAR;
-
         g_object_thaw_notify (G_OBJECT (user));
 }
 
@@ -608,16 +617,6 @@ user_local_save_to_keyfile (User     *user,
 
         if (user->icon_file)
                 g_key_file_set_string (keyfile, "User", "Icon", user->icon_file);
-
-        switch (user->password_mode) {
-        case PASSWORD_MODE_SET_AT_LOGIN:
-                g_key_file_set_string (keyfile, "User", "PasswordMode", "SetAtLogin");
-                break;
-        case PASSWORD_MODE_NONE:
-                g_key_file_set_string (keyfile, "User", "PasswordMode", "None");
-                break;
-        default: ;
-        }
 }
 
 static void
@@ -1624,7 +1623,7 @@ user_change_password_mode_authorized_cb (Daemon                *daemon,
 {
         gint mode = GPOINTER_TO_INT (data);
         GError *error;
-        gchar *argv[4];
+        gchar *argv[5];
 
         if (user->password_mode != mode) {
                 sys_log (context,
@@ -1646,6 +1645,21 @@ user_change_password_mode_authorized_cb (Daemon                *daemon,
                                 throw_error (context, ERROR_FAILED, "running '%s' failed: %s", argv[0], error->message);
                                 g_error_free (error);
                                 return;
+                        }
+
+                        if (mode == PASSWORD_MODE_SET_AT_LOGIN) {
+                                argv[0] = "/usr/bin/chage";
+                                argv[1] = "-d";
+                                argv[2] = "0";
+                                argv[3] = user->user_name;
+                                argv[4] = NULL;
+
+                                error = NULL;
+                                if (!spawn_with_login_uid (context, argv, &error)) {
+                                        throw_error (context, ERROR_FAILED, "running '%s' failed: %s", argv[0], error->message);
+                                        g_error_free (error);
+                                        return;
+                                }
                         }
 
                         g_free (user->password_hint);
