@@ -504,16 +504,13 @@
         <doc:para>
           Sets a new password for this user.
         </doc:para>
-        <doc:para>
-          Users are always allowed to change their own password.
-        </doc:para>
       </doc:description>
       <doc:permission>
         The caller needs one of the following PolicyKit authorizations:
         <doc:list>
           <doc:item>
             <doc:term>org.freedesktop.accounts.user-administration</doc:term>
-            <doc:definition>To change the password of another user</doc:definition>
+            <doc:definition>To change the password of a user</doc:definition>
           </doc:item>
         </doc:list>
       </doc:permission>

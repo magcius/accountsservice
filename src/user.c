@@ -1876,24 +1876,14 @@ user_set_password (User                  *user,
         data[1] = g_strdup (hint);
         data[2] = NULL;
 
-        if (user->uid == uid) {
-                user_change_password_authorized_cb (user->daemon,
-                                                    user,
-                                                    context,
-                                                    data);
-                g_strfreev (data);
-        }
-        else {
-                action_id = "org.freedesktop.accounts.user-administration";
-                daemon_local_check_auth (user->daemon,
-                                         user,
-                                         action_id,
-                                         TRUE,
-                                         user_change_password_authorized_cb,
-                                         context,
-                                         data,
-                                         (GDestroyNotify)g_strfreev);
-        }
+        daemon_local_check_auth (user->daemon,
+                                 user,
+                                 "org.freedesktop.accounts.user-administration",
+                                 TRUE,
+                                 user_change_password_authorized_cb,
+                                 context,
+                                 data,
+                                 (GDestroyNotify)g_strfreev);
 
         return TRUE;
 }
