@@ -24,12 +24,8 @@
         The caller needs one of the following PolicyKit authorizations:
         <doc:list>
           <doc:item>
-            <doc:term>org.freedesktop.accounts.change-own-user-data</doc:term>
-            <doc:definition>To change his own username</doc:definition>
-          </doc:item>
-          <doc:item>
             <doc:term>org.freedesktop.accounts.user-administration</doc:term>
-            <doc:definition>To change the username of another user</doc:definition>
+            <doc:definition>To change the username of any user</doc:definition>
           </doc:item>
         </doc:list>
       </doc:permission>

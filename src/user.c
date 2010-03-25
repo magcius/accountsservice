@@ -893,7 +893,6 @@ user_set_user_name (User                  *user,
         DBusConnection *connection;
         DBusError dbus_error;
         uid_t uid;
-        const gchar *action_id;
 
         connection = dbus_g_connection_get_connection (user->system_bus_connection);
         sender = dbus_g_method_get_sender (context);
@@ -906,14 +905,9 @@ user_set_user_name (User                  *user,
                 return TRUE;
         }
 
-        if (user->uid == uid)
-                action_id = "org.freedesktop.accounts.change-own-user-data";
-        else
-                action_id = "org.freedesktop.accounts.user-administration";
-
         daemon_local_check_auth (user->daemon,
                                  user,
-                                 action_id,
+                                 "org.freedesktop.accounts.user-administration",
                                  TRUE,
                                  user_change_user_name_authorized_cb,
                                  context,
