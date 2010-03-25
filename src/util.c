@@ -21,7 +21,14 @@
 
 #include "config.h"
 
+#include <string.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <wait.h>
+
 #include <syslog.h>
+
 #include <dbus/dbus-glib.h>
 #include <dbus/dbus-glib-lowlevel.h>
 
@@ -142,3 +149,68 @@ sys_log (DBusGMethodInvocation *context,
 
         g_free (real_format);
 }
+
+static gint
+get_caller_uid (DBusGMethodInvocation *context)
+{
+        PolkitSubject *subject;
+        gchar *cmdline;
+        gint pid;
+        gint uid;
+
+        subject = polkit_system_bus_name_new (dbus_g_method_get_sender (context));
+        cmdline = _polkit_subject_get_cmdline (subject, &pid, &uid);
+
+        g_object_unref (subject);
+        g_free (cmdline);
+
+        return uid;
+}
+
+static void
+setup_loginuid (gpointer data)
+{
+        const char *id = data;
+        int fd;
+
+        fd = open ("/proc/self/loginuid", O_WRONLY);
+        write (fd, id, strlen (id));
+        close (fd);
+}
+
+gboolean
+spawn_with_login_uid (DBusGMethodInvocation  *context,
+                      gchar                  *argv[],
+                      GError                **error)
+{
+        GError *local_error;
+        gchar loginuid[20];
+        gchar *std_err;
+        gint status;
+
+        g_snprintf (loginuid, 20, "%d", get_caller_uid (context));
+
+        local_error = NULL;
+        std_err = NULL;
+
+        if (!g_spawn_sync (NULL, argv, NULL, 0, setup_loginuid, loginuid, NULL, &std_err, &status, &local_error)) {
+                g_propagate_error (error, local_error);
+                g_free (std_err);
+                return FALSE;
+        }
+
+        if (WEXITSTATUS (status) != 0) {
+                g_set_error (error,
+                             G_SPAWN_ERROR,
+                             G_SPAWN_ERROR_FAILED,
+                             "%s returned an error (%d): %s",
+                             argv[0], WEXITSTATUS(status), std_err);
+                g_free (std_err);
+                return FALSE;
+        }
+
+        g_free (std_err);
+
+        return TRUE;
+}
+

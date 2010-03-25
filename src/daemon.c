@@ -1022,8 +1022,6 @@ daemon_create_user_authorized_cb (Daemon                *daemon,
         CreateUserData *cd = data;
         User *user;
         GError *error;
-        gchar *std_err, *std_out;
-        gint status;
         gchar *argv[8];
 
         if (getpwnam (cd->user_name) != NULL) {
@@ -1055,26 +1053,12 @@ daemon_create_user_authorized_cb (Daemon                *daemon,
                 argv[5] = NULL;
         }
 
-        std_out = NULL;
-        std_err = NULL;
         error = NULL;
-        if (!g_spawn_sync (NULL, argv, NULL, 0, NULL, NULL, &std_out, &std_err, &status, &error)) {
+        if (!spawn_with_login_uid (context, argv, &error)) {
                 throw_error (context, ERROR_FAILED, "running '%s' failed: %s", argv[0], error->message);
                 g_error_free (error);
-                g_free (std_out);
-                g_free (std_err);
                 return;
         }
-
-        if (WEXITSTATUS (status) != 0) {
-                throw_error (context, ERROR_FAILED, "useradd returned an error: %s", std_err);
-                g_free (std_out);
-                g_free (std_err);
-                return;
-        }
-
-        g_free (std_out);
-        g_free (std_err);
 
         user = daemon_local_find_user_by_name (daemon, cd->user_name);
 
@@ -1121,8 +1105,6 @@ daemon_delete_user_authorized_cb (Daemon                *daemon,
 {
         DeleteUserData *ud = data;
         GError *error;
-        gchar *std_err, *std_out;
-        gint status;
         gchar *filename;
         struct passwd *pwent;
         gchar *argv[4];
@@ -1148,21 +1130,10 @@ daemon_delete_user_authorized_cb (Daemon                *daemon,
                 argv[2] = NULL;
         }
 
-        std_out = NULL;
-        std_err = NULL;
         error = NULL;
-        if (!g_spawn_sync (NULL, argv, NULL, 0, NULL, NULL, &std_out, &std_err, &status, &error)) {
+        if (!spawn_with_login_uid (context, argv, &error)) {
                 throw_error (context, ERROR_FAILED, "running '%s' failed: %s", argv[0], error->message);
                 g_error_free (error);
-                g_free (std_out);
-                g_free (std_err);
-                return;
-        }
-
-        if (WEXITSTATUS (status) != 0) {
-                throw_error (context, ERROR_FAILED, "userdel returned an error: %s", std_err);
-                g_free (std_out);
-                g_free (std_err);
                 return;
         }
 

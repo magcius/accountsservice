@@ -769,8 +769,6 @@ user_change_real_name_authorized_cb (Daemon                *daemon,
 {
         gchar *name = data;
         GError *error;
-        gint status;
-        gchar *std_out, *std_err;
         gchar *argv[5];
 
         if (g_strcmp0 (user->real_name, name) != 0) {
@@ -784,26 +782,12 @@ user_change_real_name_authorized_cb (Daemon                *daemon,
                 argv[3] = user->user_name;
                 argv[4] = NULL;
 
-                std_out = NULL;
-                std_err = NULL;
                 error = NULL;
-                if (!g_spawn_sync (NULL, argv, NULL, 0, NULL, NULL, &std_out, &std_err, &status, &error)) {
+                if (!spawn_with_login_uid (context, argv, &error)) {
                         throw_error (context, ERROR_FAILED, "running '%s' failed: %s", argv[0], error->message);
                         g_error_free (error);
-                        g_free (std_out);
-                        g_free (std_err);
                         return;
                 }
-
-                if (WEXITSTATUS (status) != 0) {
-                        throw_error (context, ERROR_FAILED, "usermod returned an error: %s", std_err);
-                        g_free (std_out);
-                        g_free (std_err);
-                        return;
-                }
-
-                g_free (std_out);
-                g_free (std_err);
 
                 g_free (user->real_name);
                 user->real_name = g_strdup (name);
@@ -865,8 +849,6 @@ user_change_user_name_authorized_cb (Daemon                *daemon,
         gchar *name = data;
         gchar *old_name;
         GError *error;
-        gint status;
-        gchar *std_out, *std_err;
         gchar *argv[5];
 
         if (g_strcmp0 (user->user_name, name) != 0) {
@@ -881,26 +863,12 @@ user_change_user_name_authorized_cb (Daemon                *daemon,
                 argv[3] = user->user_name;
                 argv[4] = NULL;
 
-                std_out = NULL;
-                std_err = NULL;
                 error = NULL;
-                if (!g_spawn_sync (NULL, argv, NULL, 0, NULL, NULL, &std_out, &std_err, &status, &error)) {
+                if (!spawn_with_login_uid (context, argv, &error)) {
                         throw_error (context, ERROR_FAILED, "running '%s' failed: %s", argv[0], error->message);
                         g_error_free (error);
-                        g_free (std_out);
-                        g_free (std_err);
                         return;
                 }
-
-                if (WEXITSTATUS (status) != 0) {
-                        throw_error (context, ERROR_FAILED, "usermod returned an error: %s", std_err);
-                        g_free (std_out);
-                        g_free (std_err);
-                        return;
-                }
-
-                g_free (std_out);
-                g_free (std_err);
 
                 g_free (user->user_name);
                 user->user_name = g_strdup (name);
@@ -1154,8 +1122,6 @@ user_change_home_dir_authorized_cb (Daemon                *daemon,
 {
         gchar *home_dir = data;
         GError *error;
-        gint status;
-        gchar *std_out, *std_err;
         gchar *argv[6];
 
         if (g_strcmp0 (user->home_dir, home_dir) != 0) {
@@ -1170,26 +1136,12 @@ user_change_home_dir_authorized_cb (Daemon                *daemon,
                 argv[4] = user->user_name;
                 argv[5] = NULL;
 
-                std_out = NULL;
-                std_err = NULL;
                 error = NULL;
-                if (!g_spawn_sync (NULL, argv, NULL, 0, NULL, NULL, &std_out, &std_err, &status, &error)) {
+                if (!spawn_with_login_uid (context, argv, &error)) {
                         throw_error (context, ERROR_FAILED, "running '%s' failed: %s", argv[0], error->message);
                         g_error_free (error);
-                        g_free (std_out);
-                        g_free (std_err);
                         return;
                 }
-
-                if (WEXITSTATUS (status) != 0) {
-                        throw_error (context, ERROR_FAILED, "usermod returned an error: %s", std_err);
-                        g_free (std_out);
-                        g_free (std_err);
-                        return;
-                }
-
-                g_free (std_out);
-                g_free (std_err);
 
                 g_free (user->home_dir);
                 user->home_dir = g_strdup (home_dir);
@@ -1247,8 +1199,6 @@ user_change_shell_authorized_cb (Daemon                *daemon,
 {
         gchar *shell = data;
         GError *error;
-        gint status;
-        gchar *std_out, *std_err;
         gchar *argv[5];
 
         if (g_strcmp0 (user->shell, shell) != 0) {
@@ -1262,26 +1212,12 @@ user_change_shell_authorized_cb (Daemon                *daemon,
                 argv[3] = user->user_name;
                 argv[4] = NULL;
 
-                std_out = NULL;
-                std_err = NULL;
                 error = NULL;
-                if (!g_spawn_sync (NULL, argv, NULL, 0, NULL, NULL, &std_out, &std_err, &status, &error)) {
+                if (!spawn_with_login_uid (context, argv, &error)) {
                         throw_error (context, ERROR_FAILED, "running '%s' failed: %s", argv[0], error->message);
                         g_error_free (error);
-                        g_free (std_out);
-                        g_free (std_err);
                         return;
                 }
-
-                if (WEXITSTATUS (status) != 0) {
-                        throw_error (context, ERROR_FAILED, "usermod returned an error: %s", std_err);
-                        g_free (std_out);
-                        g_free (std_err);
-                        return;
-                }
-
-                g_free (std_out);
-                g_free (std_err);
 
                 g_free (user->shell);
                 user->shell = g_strdup (shell);
@@ -1532,8 +1468,6 @@ user_change_locked_authorized_cb (Daemon                *daemon,
 {
         gboolean locked = GPOINTER_TO_INT (data);
         GError *error;
-        gint status;
-        gchar *std_out, *std_err;
         gchar *argv[4];
 
         if (user->locked != locked) {
@@ -1545,26 +1479,12 @@ user_change_locked_authorized_cb (Daemon                *daemon,
                 argv[2] = user->user_name;
                 argv[3] = NULL;
 
-                std_out = NULL;
-                std_err = NULL;
                 error = NULL;
-                if (!g_spawn_sync (NULL, argv, NULL, 0, NULL, NULL, &std_out, &std_err, &status, &error)) {
+                if (!spawn_with_login_uid (context, argv, &error)) {
                         throw_error (context, ERROR_FAILED, "running '%s' failed: %s", argv[0], error->message);
                         g_error_free (error);
-                        g_free (std_out);
-                        g_free (std_err);
                         return;
                 }
-
-                if (WEXITSTATUS (status) != 0) {
-                        throw_error (context, ERROR_FAILED, "usermod returned an error: %s", std_err);
-                        g_free (std_out);
-                        g_free (std_err);
-                        return;
-                }
-
-                g_free (std_out);
-                g_free (std_err);
 
                 user->locked = locked;
 
@@ -1602,8 +1522,6 @@ user_change_account_type_authorized_cb (Daemon                *daemon,
 {
         gint account_type = GPOINTER_TO_INT (data);
         GError *error;
-        gint status;
-        gchar *std_out, *std_err;
         gid_t groups[20];
         gint n_groups;
         GString *str;
@@ -1664,26 +1582,12 @@ user_change_account_type_authorized_cb (Daemon                *daemon,
 
                 g_string_free (str, FALSE);
 
-                std_out = NULL;
-                std_err = NULL;
                 error = NULL;
-                if (!g_spawn_sync (NULL, argv, NULL, 0, NULL, NULL, &std_out, &std_err, &status, &error)) {
+                if (!spawn_with_login_uid (context, argv, &error)) {
                         throw_error (context, ERROR_FAILED, "running '%s' failed: %s", argv[0], error->message);
                         g_error_free (error);
-                        g_free (std_out);
-                        g_free (std_err);
                         return;
                 }
-
-                if (WEXITSTATUS (status) != 0) {
-                        throw_error (context, ERROR_FAILED, "usermod returned an error: %s", std_err);
-                        g_free (std_out);
-                        g_free (std_err);
-                        return;
-                }
-
-                g_free (std_out);
-                g_free (std_err);
 
                 user->account_type = account_type;
 
@@ -1726,8 +1630,6 @@ user_change_password_mode_authorized_cb (Daemon                *daemon,
 {
         gint mode = GPOINTER_TO_INT (data);
         GError *error;
-        gint status;
-        gchar *std_out, *std_err;
         gchar *argv[4];
 
         if (user->password_mode != mode) {
@@ -1745,26 +1647,12 @@ user_change_password_mode_authorized_cb (Daemon                *daemon,
                         argv[2] = user->user_name;
                         argv[3] = NULL;
 
-                        std_out = NULL;
-                        std_err = NULL;
                         error = NULL;
-                        if (!g_spawn_sync (NULL, argv, NULL, 0, NULL, NULL, &std_out, &std_err, &status, &error)) {
+                        if (!spawn_with_login_uid (context, argv, &error)) {
                                 throw_error (context, ERROR_FAILED, "running '%s' failed: %s", argv[0], error->message);
                                 g_error_free (error);
-                                g_free (std_out);
-                                g_free (std_err);
                                 return;
                         }
-
-                        if (WEXITSTATUS (status) != 0) {
-                                throw_error (context, ERROR_FAILED, "passwd returned an error: %s", std_err);
-                                g_free (std_out);
-                                g_free (std_err);
-                                return;
-                        }
-
-                        g_free (std_out);
-                        g_free (std_err);
 
                         g_free (user->password_hint);
                         user->password_hint = NULL;
@@ -1785,20 +1673,10 @@ user_change_password_mode_authorized_cb (Daemon                *daemon,
                         argv[2] = user->user_name;
                         argv[3] = NULL;
 
-                        std_out = NULL;
-                        std_err = NULL;
                         error = NULL;
-                        if (!g_spawn_sync (NULL, argv, NULL, 0, NULL, NULL, &std_out, &std_err, &status, &error)) {
+                        if (!spawn_with_login_uid (context, argv, &error)) {
                                 throw_error (context, ERROR_FAILED, "running '%s' failed: %s", argv[0], error->message);
                                 g_error_free (error);
-                                g_free (std_out);
-                                g_free (std_err);
-                                return;
-                        }
-                        if (WEXITSTATUS (status) != 0) {
-                                throw_error (context, ERROR_FAILED, "usermod returned an error: %s", std_err);
-                                g_free (std_out);
-                                g_free (std_err);
                                 return;
                         }
 
@@ -1870,8 +1748,6 @@ user_change_password_authorized_cb (Daemon                *daemon,
 {
         gchar **strings = data;
         GError *error;
-        gint status;
-        gchar *std_out, *std_err;
         gchar *argv[5];
 
         sys_log (context,
@@ -1886,26 +1762,12 @@ user_change_password_authorized_cb (Daemon                *daemon,
         argv[3] = user->user_name;
         argv[4] = NULL;
 
-        std_out = NULL;
-        std_err = NULL;
         error = NULL;
-        if (!g_spawn_sync (NULL, argv, NULL, 0, NULL, NULL, &std_out, &std_err, &status, &error)) {
+        if (!spawn_with_login_uid (context, argv, &error)) {
                 throw_error (context, ERROR_FAILED, "running '%s' failed: %s", argv[0], error->message);
                 g_error_free (error);
-                g_free (std_out);
-                g_free (std_err);
                 return;
         }
-
-        if (WEXITSTATUS (status) != 0) {
-                throw_error (context, ERROR_FAILED, "usermod returned an error: %s", std_err);
-                g_free (std_out);
-                g_free (std_err);
-                return;
-        }
-
-        g_free (std_out);
-        g_free (std_err);
 
         if (user->password_mode != PASSWORD_MODE_REGULAR) {
                 user->password_mode = PASSWORD_MODE_REGULAR;

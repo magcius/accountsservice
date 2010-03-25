@@ -31,6 +31,10 @@ void sys_log (DBusGMethodInvocation *context,
               const gchar           *format,
                                      ...);
 
+gboolean spawn_with_login_uid (DBusGMethodInvocation  *context,
+                               gchar                  *argv[],
+                               GError                **error);
+
 G_END_DECLS
 
 #endif /* __UTIL_H__ */
