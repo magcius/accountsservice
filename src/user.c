@@ -1364,6 +1364,7 @@ typedef struct {
         gint channels;
         gint rowstride;
         guchar *data;
+        gint len;
 } IconData;
 
 static void
@@ -1384,6 +1385,18 @@ user_change_icon_data_authorized_cb (Daemon                *daemon,
         GdkPixbuf *pixbuf;
         gchar *filename;
         GError *error;
+
+        if (id->width <= 0 || id->height <= 0 ||
+            id->rowstride < id->width ||
+            id->len != id->rowstride * id->height) {
+                throw_error (context, ERROR_FAILED, "image data appears corrupt");
+                return;
+        }
+
+        if (id->width > 256 || id->height > 256) {
+                throw_error (context, ERROR_FAILED, "image too large");
+                return;
+        }
 
         pixbuf = gdk_pixbuf_new_from_data (id->data,
                                            GDK_COLORSPACE_RGB,
@@ -1460,6 +1473,7 @@ user_set_icon_data (User                  *user,
         icon_data->rowstride = rowstride;
         /* slightly nasty, we steal the array data here */
         icon_data->data = (guchar *) data->data;
+        icon_data->len = data->len;
         data->data = NULL;
         data->len = 0;
 
