@@ -150,21 +150,31 @@ sys_log (DBusGMethodInvocation *context,
         g_free (real_format);
 }
 
-static gint
-get_caller_uid (DBusGMethodInvocation *context)
+static void
+get_caller_loginuid (DBusGMethodInvocation *context, gchar *loginuid, gint size)
 {
         PolkitSubject *subject;
         gchar *cmdline;
         gint pid;
         gint uid;
+        gchar *path;
+        gchar *buf;
 
         subject = polkit_system_bus_name_new (dbus_g_method_get_sender (context));
         cmdline = _polkit_subject_get_cmdline (subject, &pid, &uid);
-
-        g_object_unref (subject);
         g_free (cmdline);
+        g_object_unref (subject);
 
-        return uid;
+        path = g_strdup_printf ("/proc/%d/loginuid", pid);
+        if (g_file_get_contents (path, &buf, NULL, NULL)) {
+                strncpy (loginuid, buf, size);
+                g_free (buf);
+        }
+        else {
+                g_snprintf (loginuid, size, "%d", uid);
+        }
+
+        g_free (path);
 }
 
 static void
@@ -188,7 +198,7 @@ spawn_with_login_uid (DBusGMethodInvocation  *context,
         gchar *std_err;
         gint status;
 
-        g_snprintf (loginuid, 20, "%d", get_caller_uid (context));
+        get_caller_loginuid (context, loginuid, 20);
 
         local_error = NULL;
         std_err = NULL;
