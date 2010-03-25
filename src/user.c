@@ -43,6 +43,7 @@
 #include "daemon.h"
 #include "user.h"
 #include "user-glue.h"
+#include "util.h"
 
 enum {
         PROP_0,
@@ -773,9 +774,9 @@ user_change_real_name_authorized_cb (Daemon                *daemon,
         gchar *argv[5];
 
         if (g_strcmp0 (user->real_name, name) != 0) {
-                daemon_local_log (daemon, context,
-                                  "change real name of user '%s' (%d) to '%s'",
-                                  user->user_name, user->uid, name);
+                sys_log (context,
+                         "change real name of user '%s' (%d) to '%s'",
+                         user->user_name, user->uid, name);
 
                 argv[0] = "/usr/sbin/usermod";
                 argv[1] = "-c";
@@ -870,9 +871,9 @@ user_change_user_name_authorized_cb (Daemon                *daemon,
 
         if (g_strcmp0 (user->user_name, name) != 0) {
                 old_name = g_strdup (user->user_name);
-                daemon_local_log (daemon, context,
-                                  "change name of user '%s' (%d) to '%s'",
-                                  old_name, user->uid, name);
+                sys_log (context,
+                         "change name of user '%s' (%d) to '%s'",
+                         old_name, user->uid, name);
 
                 argv[0] = "/usr/sbin/usermod";
                 argv[1] = "-l";
@@ -1158,9 +1159,9 @@ user_change_home_dir_authorized_cb (Daemon                *daemon,
         gchar *argv[6];
 
         if (g_strcmp0 (user->home_dir, home_dir) != 0) {
-                daemon_local_log (daemon, context,
-                                  "change home directory of user '%s' (%d) to '%s'",
-                                  user->user_name, user->uid, home_dir);
+                sys_log (context,
+                         "change home directory of user '%s' (%d) to '%s'",
+                         user->user_name, user->uid, home_dir);
 
                 argv[0] = "/usr/sbin/usermod";
                 argv[1] = "-m";
@@ -1251,9 +1252,9 @@ user_change_shell_authorized_cb (Daemon                *daemon,
         gchar *argv[5];
 
         if (g_strcmp0 (user->shell, shell) != 0) {
-                daemon_local_log (daemon, context,
-                                  "change shell of user '%s' (%d) to '%s'",
-                                  user->user_name, user->uid, shell);
+                sys_log (context,
+                         "change shell of user '%s' (%d) to '%s'",
+                         user->user_name, user->uid, shell);
 
                 argv[0] = "/usr/sbin/usermod";
                 argv[1] = "-s";
@@ -1536,9 +1537,9 @@ user_change_locked_authorized_cb (Daemon                *daemon,
         gchar *argv[4];
 
         if (user->locked != locked) {
-                daemon_local_log (daemon, context,
-                                  "%s account of user '%s' (%d)",
-                                  locked ? "locking" : "unlocking", user->user_name, user->uid);
+                sys_log (context,
+                         "%s account of user '%s' (%d)",
+                         locked ? "locking" : "unlocking", user->user_name, user->uid);
                 argv[0] = "/usr/sbin/usermod";
                 argv[1] = locked ? "-L" : "-U";
                 argv[2] = user->user_name;
@@ -1613,9 +1614,9 @@ user_change_account_type_authorized_cb (Daemon                *daemon,
         gchar *argv[5];
 
         if (user->account_type != account_type) {
-                daemon_local_log (daemon, context,
-                                  "change account type of user '%s' (%d) to %d",
-                                  user->user_name, user->uid, account_type);
+                sys_log (context,
+                         "change account type of user '%s' (%d) to %d",
+                         user->user_name, user->uid, account_type);
 
                 grp = getgrnam ("desktop_user_r");
                 if (grp == NULL) {
@@ -1730,11 +1731,11 @@ user_change_password_mode_authorized_cb (Daemon                *daemon,
         gchar *argv[4];
 
         if (user->password_mode != mode) {
-                daemon_local_log (daemon, context,
-                                  "change password mode of user '%s' (%d) to %d",
-                                  user->user_name, user->uid, mode);
+                sys_log (context,
+                         "change password mode of user '%s' (%d) to %d",
+                         user->user_name, user->uid, mode);
 
-                g_object_freeze_notify (user);
+                g_object_freeze_notify (G_OBJECT (user));
 
                 if (mode == PASSWORD_MODE_SET_AT_LOGIN ||
                     mode == PASSWORD_MODE_NONE) {
@@ -1811,7 +1812,7 @@ user_change_password_mode_authorized_cb (Daemon                *daemon,
 
                 save_extra_data (user);
 
-                g_object_thaw_notify (user);
+                g_object_thaw_notify (G_OBJECT (user));
 
                 g_signal_emit (user, signals[CHANGED], 0);
         }
@@ -1873,11 +1874,11 @@ user_change_password_authorized_cb (Daemon                *daemon,
         gchar *std_out, *std_err;
         gchar *argv[5];
 
-        daemon_local_log (daemon, context,
-                          "set password and hint of user '%s' (%d)",
-                          user->user_name, user->uid);
+        sys_log (context,
+                 "set password and hint of user '%s' (%d)",
+                 user->user_name, user->uid);
 
-        g_object_freeze_notify (user);
+        g_object_freeze_notify (G_OBJECT (user));
 
         argv[0] = "/usr/sbin/usermod";
         argv[1] = "-p";
@@ -1924,7 +1925,7 @@ user_change_password_authorized_cb (Daemon                *daemon,
 
         save_extra_data (user);
 
-        g_object_thaw_notify (user);
+        g_object_thaw_notify (G_OBJECT (user));
 
         g_signal_emit (user, signals[CHANGED], 0);
 
@@ -1941,7 +1942,6 @@ user_set_password (User                  *user,
         DBusConnection *connection;
         DBusError dbus_error;
         uid_t uid;
-        const gchar *action_id;
         gchar **data;
 
         connection = dbus_g_connection_get_connection (user->system_bus_connection);
@@ -1981,9 +1981,9 @@ user_change_automatic_login_authorized_cb (Daemon                *daemon,
         gboolean enabled = GPOINTER_TO_INT (data);
         GError *error = NULL;
 
-        daemon_local_log (daemon, context,
-                          "%s automatic login for user '%s' (%d)",
-                          enabled ? "enable" : "disable", user->user_name, user->uid);
+        sys_log (context,
+                 "%s automatic login for user '%s' (%d)",
+                 enabled ? "enable" : "disable", user->user_name, user->uid);
 
         if (!daemon_local_set_automatic_login (daemon, user, enabled, &error)) {
                 throw_error (context, ERROR_FAILED, "failed to change automatic login: %s", error->message);

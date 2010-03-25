@@ -27,6 +27,8 @@ accounts_daemon_SOURCES = 	\
 	daemon.c		\
 	user.h			\
 	user.c			\
+	util.h			\
+	util.c			\
 	main.c
 
 accounts_daemon_LDADD = 	\

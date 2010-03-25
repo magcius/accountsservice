@@ -22,8 +22,10 @@
 #include "config.h"
 
 #include <stdlib.h>
+#include <stdarg.h>
 #include <locale.h>
 #include <libintl.h>
+#include <syslog.h>
 
 #include <glib.h>
 #include <glib/gi18n.h>
@@ -182,6 +184,11 @@ main (int argc, char *argv[])
 
         if (daemon == NULL)
                 goto out;
+
+        openlog ("accounts-daemon", LOG_PID, LOG_DAEMON);
+        syslog (LOG_INFO, "started daemon version %s", VERSION);
+        closelog ();
+        openlog ("accounts-daemon", 0, LOG_AUTHPRIV);
 
         loop = g_main_loop_new (NULL, FALSE);
 

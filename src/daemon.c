@@ -24,11 +24,12 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include <sys/wait.h>
 #include <pwd.h>
 #include <unistd.h>
 #include <errno.h>
-#include <syslog.h>
 
 #include <glib.h>
 #include <glib/gi18n.h>
@@ -41,6 +42,7 @@
 
 #include "daemon.h"
 #include "daemon-glue.h"
+#include "util.h"
 
 #define PATH_PASSWD "/etc/passwd"
 #define PATH_SHADOW "/etc/shadow"
@@ -792,11 +794,6 @@ daemon_new (void)
                 goto error;
         }
 
-        openlog ("accounts-daemon", LOG_PID, LOG_DAEMON);
-        syslog (LOG_INFO, "started daemon version %s", VERSION);
-        closelog ();
-        openlog ("accounts-daemon", 0, LOG_AUTHPRIV);
-
         return daemon;
 
  error:
@@ -1035,9 +1032,7 @@ daemon_create_user_authorized_cb (Daemon                *daemon,
                 return;
         }
 
-        daemon_local_log (daemon, context,
-                          "create user '%s'",
-                          cd->user_name);
+        sys_log (context, "create user '%s'", cd->user_name);
 
         argv[0] = "/usr/sbin/useradd";
         argv[1] = "-m";
@@ -1140,9 +1135,7 @@ daemon_delete_user_authorized_cb (Daemon                *daemon,
                 return;
         }
 
-        daemon_local_log (daemon, context,
-                          "delete user '%s' (%d)",
-                          pwent->pw_name, ud->uid);
+        sys_log (context, "delete user '%s' (%d)", pwent->pw_name, ud->uid);
 
         argv[0] = "/usr/sbin/userdel";
         if (ud->remove_files) {
@@ -1423,119 +1416,5 @@ daemon_local_set_automatic_login (Daemon    *daemon,
         }
 
         return TRUE;
-}
-
-static gchar *
-_polkit_subject_get_cmdline (PolkitSubject *subject, gint *pid, gint *uid)
-{
-  PolkitSubject *process;
-  gchar *ret;
-  gchar *filename;
-  gchar *contents;
-  gsize contents_len;
-  GError *error;
-  guint n;
-
-  g_return_val_if_fail (subject != NULL, NULL);
-
-  error = NULL;
-
-  ret = NULL;
-  process = NULL;
-  filename = NULL;
-  contents = NULL;
-
-  if (POLKIT_IS_UNIX_PROCESS (subject))
-   {
-      process = g_object_ref (subject);
-    }
-  else if (POLKIT_IS_SYSTEM_BUS_NAME (subject))
-    {
-      process = polkit_system_bus_name_get_process_sync (POLKIT_SYSTEM_BUS_NAME (subject),
-                                                         NULL,
-                                                         &error);
-      if (process == NULL)
-        {
-          g_warning ("Error getting process for system bus name `%s': %s",
-                     polkit_system_bus_name_get_name (POLKIT_SYSTEM_BUS_NAME (subject)),
-                     error->message);
-          g_error_free (error);
-          goto out;
-        }
-    }
-  else
-    {
-      g_warning ("Unknown subject type passed to guess_program_name()");
-      goto out;
-    }
-
-  *pid = polkit_unix_process_get_pid (POLKIT_UNIX_PROCESS (process));
-  *uid = polkit_unix_process_get_owner (POLKIT_UNIX_PROCESS (process), NULL);
-
-  filename = g_strdup_printf ("/proc/%d/cmdline", *pid);
-
-  if (!g_file_get_contents (filename,
-                            &contents,
-                            &contents_len,
-                            &error))
-    {
-      g_warning ("Error openeing `%s': %s",
-                 filename,
-                 error->message);
-      g_error_free (error);
-      goto out;
-    }
-  /* The kernel uses '\0' to separate arguments - replace those with a space. */
-  for (n = 0; n < contents_len - 1; n++)
-    {
-      if (contents[n] == '\0')
-        contents[n] = ' ';
-    }
-
-  ret = g_strdup (contents);
-  g_strstrip (ret);
-
- out:
-  g_free (filename);
-  g_free (contents);
-  if (process != NULL)
-    g_object_unref (process);
-  return ret;
-}
-
-void daemon_local_log (Daemon                *daemon,
-                       DBusGMethodInvocation *context,
-                       const gchar           *format,
-                       ...)
-{
-        va_list args;
-        gchar *real_format;
-        gint pid;
-        gint uid;
-
-        if (context) {
-                PolkitSubject *subject;
-                gchar *cmdline;
-                gchar *id;
-
-                subject = polkit_system_bus_name_new (dbus_g_method_get_sender (context));
-                id = polkit_subject_to_string (subject);
-                cmdline = _polkit_subject_get_cmdline (subject, &pid, &uid);
-                if (cmdline == NULL) {
-                        cmdline = g_strdup ("<unknown>");
-                }
-
-                real_format = g_strdup_printf ("request by %s [%s pid:%d uid:%d]: %s", id, cmdline, pid, uid, format);
-
-                g_free (id);
-                g_free (cmdline);
-                g_object_unref (subject);
-        }
-
-        va_start (args, format);
-        vsyslog (LOG_NOTICE, real_format, args);
-        va_end (args);
-
-        g_free (real_format);
 }
 
