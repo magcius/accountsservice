@@ -466,6 +466,10 @@
         <doc:para>
           Changes the users password mode.
         </doc:para>
+        <doc:para>
+          Note that changing the password mode has the side-effect of
+          unlocking the account.
+        </doc:para>
       </doc:description>
       <doc:permission>
         The caller needs one of the following PolicyKit authorizations:
@@ -503,6 +507,10 @@
       <doc:description>
         <doc:para>
           Sets a new password for this user.
+        </doc:para>
+        <doc:para>
+          Note that setting a password has the side-effect of
+          unlocking the account.
         </doc:para>
       </doc:description>
       <doc:permission>

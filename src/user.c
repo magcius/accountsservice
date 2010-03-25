@@ -28,6 +28,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include <grp.h>
+#include <shadow.h>
 
 #include <glib.h>
 #include <glib/gi18n.h>
@@ -422,6 +423,7 @@ void
 user_local_update_from_pwent (User          *user,
                               struct passwd *pwent)
 {
+        struct spwd *spent;
         gchar *real_name;
         g_object_freeze_notify (G_OBJECT (user));
 
@@ -497,6 +499,23 @@ user_local_update_from_pwent (User          *user,
                 g_free (user->shell);
                 user->shell = g_strdup (pwent->pw_shell);
                 g_object_notify (G_OBJECT (user), "shell");
+        }
+
+        spent = getspnam (pwent->pw_name);
+        if (spent)
+                pwent->pw_passwd = spent->sp_pwdp;
+
+        if (pwent->pw_passwd && pwent->pw_passwd[0] == '!') {
+                if (!user->locked) {
+                        user->locked = TRUE;
+                        g_object_notify (G_OBJECT (user), "locked");
+                }
+        }
+        else {
+                if (user->locked) {
+                        user->locked = FALSE;
+                        g_object_notify (G_OBJECT (user), "locked");
+                }
         }
 
         g_object_thaw_notify (G_OBJECT (user));
@@ -1701,6 +1720,8 @@ user_change_password_mode_authorized_cb (Daemon                *daemon,
                                   "change password mode of user '%s' (%d) to %d",
                                   user->user_name, user->uid, mode);
 
+                g_object_freeze_notify (user);
+
                 if (mode == PASSWORD_MODE_SET_AT_LOGIN ||
                     mode == PASSWORD_MODE_NONE) {
 
@@ -1721,7 +1742,7 @@ user_change_password_mode_authorized_cb (Daemon                *daemon,
                         }
 
                         if (WEXITSTATUS (status) != 0) {
-                                throw_error (context, ERROR_FAILED, "usermod returned an error: %s", std_err);
+                                throw_error (context, ERROR_FAILED, "passwd returned an error: %s", std_err);
                                 g_free (std_out);
                                 g_free (std_err);
                                 return;
@@ -1734,15 +1755,51 @@ user_change_password_mode_authorized_cb (Daemon                *daemon,
                         user->password_hint = NULL;
 
                         g_object_notify (G_OBJECT (user), "password-hint");
+
+                        /* removing the password has the side-effect of
+                         * unlocking the account
+                         */
+                        if (user->locked) {
+                                user->locked = FALSE;
+                                g_object_notify (G_OBJECT (user), "locked");
+                        }
+                }
+                else if (user->locked) {
+                        argv[0] = "/usr/sbin/usermod";
+                        argv[1] = "-U";
+                        argv[2] = user->user_name;
+                        argv[3] = NULL;
+
+                        std_out = NULL;
+                        std_err = NULL;
+                        error = NULL;
+                        if (!g_spawn_sync (NULL, argv, NULL, 0, NULL, NULL, &std_out, &std_err, &status, &error)) {
+                                throw_error (context, ERROR_FAILED, "running '%s' failed: %s", argv[0], error->message);
+                                g_error_free (error);
+                                g_free (std_out);
+                                g_free (std_err);
+                                return;
+                        }
+                        if (WEXITSTATUS (status) != 0) {
+                                throw_error (context, ERROR_FAILED, "usermod returned an error: %s", std_err);
+                                g_free (std_out);
+                                g_free (std_err);
+                                return;
+                        }
+
+                        user->locked = FALSE;
+                        g_object_notify (G_OBJECT (user), "locked");
                 }
 
                 user->password_mode = mode;
 
+                g_object_notify (G_OBJECT (user), "password-mode");
+
                 save_extra_data (user);
 
-                g_signal_emit (user, signals[CHANGED], 0);
+                g_object_thaw_notify (user);
 
-                g_object_notify (G_OBJECT (user), "password-mode");
+                g_signal_emit (user, signals[CHANGED], 0);
         }
 
         dbus_g_method_return (context);
@@ -1761,11 +1818,6 @@ user_set_password_mode (User                  *user,
 
         if (mode < 0 || mode > PASSWORD_MODE_LAST) {
                 throw_error (context, ERROR_FAILED, "unknown password mode: %d", mode);
-                return FALSE;
-        }
-
-        if (user->locked) {
-                throw_error (context, ERROR_FAILED, "account is locked");
                 return FALSE;
         }
 
@@ -1811,6 +1863,8 @@ user_change_password_authorized_cb (Daemon                *daemon,
                           "set password and hint of user '%s' (%d)",
                           user->user_name, user->uid);
 
+        g_object_freeze_notify (user);
+
         argv[0] = "/usr/sbin/usermod";
         argv[1] = "-p";
         argv[2] = strings[0];
@@ -1843,6 +1897,11 @@ user_change_password_authorized_cb (Daemon                *daemon,
                 g_object_notify (G_OBJECT (user), "password-mode");
         }
 
+        if (user->locked) {
+                user->locked = FALSE;
+                g_object_notify (G_OBJECT (user), "locked");
+        }
+
         if (g_strcmp0 (user->password_hint, strings[1]) != 0) {
                 g_free (user->password_hint);
                 user->password_hint = g_strdup (strings[1]);
@@ -1850,6 +1909,8 @@ user_change_password_authorized_cb (Daemon                *daemon,
         }
 
         save_extra_data (user);
+
+        g_object_thaw_notify (user);
 
         g_signal_emit (user, signals[CHANGED], 0);
 
@@ -1868,11 +1929,6 @@ user_set_password (User                  *user,
         uid_t uid;
         const gchar *action_id;
         gchar **data;
-
-        if (user->locked) {
-                throw_error (context, ERROR_FAILED, "account is locked");
-                return FALSE;
-        }
 
         connection = dbus_g_connection_get_connection (user->system_bus_connection);
         sender = dbus_g_method_get_sender (context);
