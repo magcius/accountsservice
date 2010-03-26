@@ -1386,13 +1386,14 @@ daemon_local_set_automatic_login (Daemon    *daemon,
                 g_object_set (daemon->priv->autologin, "automatic-login", FALSE, NULL);
                 g_signal_emit_by_name (daemon->priv->autologin, "changed", 0);
                 g_object_unref (daemon->priv->autologin);
+                daemon->priv->autologin = NULL;
         }
 
         if (enabled) {
+                g_object_set (user, "automatic-login", TRUE, NULL);
+                g_signal_emit_by_name (user, "changed", 0);
                 g_object_ref (user);
-                g_object_set (daemon->priv->autologin, "automatic-login", TRUE, NULL);
                 daemon->priv->autologin = user;
-                g_signal_emit_by_name (daemon->priv->autologin, "changed", 0);
         }
 
         return TRUE;
