@@ -91,13 +91,6 @@ gboolean       user_set_shell          (User                  *user,
 gboolean       user_set_icon_file      (User                  *user,
                                         const gchar           *filename,
                                         DBusGMethodInvocation *context);
-gboolean       user_set_icon_data      (User                  *user,
-                                        gint                   width,
-                                        gint                   height,
-                                        gint                   channels,
-                                        gint                   rowstride,
-                                        GArray                *data,
-                                        DBusGMethodInvocation *context);
 gboolean       user_set_locked         (User                  *user,
                                         gboolean               locked,
                                         DBusGMethodInvocation *context);

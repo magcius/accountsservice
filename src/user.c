@@ -34,8 +34,7 @@
 #include <glib/gi18n.h>
 #include <glib-object.h>
 #include <glib/gstdio.h>
-
-#include <gdk-pixbuf/gdk-pixbuf.h>
+#include <gio/gio.h>
 
 #include <dbus/dbus-glib.h>
 #include <dbus/dbus-glib-lowlevel.h>
@@ -1361,135 +1360,6 @@ user_set_icon_file (User                  *user,
                                  context,
                                  g_strdup (filename),
                                  (GDestroyNotify)g_free);
-
-        return TRUE;
-}
-
-typedef struct {
-        gint width;
-        gint height;
-        gint channels;
-        gint rowstride;
-        guchar *data;
-        gint len;
-} IconData;
-
-static void
-icon_data_free (IconData *data)
-{
-        g_free (data->data);
-        g_free (data);
-}
-
-static void
-user_change_icon_data_authorized_cb (Daemon                *daemon,
-                                     User                  *user,
-                                     DBusGMethodInvocation *context,
-                                     gpointer               data)
-
-{
-        IconData *id = data;
-        GdkPixbuf *pixbuf;
-        gchar *filename;
-        GError *error;
-
-        if (id->width <= 0 || id->height <= 0 ||
-            id->rowstride < id->width ||
-            id->len != id->rowstride * id->height) {
-                throw_error (context, ERROR_FAILED, "image data appears corrupt");
-                return;
-        }
-
-        if (id->width > 256 || id->height > 256) {
-                throw_error (context, ERROR_FAILED, "image too large");
-                return;
-        }
-
-        pixbuf = gdk_pixbuf_new_from_data (id->data,
-                                           GDK_COLORSPACE_RGB,
-                                           id->channels == 3 ? FALSE : TRUE,
-                                           8,
-                                           id->width, id->height,
-                                           id->rowstride,
-                                           NULL, NULL);
-        if (pixbuf == NULL) {
-                throw_error (context, ERROR_FAILED, "failed to reconstruct pixbuf");
-                return;
-        }
-
-        filename = g_build_filename (ICONDIR, user->user_name, NULL);
-
-        error = NULL;
-        if (!gdk_pixbuf_save (pixbuf, filename, "png", &error, NULL)) {
-                throw_error (context, ERROR_FAILED, "Saving to %s failed: %s", filename, error->message);
-                g_object_unref (pixbuf);
-                g_free (filename);
-                return;
-        }
-
-        g_free (user->icon_file);
-        user->icon_file = g_strdup (filename);
-
-        save_extra_data (user);
-
-        g_signal_emit (user, signals[CHANGED], 0);
-
-        g_object_notify (G_OBJECT (user), "icon-file");
-
-        dbus_g_method_return (context);
-}
-
-gboolean
-user_set_icon_data (User                  *user,
-                    gint                   width,
-                    gint                   height,
-                    gint                   channels,
-                    gint                   rowstride,
-                    GArray                *data,
-                    DBusGMethodInvocation *context)
-{
-        gchar *sender;
-        DBusConnection *connection;
-        DBusError dbus_error;
-        uid_t uid;
-        const gchar *action_id;
-        IconData *icon_data;
-
-        connection = dbus_g_connection_get_connection (user->system_bus_connection);
-        sender = dbus_g_method_get_sender (context);
-        dbus_error_init (&dbus_error);
-        uid = dbus_bus_get_unix_user (connection, sender, &dbus_error);
-        if (dbus_error_is_set (&dbus_error)) {
-                throw_error (context, ERROR_FAILED, dbus_error.message);
-                dbus_error_free (&dbus_error);
-
-                return TRUE;
-        }
-
-        if (user->uid == uid)
-                action_id = "org.freedesktop.accounts.change-own-user-data";
-        else
-                action_id = "org.freedesktop.accounts.user-administration";
-
-        icon_data = g_new0 (IconData, 1);
-        icon_data->width = width;
-        icon_data->height = height;
-        icon_data->channels = channels;
-        icon_data->rowstride = rowstride;
-        /* slightly nasty, we steal the array data here */
-        icon_data->data = (guchar *) data->data;
-        icon_data->len = data->len;
-        data->data = NULL;
-        data->len = 0;
-
-        daemon_local_check_auth (user->daemon,
-                                 user,
-                                 action_id,
-                                 TRUE,
-                                 user_change_icon_data_authorized_cb,
-                                 context,
-                                 icon_data,
-                                 (GDestroyNotify)icon_data_free);
 
         return TRUE;
 }

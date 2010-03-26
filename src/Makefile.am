@@ -4,7 +4,6 @@ INCLUDES = 			\
 	$(DBUS_GLIB_CFLAGS) 	\
 	$(GIO_CFLAGS)	 	\
 	$(GLIB_CFLAGS)		\
-	$(GDK_PIXBUF_CFLAGS)	\
 	$(POLKIT_CFLAGS)	\
 	$(WARN_CFLAGS)
 
@@ -36,7 +35,6 @@ accounts_daemon_LDADD = 	\
 	$(DBUS_GLIB_LIBS) 	\
 	$(GIO_LIBS)		\
 	$(GLIB_LIBS)		\
-	$(GDK_PIXBUF_LIBS)	\
 	$(POLKIT_LIBS)
 
 CLEANFILES = $(BUILT_SOURCES)

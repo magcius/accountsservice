@@ -4,7 +4,6 @@ Prerequisites
 The AccountsService uses the following libraries:
 
  - GLib and GIO
- - GdkPixbuf
  - dbus-glib
  - PolicyKit
 
