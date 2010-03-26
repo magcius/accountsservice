@@ -45,6 +45,8 @@
 #include "user-glue.h"
 #include "util.h"
 
+#define ICONDIR LOCALSTATEDIR "/lib/AccountsService/icons"
+
 enum {
         PROP_0,
         PROP_UID,
@@ -1266,7 +1268,47 @@ user_change_icon_file_authorized_cb (Daemon                *daemon,
                                      gpointer               data)
 
 {
-        gchar *filename = data;
+        gchar *filename;
+        GFile *file;
+        GFileInfo *info;
+        guint32 mode;
+
+        filename = g_strdup (data);
+
+        file = g_file_new_for_path (filename);
+        info = g_file_query_info (file, G_FILE_ATTRIBUTE_UNIX_MODE, 0, NULL, NULL);
+        mode = g_file_info_get_attribute_uint32 (info, G_FILE_ATTRIBUTE_UNIX_MODE);
+        g_object_unref (info);
+
+        if ((mode & S_IROTH) == 0 ||
+            (!g_str_has_prefix (filename, DATADIR) &&
+             !g_str_has_prefix (filename, ICONDIR))) {
+                gchar *dest_path;
+                GFile *dest;
+                GError *error;
+
+                dest_path = g_build_filename (ICONDIR, user->user_name, NULL);
+                dest = g_file_new_for_path (dest_path);
+
+                error = NULL;
+                if (!g_file_copy (file, dest,
+                                  G_FILE_COPY_OVERWRITE|G_FILE_COPY_TARGET_DEFAULT_PERMS,
+                                  NULL, NULL, NULL, &error)) {
+                        throw_error (context, ERROR_FAILED, "copying file from '%s' to '%s' failed: %s", filename, dest_path, error->message);
+                        g_error_free (error);
+                        g_free (dest_path);
+                        g_object_unref (dest);
+                        g_object_unref (file);
+
+                        return;
+                }
+
+                filename = dest_path;
+
+                g_object_unref (dest);
+        }
+
+        g_object_unref (file);
 
         if (g_strcmp0 (user->icon_file, filename) != 0) {
                 g_free (user->icon_file);
@@ -1278,6 +1320,8 @@ user_change_icon_file_authorized_cb (Daemon                *daemon,
 
                 g_object_notify (G_OBJECT (user), "icon-file");
         }
+
+        g_free (filename);
 
         dbus_g_method_return (context);
 }
@@ -1373,9 +1417,7 @@ user_change_icon_data_authorized_cb (Daemon                *daemon,
                 return;
         }
 
-        filename = g_build_filename (LOCALSTATE_DIR "/lib/AccountsService/icons",
-                                     user->user_name,
-                                     NULL);
+        filename = g_build_filename (ICONDIR, user->user_name, NULL);
 
         error = NULL;
         if (!gdk_pixbuf_save (pixbuf, filename, "png", &error, NULL)) {

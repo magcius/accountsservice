@@ -1,5 +1,6 @@
 INCLUDES = 			\
-	-DLOCALSTATE_DIR=\""$(localstatedir)"\" \
+	-DLOCALSTATEDIR=\""$(localstatedir)"\" \
+	-DDATADIR=\""$(datadir)"\" \
 	$(DBUS_GLIB_CFLAGS) 	\
 	$(GIO_CFLAGS)	 	\
 	$(GLIB_CFLAGS)		\

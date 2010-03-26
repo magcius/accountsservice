@@ -48,6 +48,8 @@
 #define PATH_SHADOW "/etc/shadow"
 #define MINIMAL_UID 500
 
+#define USERDIR LOCALSTATEDIR "/lib/AccountsService/users"
+
 static const char *default_excludes[] = {
         "bin",
         "root",
@@ -554,7 +556,7 @@ reload_data (Daemon *daemon)
 
         g_hash_table_iter_init (&iter, daemon->priv->users);
         while (g_hash_table_iter_next (&iter, (gpointer *)&name, (gpointer *)&user)) {
-                filename = g_build_filename (LOCALSTATE_DIR "/lib/AccountsService/users", name, NULL);
+                filename = g_build_filename (USERDIR, name, NULL);
                 key_file = g_key_file_new ();
                 if (g_key_file_load_from_file (key_file, filename, 0, NULL))
                         user_local_update_from_keyfile (user, key_file);
@@ -1137,7 +1139,7 @@ daemon_delete_user_authorized_cb (Daemon                *daemon,
                 return;
         }
 
-        filename = g_build_filename (LOCALSTATE_DIR "/lib/AccountsService/users", pwent->pw_name, NULL);
+        filename = g_build_filename (USERDIR, pwent->pw_name, NULL);
         g_remove (filename);
 
         g_free (filename);
