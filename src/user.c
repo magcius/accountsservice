@@ -388,8 +388,8 @@ account_type_from_groups (struct passwd *pwent)
         struct group *grp;
         gid_t desktop_user_r;
         gid_t desktop_admin_r;
-        gid_t groups[20];
-        gint n_groups = 20;
+        gid_t *groups;
+        gint ngroups;
         gint i;
 
         grp = getgrnam ("desktop_user_r");
@@ -406,17 +406,16 @@ account_type_from_groups (struct passwd *pwent)
         }
         desktop_admin_r = grp->gr_gid;
 
-        if (getgrouplist (pwent->pw_name, pwent->pw_gid, groups, &n_groups) == -1) {
-                g_warning ("too many groups");
-                return ACCOUNT_TYPE_STANDARD;
-        }
+        ngroups = get_user_groups (pwent->pw_name, pwent->pw_gid, &groups);
 
-        for (i = 0; i < n_groups; i++) {
+        for (i = 0; i < ngroups; i++) {
                 if (groups[i] == desktop_user_r)
                         return ACCOUNT_TYPE_STANDARD;
                 if (groups[i] == desktop_admin_r)
                         return ACCOUNT_TYPE_ADMINISTRATOR;
         }
+
+        g_free (groups);
 
         return ACCOUNT_TYPE_SUPERVISED;
 }
@@ -1427,8 +1426,8 @@ user_change_account_type_authorized_cb (Daemon                *daemon,
 {
         gint account_type = GPOINTER_TO_INT (data);
         GError *error;
-        gid_t groups[20];
-        gint n_groups;
+        gid_t *groups;
+        gint ngroups;
         GString *str;
         gid_t desktop_user_r;
         gid_t desktop_admin_r;
@@ -1455,14 +1454,10 @@ user_change_account_type_authorized_cb (Daemon                *daemon,
                 }
                 desktop_admin_r = grp->gr_gid;
 
-                n_groups = 20;
-                if (getgrouplist (user->user_name, user->gid, groups, &n_groups) == -1) {
-                        throw_error (context, ERROR_FAILED, "failed to set account type: too many groups");
-                        return;
-                }
+                ngroups = get_user_groups (user->user_name, user->gid, &groups);
 
                 str = g_string_new ("");
-                for (i = 0; i < n_groups; i++) {
+                for (i = 0; i < ngroups; i++) {
                         if (groups[i] == desktop_user_r || groups[i] == desktop_admin_r)
                                 continue;
                         g_string_append_printf (str, "%d,", groups[i]);
@@ -1478,6 +1473,8 @@ user_change_account_type_authorized_cb (Daemon                *daemon,
                         /* remove excess comma */
                         g_string_truncate (str, str->len - 1);
                 }
+
+                g_free (groups);
 
                 argv[0] = "/usr/sbin/usermod";
                 argv[1] = "-G";

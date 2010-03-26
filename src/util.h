@@ -35,6 +35,10 @@ gboolean spawn_with_login_uid (DBusGMethodInvocation  *context,
                                gchar                  *argv[],
                                GError                **error);
 
+gint get_user_groups (const gchar  *username,
+                      gid_t         group,
+                      gid_t       **groups);
+
 G_END_DECLS
 
 #endif /* __UTIL_H__ */

@@ -26,6 +26,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <wait.h>
+#include <grp.h>
 
 #include <syslog.h>
 
@@ -122,21 +123,23 @@ sys_log (DBusGMethodInvocation *context,
 {
         va_list args;
         gchar *real_format;
-        gint pid;
-        gint uid;
 
         if (context) {
                 PolkitSubject *subject;
                 gchar *cmdline;
                 gchar *id;
+                gint pid = 0;
+                gint uid = 0;
 
                 subject = polkit_system_bus_name_new (dbus_g_method_get_sender (context));
                 id = polkit_subject_to_string (subject);
                 cmdline = _polkit_subject_get_cmdline (subject, &pid, &uid);
                 if (cmdline == NULL) {
-                        cmdline = g_strdup ("<unknown>");
+                        real_format = g_strdup_printf ("request by %s: %s", id, format);
                 }
-                real_format = g_strdup_printf ("request by %s [%s pid:%d uid:%d]: %s", id, cmdline, pid, uid, format);
+                else {
+                        real_format = g_strdup_printf ("request by %s [%s pid:%d uid:%d]: %s", id, cmdline, pid, uid, format);
+                }
 
                 g_free (id);
                 g_free (cmdline);
@@ -224,3 +227,20 @@ spawn_with_login_uid (DBusGMethodInvocation  *context,
         return TRUE;
 }
 
+gint
+get_user_groups (const gchar  *user,
+                 gid_t         group,
+                 gid_t       **groups)
+{
+        gint res;
+        gint ngroups;
+
+        ngroups = 0;
+        res = getgrouplist (user, group, NULL, &ngroups);
+
+        g_warning ("user %s has %d groups\n", user, ngroups);
+        *groups = g_new (gid_t, ngroups);
+        res = getgrouplist (user, group, *groups, &ngroups);
+
+        return res;
+}
