@@ -453,6 +453,15 @@ reload_ck_history (Daemon *daemon)
         g_free (command);
 }
 
+static gint
+compare_user_name (gconstpointer a, gconstpointer b)
+{
+        const User *user = a;
+        const gchar *name = b;
+
+        return g_strcmp0 (user_local_get_user_name (user), name);
+}
+
 static void
 reload_passwd (Daemon *daemon)
 {
@@ -487,14 +496,12 @@ reload_passwd (Daemon *daemon)
                         continue;
                 }
 
-                user = g_hash_table_lookup (daemon->priv->users, pwent->pw_name);
-
-                /* Update users already in the *new* list */
-                if (g_slist_find (new_users, user)) {
-                        user_local_update_from_pwent (user, pwent);
+                /* ignore duplicate entries */
+                if (g_slist_find_custom (new_users, pwent->pw_name, compare_user_name)) {
                         continue;
                 }
 
+                user = g_hash_table_lookup (daemon->priv->users, pwent->pw_name);
                 if (user == NULL) {
                         user = user_local_new (daemon, pwent->pw_uid);
                 } else {
