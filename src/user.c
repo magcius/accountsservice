@@ -1152,27 +1152,9 @@ user_set_home_directory (User                  *user,
                          const gchar           *home_dir,
                          DBusGMethodInvocation *context)
 {
-        gchar *sender;
-        DBusConnection *connection;
-        DBusError dbus_error;
-        uid_t uid;
-        const gchar *action_id;
-
-        connection = dbus_g_connection_get_connection (user->system_bus_connection);
-        sender = dbus_g_method_get_sender (context);
-        dbus_error_init (&dbus_error);
-        uid = dbus_bus_get_unix_user (connection, sender, &dbus_error);
-        if (dbus_error_is_set (&dbus_error)) {
-                throw_error (context, ERROR_FAILED, dbus_error.message);
-                dbus_error_free (&dbus_error);
-
-                return TRUE;
-        }
-
-        action_id = "org.freedesktop.accounts.user-administration";
-
         daemon_local_check_auth (user->daemon,
                                  user,
+                                 "org.freedesktop.accounts.user-administration",
                                  action_id,
                                  TRUE,
                                  user_change_home_dir_authorized_cb,
@@ -1228,28 +1210,9 @@ user_set_shell (User                  *user,
                 const gchar           *shell,
                 DBusGMethodInvocation *context)
 {
-        gchar *sender;
-        DBusConnection *connection;
-        DBusError dbus_error;
-        uid_t uid;
-        const gchar *action_id;
-
-        connection = dbus_g_connection_get_connection (user->system_bus_connection);
-        sender = dbus_g_method_get_sender (context);
-        dbus_error_init (&dbus_error);
-        uid = dbus_bus_get_unix_user (connection, sender, &dbus_error);
-        if (dbus_error_is_set (&dbus_error)) {
-                throw_error (context, ERROR_FAILED, dbus_error.message);
-                dbus_error_free (&dbus_error);
-
-                return TRUE;
-        }
-
-        action_id = "org.freedesktop.accounts.user-administration";
-
         daemon_local_check_auth (user->daemon,
                                  user,
-                                 action_id,
+                                 "org.freedesktop.accounts.user-administration",
                                  TRUE,
                                  user_change_shell_authorized_cb,
                                  context,
@@ -1711,6 +1674,13 @@ user_change_password_authorized_cb (Daemon                *daemon,
         dbus_g_method_return (context);
 }
 
+static void
+free_passwords (gchar **strings)
+{
+        memset (strings[0], 0, strlen (strings[0]));
+        g_strfreev (strings);
+}
+
 gboolean
 user_set_password (User                  *user,
                    const gchar           *password,
@@ -1746,7 +1716,9 @@ user_set_password (User                  *user,
                                  user_change_password_authorized_cb,
                                  context,
                                  data,
-                                 (GDestroyNotify)g_strfreev);
+                                 (GDestroyNotify)free_passwords);
+
+        memset ((char*)password, 0, strlen (password));
 
         return TRUE;
 }
