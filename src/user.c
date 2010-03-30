@@ -182,7 +182,14 @@ user_get_property (GObject    *object,
                 g_value_set_string (value, user->location);
                 break;
         case PROP_ICON_FILE:
-                g_value_set_string (value, user->icon_file);
+                if (user->icon_file)
+                        g_value_set_string (value, user->icon_file);
+                else {
+                        gchar *icon_file;
+
+                        icon_file = g_build_filename (user->home_dir, ".face", NULL);
+                        g_value_take_string (value, icon_file);
+                }
                 break;
         case PROP_LOGIN_FREQUENCY:
                 g_value_set_uint64 (value, user->login_frequency);
