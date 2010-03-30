@@ -23,6 +23,7 @@
 
 #include "config.h"
 
+#include <stdlib.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
@@ -35,6 +36,7 @@
 #include <glib-object.h>
 #include <glib/gstdio.h>
 #include <gio/gio.h>
+#include <gio/gunixinputstream.h>
 
 #include <dbus/dbus-glib.h>
 #include <dbus/dbus-glib-lowlevel.h>
@@ -1222,6 +1224,19 @@ user_set_shell (User                  *user,
 }
 
 static void
+become_user (gpointer data)
+{
+        struct passwd *pw = data;
+
+        if (pw == NULL ||
+            initgroups (pw->pw_name, pw->pw_gid) != 0 ||
+            setgid (pw->pw_gid) != 0 ||
+            setuid (pw->pw_uid) != 0) {
+                exit (1);
+        }
+}
+
+static void
 user_change_icon_file_authorized_cb (Daemon                *daemon,
                                      User                  *user,
                                      DBusGMethodInvocation *context,
@@ -1232,43 +1247,104 @@ user_change_icon_file_authorized_cb (Daemon                *daemon,
         GFile *file;
         GFileInfo *info;
         guint32 mode;
+        guint64 size;
 
         filename = g_strdup (data);
 
         file = g_file_new_for_path (filename);
-        info = g_file_query_info (file, G_FILE_ATTRIBUTE_UNIX_MODE, 0, NULL, NULL);
+        info = g_file_query_info (file, G_FILE_ATTRIBUTE_UNIX_MODE ","
+                                        G_FILE_ATTRIBUTE_STANDARD_SIZE,
+                                  0, NULL, NULL);
         mode = g_file_info_get_attribute_uint32 (info, G_FILE_ATTRIBUTE_UNIX_MODE);
+        size = g_file_info_get_attribute_uint64 (info, G_FILE_ATTRIBUTE_STANDARD_SIZE);
+
         g_object_unref (info);
+        g_object_unref (file);
+
+        if (size > 1048576) {
+                g_warning ("file too large\n");
+                /* 1MB ought to be enough for everybody */
+                throw_error (context, ERROR_FAILED, "file '%s' is too large to be used as an icon", filename);
+                g_free (filename);
+                return;
+        }
 
         if ((mode & S_IROTH) == 0 ||
             (!g_str_has_prefix (filename, DATADIR) &&
              !g_str_has_prefix (filename, ICONDIR))) {
                 gchar *dest_path;
                 GFile *dest;
+                gchar *argv[3];
+                gint std_out;
                 GError *error;
+                GInputStream *input;
+                GOutputStream *output;
+                gint uid;
+                gssize bytes;
+                struct passwd *pw;
+
+                if (!get_caller_uid (context, &uid)) {
+                        throw_error (context, ERROR_FAILED, "failed to copy file, could not determine caller UID");
+                        g_free (filename);
+                        return;
+                }
 
                 dest_path = g_build_filename (ICONDIR, user->user_name, NULL);
                 dest = g_file_new_for_path (dest_path);
 
                 error = NULL;
-                if (!g_file_copy (file, dest,
-                                  G_FILE_COPY_OVERWRITE|G_FILE_COPY_TARGET_DEFAULT_PERMS,
-                                  NULL, NULL, NULL, &error)) {
-                        throw_error (context, ERROR_FAILED, "copying file from '%s' to '%s' failed: %s", filename, dest_path, error->message);
+                output = G_OUTPUT_STREAM (g_file_replace (dest, NULL, FALSE, 0, NULL, &error));
+                if (!output) {
+                        throw_error (context, ERROR_FAILED, "creating file '%s' failed: %s", dest_path, error->message);
                         g_error_free (error);
+                        g_free (filename);
                         g_free (dest_path);
                         g_object_unref (dest);
-                        g_object_unref (file);
-
                         return;
                 }
 
-                filename = dest_path;
+                argv[0] = "/bin/cat";
+                argv[1] = filename;
+                argv[2] = NULL;
+
+                pw = getpwuid (uid);
+
+                error = NULL;
+                if (!g_spawn_async_with_pipes (NULL, argv, NULL, 0, become_user, pw, NULL, NULL, &std_out, NULL, &error)) {
+                        throw_error (context, ERROR_FAILED, "reading file '%s' failed: %s", filename, error->message);
+                        g_error_free (error);
+                        g_free (filename);
+                        g_free (dest_path);
+                        g_object_unref (dest);
+                        return;
+                }
+
+                input = g_unix_input_stream_new (std_out, FALSE);
+
+                error = NULL;
+                bytes = g_output_stream_splice (output, input, G_OUTPUT_STREAM_SPLICE_CLOSE_TARGET, NULL, &error);
+                if (bytes < 0 || bytes != size) {
+                        throw_error (context, ERROR_FAILED, "copying file '%s' to '%s' failed: %s", filename, dest_path, error ? error->message : "unknown reason");
+                        if (error)
+                                g_error_free (error);
+
+                        g_file_delete (dest, NULL, NULL);
+
+                        g_free (filename);
+                        g_free (dest_path);
+                        g_object_unref (dest);
+                        g_object_unref (input);
+                        g_object_unref (output);
+                        return;
+                }
 
                 g_object_unref (dest);
-        }
+                g_object_unref (input);
+                g_object_unref (output);
 
-        g_object_unref (file);
+                g_free (filename);
+                filename = dest_path;
+        }
 
         if (g_strcmp0 (user->icon_file, filename) != 0) {
                 g_free (user->icon_file);

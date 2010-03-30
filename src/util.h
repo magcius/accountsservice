@@ -31,6 +31,8 @@ void sys_log (DBusGMethodInvocation *context,
               const gchar           *format,
                                      ...);
 
+gboolean get_caller_uid (DBusGMethodInvocation *context, gint *uid);
+
 gboolean spawn_with_login_uid (DBusGMethodInvocation  *context,
                                gchar                  *argv[],
                                GError                **error);

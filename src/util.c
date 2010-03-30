@@ -251,3 +251,34 @@ get_user_groups (const gchar  *user,
 
         return res;
 }
+
+
+gboolean
+get_caller_uid (DBusGMethodInvocation *context, gint *uid)
+{
+        PolkitSubject *subject;
+        PolkitSubject *process;
+        GError *error;
+
+        subject = polkit_system_bus_name_new (dbus_g_method_get_sender (context));
+        process = polkit_system_bus_name_get_process_sync (POLKIT_SYSTEM_BUS_NAME (subject), NULL, NULL);
+        if (!process) {
+                g_object_unref (subject);
+                return FALSE;
+        }
+
+        error = NULL;
+        *uid = polkit_unix_process_get_owner (POLKIT_UNIX_PROCESS (process), &error);
+        if (error) {
+                g_error_free (error);
+                g_object_unref (subject);
+                g_object_unref (process);
+
+                return FALSE;
+        }
+
+        g_object_unref (subject);
+        g_object_unref (process);
+
+        return TRUE;
+}
