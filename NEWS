@@ -1,3 +1,19 @@
+Changes in 0.6
+==============
+
+* Many changes after code review by Miroslav Trmac:
+ - Always require user-administration privilege when setting a password
+   or changing a username
+ - Allow changing password mode and password even when the account is
+   locked, and unlock it as a side-effect
+ - Use /etc/shadow to store account locking and 'set password at next
+   login' information and monitor /etc/shadow for changes
+ - Set loginuid when runing commands on behalf of a user to generate
+   proper audit records
+ - Drop SetIconData and make SetIconFile copy the file when appropriate.
+   As a consequence, the service no longer links against image libraries.
+ - Various other robustness and error-handling fixes
+
 Changes in 0.5
 ==============
 
