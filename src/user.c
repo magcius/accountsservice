@@ -1353,18 +1353,14 @@ user_change_icon_file_authorized_cb (Daemon                *daemon,
                 filename = dest_path;
         }
 
-        if (g_strcmp0 (user->icon_file, filename) != 0) {
-                g_free (user->icon_file);
-                user->icon_file = g_strdup (filename);
+        g_free (user->icon_file);
+        user->icon_file = filename;
 
-                save_extra_data (user);
+        save_extra_data (user);
 
-                g_signal_emit (user, signals[CHANGED], 0);
+        g_signal_emit (user, signals[CHANGED], 0);
 
-                g_object_notify (G_OBJECT (user), "icon-file");
-        }
-
-        g_free (filename);
+        g_object_notify (G_OBJECT (user), "icon-file");
 
         dbus_g_method_return (context);
 }
