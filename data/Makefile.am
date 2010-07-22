@@ -20,12 +20,25 @@ policy_DATA     = $(policy_in_files:.policy.in=.policy)
 
 @INTLTOOL_POLICY_RULE@
 
+if HAVE_SYSTEMD
+systemdsystemunit_DATA = \
+	accounts-daemon.service
+
+accounts-daemon.service: accounts-daemon.service.in
+	@sed -e "s|\@libexecdir\@|$(libexecdir)|" $< >$@
+
+endif
+
 EXTRA_DIST = 			\
 	$(dbusif_DATA)		\
 	$(dbusconf_DATA)	\
 	$(service_in_files)	\
-	$(policy_in_files)
+	$(policy_in_files)      \
+	accounts-daemon.service.in
 
 DISTCLEANFILES = 		\
 	$(service_DATA)		\
 	$(policy_DATA)
+
+CLEANFILES = \
+	accounts-daemon.service
