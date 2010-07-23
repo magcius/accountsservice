@@ -82,7 +82,6 @@ enum {
 enum {
         USER_ADDED,
         USER_REMOVED,
-        USER_CHANGED,
         LAST_SIGNAL
 };
 
@@ -188,17 +187,6 @@ daemon_class_init (DaemonClass *klass)
                                             DBUS_TYPE_G_OBJECT_PATH);
 
         signals[USER_REMOVED] = g_signal_new ("user-deleted",
-                                              G_OBJECT_CLASS_TYPE (klass),
-                                              G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
-                                              0,
-                                              NULL,
-                                              NULL,
-                                              g_cclosure_marshal_VOID__BOXED,
-                                              G_TYPE_NONE,
-                                              1,
-                                              DBUS_TYPE_G_OBJECT_PATH);
-
-        signals[USER_CHANGED] = g_signal_new ("user-changed",
                                               G_OBJECT_CLASS_TYPE (klass),
                                               G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                                               0,

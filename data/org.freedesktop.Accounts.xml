@@ -167,19 +167,6 @@
       </doc:doc>
     </signal>
 
-    <signal name="UserChanged">
-      <arg name="user" type="o">
-        <doc:doc><doc:summary>Object path of the user that was changed.</doc:summary></doc:doc>
-      </arg>
-      <doc:doc>
-        <doc:description>
-          <doc:para>
-            Emitted when a user is changed.
-          </doc:para>
-        </doc:description>
-      </doc:doc>
-    </signal>
-
    <property name="DaemonVersion" type="s" access="read">
      <doc:doc>
        <doc:description>
