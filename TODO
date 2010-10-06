@@ -9,6 +9,8 @@ General
 
 - fix the docs build
 
+- add a user client library that's a front end to the dbus service
+
 Other
 -----
 
