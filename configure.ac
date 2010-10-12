@@ -1,4 +1,4 @@
-AC_INIT(AccountsService, 0.6.2)
+AC_INIT([AccountsService],[0.6.2])
 AM_INIT_AUTOMAKE(dist-bzip2 foreign)
 
 GETTEXT_PACKAGE=accounts-service
@@ -50,8 +50,7 @@ dnl - DocBook Documentation
 dnl ---------------------------------------------------------------------------
 
 AC_ARG_ENABLE(docbook-docs,
-        [AC_HELP_STRING([--enable-docbook-docs],
-                        [build documentation (requires xmlto)])],
+        [AS_HELP_STRING([--enable-docbook-docs],[build documentation (requires xmlto)])],
         enable_docbook_docs=$enableval,enable_docbook_docs=no)
 AC_PATH_PROG(XMLTO, xmlto, no)
 AC_MSG_CHECKING([whether to build DocBook documentation])
