@@ -16,6 +16,14 @@ PKG_PROG_PKG_CONFIG
 AM_GLIB_GNU_GETTEXT
 IT_PROG_INTLTOOL([0.40.0])
 
+LT_INIT
+LT_CURRENT=0
+LT_REVISION=0
+LT_AGE=0
+AC_SUBST(LT_CURRENT)
+AC_SUBST(LT_REVISION)
+AC_SUBST(LT_AGE)
+
 PKG_CHECK_MODULES(GLIB, glib-2.0)
 PKG_CHECK_MODULES(GIO, gio-2.0 gio-unix-2.0)
 PKG_CHECK_MODULES(DBUS_GLIB, dbus-glib-1)
@@ -27,7 +35,17 @@ GNOME_COMPILE_WARNINGS([maximum])
 GNOME_CXX_WARNINGS
 GNOME_MAINTAINER_MODE_DEFINES
 
-nl ---------------------------------------------------------------------------
+# client library dependencies
+LIBACCOUNTSSERVICE_LIBS="$GLIB_LIBS $DBUS_GLIB_LIBS"
+AC_SUBST(LIBACCOUNTSSERVICE_LIBS)
+LIBACCOUNTSSERVICE_CFLAGS="$GLIB_CFLAGS $DBUS_GLIB_CFLAGS"
+AC_SUBST(LIBACCOUNTSSERVICE_CFLAGS)
+
+GOBJECT_INTROSPECTION_CHECK([0.9.12])
+LIBACCOUNTSSERVICE_GIR_INCLUDES="GLib-2.0 GObject-2.0 DBusGLib-1.0"
+AC_SUBST(LIBACCOUNTSSERVICE_GIR_INCLUDES)
+
+dnl ---------------------------------------------------------------------------
 dnl - DocBook Documentation
 dnl ---------------------------------------------------------------------------
 
@@ -79,6 +97,8 @@ Makefile
 po/Makefile.in
 data/Makefile
 src/Makefile
+src/libaccountsservice/Makefile
+src/libaccountsservice/accountsservice.pc
 doc/Makefile
 doc/dbus/Makefile
 doc/dbus/AccountsService.xml

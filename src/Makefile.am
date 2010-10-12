@@ -1,3 +1,4 @@
+SUBDIRS = . libaccountsservice
 INCLUDES = 			\
 	-DLOCALSTATEDIR=\""$(localstatedir)"\" \
 	-DDATADIR=\""$(datadir)"\" \
