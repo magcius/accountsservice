@@ -337,7 +337,7 @@ set_is_loaded (ActUser  *user,
  *  freed, or %NULL.
  **/
 
-guint64
+uid_t
 act_user_get_uid (ActUser *user)
 {
         g_return_val_if_fail (ACT_IS_USER (user), -1);

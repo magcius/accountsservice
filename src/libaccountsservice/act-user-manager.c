@@ -770,11 +770,11 @@ on_new_user_loaded (ActUser        *user,
 
                 if (object_path != NULL) {
                         g_warning ("ActUserManager: user has no username "
-                                   "(object path: %s, uid: %lu)",
-                                   object_path, act_user_get_uid (user));
+                                   "(object path: %s, uid: %d)",
+                                   object_path, (int) act_user_get_uid (user));
                 } else {
-                        g_warning ("ActUserManager: user has no username (uid: %lu)",
-                                   act_user_get_uid (user));
+                        g_warning ("ActUserManager: user has no username (uid: %d)",
+                                   (int) act_user_get_uid (user));
                 }
                 g_object_unref (user);
                 return;

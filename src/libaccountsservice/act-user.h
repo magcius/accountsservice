@@ -42,7 +42,7 @@ GType          act_user_get_type                  (void) G_GNUC_CONST;
 
 const char    *act_user_get_object_path           (ActUser *user);
 
-gulong         act_user_get_uid                   (ActUser   *user);
+uid_t          act_user_get_uid                   (ActUser   *user);
 const char    *act_user_get_user_name             (ActUser   *user);
 const char    *act_user_get_real_name             (ActUser   *user);
 guint          act_user_get_num_sessions          (ActUser   *user);
