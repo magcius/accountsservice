@@ -71,7 +71,7 @@ struct _ActUser {
         char           *real_name;
         char           *icon_file;
         GList          *sessions;
-        guint64          login_frequency;
+        int             login_frequency;
 
         guint           is_loaded : 1;
 };
@@ -183,7 +183,7 @@ act_user_get_property (GObject    *object,
                 g_value_set_string (value, user->real_name);
                 break;
         case PROP_LOGIN_FREQUENCY:
-                g_value_set_uint64 (value, user->login_frequency);
+                g_value_set_int (value, user->login_frequency);
                 break;
         case PROP_ICON_FILE:
                 g_value_set_string (value, user->icon_file);
@@ -233,13 +233,13 @@ act_user_class_init (ActUserClass *class)
                                                               G_PARAM_READABLE));
         g_object_class_install_property (gobject_class,
                                          PROP_LOGIN_FREQUENCY,
-                                         g_param_spec_uint64 ("login-frequency",
-                                                             "login frequency",
-                                                             "login frequency",
-                                                             0,
-                                                             G_MAXULONG,
-                                                             0,
-                                                             G_PARAM_READABLE));
+                                         g_param_spec_int ("login-frequency",
+                                                           "login frequency",
+                                                           "login frequency",
+                                                           0,
+                                                           G_MAXINT,
+                                                           0,
+                                                           G_PARAM_READABLE));
         g_object_class_install_property (gobject_class,
                                          PROP_ICON_FILE,
                                          g_param_spec_string ("icon-file",
@@ -388,7 +388,7 @@ act_user_get_user_name (ActUser *user)
  *
  * Returns: the login frequency
  */
-guint64
+int
 act_user_get_login_frequency (ActUser *user)
 {
         g_return_val_if_fail (ACT_IS_USER (user), 0);
@@ -402,8 +402,8 @@ act_user_collate (ActUser *user1,
 {
         const char *str1;
         const char *str2;
-        guint64      num1;
-        guint64      num2;
+        int         num1;
+        int         num2;
         guint       len1;
         guint       len2;
 
@@ -565,10 +565,10 @@ collect_props (const gchar    *key,
                         g_object_notify (G_OBJECT (user), "real-name");
                 }
         } else if (strcmp (key, "LoginFrequency") == 0) {
-                guint64 new_login_frequency;
+                int new_login_frequency;
 
-                new_login_frequency = g_value_get_uint64 (value);
-                if ((guint64) user->login_frequency != new_login_frequency) {
+                new_login_frequency = g_value_get_int (value);
+                if ((int) user->login_frequency != new_login_frequency) {
                         user->login_frequency = new_login_frequency;
                         g_object_notify (G_OBJECT (user), "login-frequency");
                 }
@@ -713,7 +713,7 @@ _act_user_update_from_object_path (ActUser    *user,
 
 void
 _act_user_update_login_frequency (ActUser    *user,
-                                  guint64     login_frequency)
+                                  int         login_frequency)
 {
         if (user->login_frequency != login_frequency) {
                 user->login_frequency = login_frequency;

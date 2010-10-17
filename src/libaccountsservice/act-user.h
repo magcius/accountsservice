@@ -47,7 +47,7 @@ const char    *act_user_get_user_name             (ActUser   *user);
 const char    *act_user_get_real_name             (ActUser   *user);
 guint          act_user_get_num_sessions          (ActUser   *user);
 gboolean       act_user_is_logged_in              (ActUser   *user);
-gulong         act_user_get_login_frequency       (ActUser   *user);
+int            act_user_get_login_frequency       (ActUser   *user);
 const char    *act_user_get_icon_file             (ActUser   *user);
 const char    *act_user_get_primary_session_id    (ActUser   *user);
 

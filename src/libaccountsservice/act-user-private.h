@@ -33,7 +33,7 @@ G_BEGIN_DECLS
 void           _act_user_update_from_object_path   (ActUser    *user,
                                                     const char *object_path);
 void           _act_user_update_login_frequency    (ActUser    *user,
-                                                    guint64     login_frequency);
+                                                    int         login_frequency);
 
 void           _act_user_add_session      (ActUser             *user,
                                            const char          *session_id);
