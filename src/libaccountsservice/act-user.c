@@ -174,7 +174,7 @@ act_user_get_property (GObject    *object,
 
         switch (param_id) {
         case PROP_UID:
-                g_value_set_uint64 (value, user->uid);
+                g_value_set_int (value, user->uid);
                 break;
         case PROP_USER_NAME:
                 g_value_set_string (value, user->user_name);
@@ -219,11 +219,11 @@ act_user_class_init (ActUserClass *class)
 
         g_object_class_install_property (gobject_class,
                                          PROP_UID,
-                                         g_param_spec_uint64 ("uid",
-                                                             "User ID",
-                                                             "The UID for this user.",
-                                                             0, G_MAXULONG, 0,
-                                                             G_PARAM_READABLE));
+                                         g_param_spec_int ("uid",
+                                                           "User ID",
+                                                           "The UID for this user.",
+                                                           0, G_MAXINT, 0,
+                                                           G_PARAM_READABLE));
         g_object_class_install_property (gobject_class,
                                          PROP_USER_NAME,
                                          g_param_spec_string ("user-name",
