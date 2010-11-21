@@ -1352,6 +1352,30 @@ user_change_icon_file_authorized_cb (Daemon                *daemon,
 
         filename = g_strdup (data);
 
+        if (filename == NULL ||
+            *filename == '\0') {
+                char *dest_path;
+                GFile *dest;
+                GError *error;
+
+                g_free (filename);
+                filename = NULL;
+
+                dest_path = g_build_filename (ICONDIR, user->user_name, NULL);
+                dest = g_file_new_for_path (dest_path);
+                g_free (dest_path);
+
+                error = NULL;
+                if (!g_file_delete (dest, NULL, &error)) {
+                        g_object_unref (dest);
+                        throw_error (context, ERROR_FAILED, "failed to remove user icon, %s", error->message);
+                        g_error_free (error);
+                        return;
+                }
+                g_object_unref (dest);
+                goto icon_saved;
+        }
+
         file = g_file_new_for_path (filename);
         info = g_file_query_info (file, G_FILE_ATTRIBUTE_UNIX_MODE ","
                                         G_FILE_ATTRIBUTE_STANDARD_SIZE,
@@ -1447,6 +1471,7 @@ user_change_icon_file_authorized_cb (Daemon                *daemon,
                 filename = dest_path;
         }
 
+icon_saved:
         g_free (user->icon_file);
         user->icon_file = filename;
 
