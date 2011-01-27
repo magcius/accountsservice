@@ -1830,7 +1830,7 @@ user_set_automatic_login (User                  *user,
 {
         daemon_local_check_auth (user->daemon,
                                  user,
-                                 "org.freedesktop.accounts.set-login-option",
+                                 "org.freedesktop.accounts.user-administration",
                                  TRUE,
                                  user_change_automatic_login_authorized_cb,
                                  context,
