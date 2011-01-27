@@ -1,3 +1,14 @@
+Changes in 0.6.2
+================
+
+* Remove the unused UserChanged signal
+
+* Add a small client library, based on code from gdm
+
+* Don't use gnome-common
+
+* Use the user-administration privilege for autologin changes
+
 Changes in 0.6.1
 ================
 
