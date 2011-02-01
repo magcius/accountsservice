@@ -48,6 +48,7 @@ enum {
         PROP_REAL_NAME,
         PROP_LOGIN_FREQUENCY,
         PROP_ICON_FILE,
+        PROP_LANGUAGE,
         PROP_IS_LOADED
 };
 
@@ -70,6 +71,7 @@ struct _ActUser {
         char           *user_name;
         char           *real_name;
         char           *icon_file;
+        char           *language;
         GList          *sessions;
         int             login_frequency;
 
@@ -188,6 +190,9 @@ act_user_get_property (GObject    *object,
         case PROP_ICON_FILE:
                 g_value_set_string (value, user->icon_file);
                 break;
+        case PROP_LANGUAGE:
+                g_value_set_string (value, user->language);
+                break;
         case PROP_IS_LOADED:
                 g_value_set_boolean (value, user->is_loaded);
                 break;
@@ -248,6 +253,13 @@ act_user_class_init (ActUserClass *class)
                                                               NULL,
                                                               G_PARAM_READABLE));
         g_object_class_install_property (gobject_class,
+                                         PROP_LANGUAGE,
+                                         g_param_spec_string ("language",
+                                                              "Language",
+                                                              "User's locale.",
+                                                              NULL,
+                                                              G_PARAM_READABLE));
+        g_object_class_install_property (gobject_class,
                                          PROP_IS_LOADED,
                                          g_param_spec_boolean ("is-loaded",
                                                                NULL,
@@ -299,6 +311,7 @@ act_user_finalize (GObject *object)
         g_free (user->user_name);
         g_free (user->real_name);
         g_free (user->icon_file);
+        g_free (user->language);
         g_free (user->object_path);
 
         if (user->accounts_proxy != NULL) {
@@ -492,6 +505,22 @@ act_user_get_icon_file (ActUser *user)
 }
 
 /**
+ * act_user_get_language:
+ * @user: a #ActUser
+ *
+ * Returns the path to the configured locale of @user.
+ *
+ * Returns: (transfer none): a path to an icon
+ */
+const char *
+act_user_get_language (ActUser *user)
+{
+        g_return_val_if_fail (ACT_IS_USER (user), NULL);
+
+        return user->language;
+}
+
+/**
  * act_user_get_object_path:
  * @user: a #ActUser
  *
@@ -580,6 +609,15 @@ collect_props (const gchar    *key,
                         g_free (user->icon_file);
                         user->icon_file = g_value_dup_string (value);
                         g_object_notify (G_OBJECT (user), "icon-file");
+                }
+        } else if (strcmp (key, "Language") == 0) {
+                const char *new_language;
+
+                new_language = g_value_get_string (value);
+                if (g_strcmp0 (user->language, new_language) != 0) {
+                        g_free (user->language);
+                        user->language = g_value_dup_string (value);
+                        g_object_notify (G_OBJECT (user), "language");
                 }
         } else {
                 handled = FALSE;

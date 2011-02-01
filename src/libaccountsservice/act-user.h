@@ -49,6 +49,7 @@ guint          act_user_get_num_sessions          (ActUser   *user);
 gboolean       act_user_is_logged_in              (ActUser   *user);
 int            act_user_get_login_frequency       (ActUser   *user);
 const char    *act_user_get_icon_file             (ActUser   *user);
+const char    *act_user_get_language              (ActUser   *user);
 const char    *act_user_get_primary_session_id    (ActUser   *user);
 
 gint           act_user_collate                   (ActUser   *user1,
