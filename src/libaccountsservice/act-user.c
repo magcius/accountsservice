@@ -596,8 +596,8 @@ collect_props (const gchar    *key,
         } else if (strcmp (key, "LoginFrequency") == 0) {
                 int new_login_frequency;
 
-                new_login_frequency = g_value_get_int (value);
-                if ((int) user->login_frequency != new_login_frequency) {
+                new_login_frequency = (int) g_value_get_uint64 (value);
+                if ((int) user->login_frequency != (int) new_login_frequency) {
                         user->login_frequency = new_login_frequency;
                         g_object_notify (G_OBJECT (user), "login-frequency");
                 }
