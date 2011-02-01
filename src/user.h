@@ -79,6 +79,9 @@ gboolean       user_set_email          (User                  *user,
 gboolean       user_set_language       (User                  *user,
                                         const gchar           *language,
                                         DBusGMethodInvocation *context);
+gboolean       user_set_x_session      (User                  *user,
+                                        const gchar           *x_session,
+                                        DBusGMethodInvocation *context);
 gboolean       user_set_location       (User                  *user,
                                         const gchar           *location,
                                         DBusGMethodInvocation *context);

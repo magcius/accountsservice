@@ -58,6 +58,7 @@ enum {
         PROP_ACCOUNT_TYPE,
         PROP_EMAIL,
         PROP_LANGUAGE,
+        PROP_X_SESSION,
         PROP_LOCATION,
         PROP_PASSWORD_MODE,
         PROP_PASSWORD_HINT,
@@ -93,6 +94,7 @@ struct User {
         gchar        *shell;
         gchar        *email;
         gchar        *language;
+        gchar        *x_session;
         gchar        *location;
         guint64       login_frequency;
         gchar        *icon_file;
@@ -123,6 +125,9 @@ user_set_property (GObject      *object,
                 break;
         case PROP_LANGUAGE:
                 user->language = g_value_dup_string (value);
+                break;
+        case PROP_X_SESSION:
+                user->x_session = g_value_dup_string (value);
                 break;
         case PROP_EMAIL:
                 user->email = g_value_dup_string (value);
@@ -177,6 +182,9 @@ user_get_property (GObject    *object,
                 break;
         case PROP_LANGUAGE:
                 g_value_set_string (value, user->language);
+                break;
+        case PROP_X_SESSION:
+                g_value_set_string (value, user->x_session);
                 break;
         case PROP_LOCATION:
                 g_value_set_string (value, user->location);
@@ -308,6 +316,13 @@ user_class_init (UserClass *class)
                                                               NULL,
                                                               G_PARAM_READABLE));
         g_object_class_install_property (gobject_class,
+                                         PROP_X_SESSION,
+                                         g_param_spec_string ("x-session",
+                                                              "X Session",
+                                                              "The session this user logs into.",
+                                                              NULL,
+                                                              G_PARAM_READABLE));
+        g_object_class_install_property (gobject_class,
                                          PROP_LOCATION,
                                          g_param_spec_string ("location",
                                                               "Location",
@@ -362,6 +377,7 @@ user_init (User *user)
         user->icon_file = NULL;
         user->email = NULL;
         user->language = NULL;
+        user->x_session = NULL;
         user->location = NULL;
         user->password_mode = PASSWORD_MODE_REGULAR;
         user->password_hint = NULL;
@@ -384,6 +400,7 @@ user_finalize (GObject *object)
         g_free (user->icon_file);
         g_free (user->email);
         g_free (user->language);
+        g_free (user->x_session);
         g_free (user->location);
         g_free (user->password_hint);
 
@@ -581,6 +598,12 @@ user_local_update_from_keyfile (User     *user,
                 user->language = s;
         }
 
+        s = g_key_file_get_string (keyfile, "User", "XSession", NULL);
+        if (s != NULL) {
+                g_free (user->x_session);
+                user->x_session = s;
+        }
+
         s = g_key_file_get_string (keyfile, "User", "Email", NULL);
         if (s != NULL) {
                 g_free (user->email);
@@ -617,6 +640,9 @@ user_local_save_to_keyfile (User     *user,
 
         if (user->language)
                 g_key_file_set_string (keyfile, "User", "Language", user->language);
+
+        if (user->x_session)
+                g_key_file_set_string (keyfile, "User", "XSession", user->x_session);
 
         if (user->location)
                 g_key_file_set_string (keyfile, "User", "Location", user->location);
@@ -1049,6 +1075,68 @@ user_set_language (User                  *user,
                                  context,
                                  g_strdup (language),
                                  (GDestroyNotify)g_free);
+
+        return TRUE;
+}
+
+static void
+user_change_x_session_authorized_cb (Daemon                *daemon,
+                                     User                  *user,
+                                     DBusGMethodInvocation *context,
+                                     gpointer               data)
+
+{
+        gchar *x_session = data;
+
+        if (g_strcmp0 (user->x_session, x_session) != 0) {
+                g_free (user->x_session);
+                user->x_session = g_strdup (x_session);
+
+                save_extra_data (user);
+
+                g_signal_emit (user, signals[CHANGED], 0);
+
+                g_object_notify (G_OBJECT (user), "x-session");
+        }
+
+        dbus_g_method_return (context);
+}
+
+gboolean
+user_set_x_session (User                  *user,
+                    const gchar           *x_session,
+                    DBusGMethodInvocation *context)
+{
+        gchar *sender;
+        DBusConnection *connection;
+        DBusError dbus_error;
+        uid_t uid;
+        const gchar *action_id;
+
+        connection = dbus_g_connection_get_connection (user->system_bus_connection);
+        sender = dbus_g_method_get_sender (context);
+        dbus_error_init (&dbus_error);
+        uid = dbus_bus_get_unix_user (connection, sender, &dbus_error);
+        if (dbus_error_is_set (&dbus_error)) {
+                throw_error (context, ERROR_FAILED, dbus_error.message);
+                dbus_error_free (&dbus_error);
+
+                return TRUE;
+        }
+
+        if (user->uid == uid)
+                action_id = "org.freedesktop.accounts.change-own-user-data";
+        else
+                action_id = "org.freedesktop.accounts.user-administration";
+
+        daemon_local_check_auth (user->daemon,
+                                 user,
+                                 action_id,
+                                 TRUE,
+                                 user_change_x_session_authorized_cb,
+                                 context,
+                                 g_strdup (x_session),
+                                 (GDestroyNotify) g_free);
 
         return TRUE;
 }

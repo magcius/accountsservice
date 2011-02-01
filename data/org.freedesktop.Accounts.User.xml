@@ -150,6 +150,46 @@
     </doc:doc>
   </method>
 
+  <method name="SetXSession">
+    <annotation name="org.freedesktop.DBus.GLib.Async" value=""/>
+    <annotation name="org.freedesktop.DBus.GLib.CSymbol" value="user_set_x_session"/>
+    <arg name="x_session" direction="in" type="s">
+      <doc:doc>
+        <doc:summary>
+          The new xsession to start (e.g. "gnome")
+        </doc:summary>
+      </doc:doc>
+    </arg>
+    <doc:doc>
+      <doc:description>
+        <doc:para>
+          Sets the users x session.
+        </doc:para>
+        <doc:language>
+          The expectation is that display managers will log the user in to this
+          specified session, if available.
+        </doc:language>
+      </doc:description>
+      <doc:permission>
+        The caller needs one of the following PolicyKit authorizations:
+        <doc:list>
+          <doc:item>
+            <doc:term>org.freedesktop.accounts.change-own-user-data</doc:term>
+            <doc:definition>To change his own language</doc:definition>
+          </doc:item>
+          <doc:item>
+            <doc:term>org.freedesktop.accounts.user-administration</doc:term>
+            <doc:definition>To change the language of another user</doc:definition>
+          </doc:item>
+        </doc:list>
+      </doc:permission>
+      <doc:errors>
+        <doc:error name="org.freedesktop.Accounts.Error.PermissionDenied">if the caller lacks the appropriate PolicyKit authorization</doc:error>
+        <doc:error name="org.freedesktop.Accounts.Error.Failed">if the operation failed</doc:error>
+      </doc:errors>
+   </doc:doc>
+  </method>
+
   <method name="SetLocation">
     <annotation name="org.freedesktop.DBus.GLib.Async" value=""/>
     <arg name="location" direction="in" type="s">
