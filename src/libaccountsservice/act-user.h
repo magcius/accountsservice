@@ -78,6 +78,32 @@ gint           act_user_collate                   (ActUser   *user1,
                                                    ActUser   *user2);
 gboolean       act_user_is_loaded                 (ActUser   *user);
 
+void           act_user_set_email                 (ActUser    *user,
+                                                   const char *email);
+void           act_user_set_language              (ActUser    *user,
+                                                   const char *language);
+void           act_user_set_x_session             (ActUser    *user,
+                                                   const char *x_session);
+void           act_user_set_location              (ActUser    *user,
+                                                   const char *location);
+void           act_user_set_user_name             (ActUser    *user,
+                                                   const char  *user_name);
+void           act_user_set_real_name             (ActUser    *user,
+                                                   const char *real_name);
+void           act_user_set_icon_file             (ActUser    *user,
+                                                   const char *icon_file);
+void           act_user_set_account_type          (ActUser    *user,
+                                                   ActUserAccountType account_type);
+void           act_user_set_password              (ActUser     *user,
+                                                   const gchar *password,
+                                                   const gchar *hint);
+void           act_user_set_password_mode         (ActUser             *user,
+                                                   ActUserPasswordMode  password_mode);
+void           act_user_set_locked                (ActUser    *user,
+                                                   gboolean    locked);
+void           act_user_set_automatic_login       (ActUser   *user,
+                                                   gboolean  enabled);
+
 G_END_DECLS
 
 #endif /* __ACT_USER_H__ */

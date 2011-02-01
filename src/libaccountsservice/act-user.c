@@ -1155,3 +1155,404 @@ act_user_is_loaded (ActUser *user)
 {
         return user->is_loaded;
 }
+
+/**
+ * act_user_set_email:
+ * @user: the user object to alter.
+ * @email: an email address
+ *
+ * Assigns a new email to @user.
+ *
+ * Note this function is synchronous and ignores errors.
+ **/
+void
+act_user_set_email (ActUser    *user,
+                    const char *email)
+{
+        GError *error = NULL;
+
+        g_return_if_fail (ACT_IS_USER (user));
+        g_return_if_fail (email != NULL);
+
+        if (!dbus_g_proxy_call (user->object_proxy,
+                                "SetEmail",
+                                &error,
+                                G_TYPE_STRING, email,
+                                G_TYPE_INVALID,
+                                G_TYPE_INVALID)) {
+                g_warning ("SetEmail call failed: %s", error->message);
+                g_error_free (error);
+                return;
+        }
+}
+
+/**
+ * act_user_set_language:
+ * @user: the user object to alter.
+ * @language: a locale (e.g. en_US.utf8)
+ *
+ * Assigns a new locale for @user.
+ *
+ * Note this function is synchronous and ignores errors.
+ **/
+void
+act_user_set_language (ActUser    *user,
+                       const char *language)
+{
+        GError *error = NULL;
+
+        g_return_if_fail (ACT_IS_USER (user));
+        g_return_if_fail (language != NULL);
+
+        if (!dbus_g_proxy_call (user->object_proxy,
+                                "SetLanguage",
+                                &error,
+                                G_TYPE_STRING, language,
+                                G_TYPE_INVALID,
+                                G_TYPE_INVALID)) {
+                g_warning ("SetLanguage call failed: %s", error->message);
+                g_error_free (error);
+                return;
+        }
+}
+
+/**
+ * act_user_set_x_session:
+ * @user: the user object to alter.
+ * @x_session: an x session (e.g. gnome)
+ *
+ * Assigns a new x session for @user.
+ *
+ * Note this function is synchronous and ignores errors.
+ **/
+void
+act_user_set_x_session (ActUser    *user,
+                        const char *x_session)
+{
+        GError *error = NULL;
+
+        g_return_if_fail (ACT_IS_USER (user));
+        g_return_if_fail (x_session != NULL);
+
+        if (!dbus_g_proxy_call (user->object_proxy,
+                                "SetXSession",
+                                &error,
+                                G_TYPE_STRING, x_session,
+                                G_TYPE_INVALID,
+                                G_TYPE_INVALID)) {
+                g_warning ("SetXSession call failed: %s", error->message);
+                g_error_free (error);
+                return;
+        }
+}
+
+
+/**
+ * act_user_set_location:
+ * @user: the user object to alter.
+ * @location: a location
+ *
+ * Assigns a new location for @user.
+ *
+ * Note this function is synchronous and ignores errors.
+ **/
+void
+act_user_set_location (ActUser    *user,
+                       const char *location)
+{
+        GError *error = NULL;
+
+        g_return_if_fail (ACT_IS_USER (user));
+        g_return_if_fail (location != NULL);
+
+        if (!dbus_g_proxy_call (user->object_proxy,
+                                "SetLocation",
+                                &error,
+                                G_TYPE_STRING, location,
+                                G_TYPE_INVALID,
+                                G_TYPE_INVALID)) {
+                g_warning ("SetLocation call failed: %s", error->message);
+                g_error_free (error);
+                return;
+        }
+}
+
+/**
+ * act_user_set_user_name:
+ * @user: the user object to alter.
+ * @user_name: a new user name
+ *
+ * Assigns a new username for @user.
+ *
+ * Note this function is synchronous and ignores errors.
+ **/
+void
+act_user_set_user_name (ActUser    *user,
+                        const char *user_name)
+{
+        GError *error = NULL;
+
+        g_return_if_fail (ACT_IS_USER (user));
+        g_return_if_fail (user_name != NULL);
+
+        if (!dbus_g_proxy_call (user->object_proxy,
+                                "SetUserName",
+                                &error,
+                                G_TYPE_STRING, user_name,
+                                G_TYPE_INVALID,
+                                G_TYPE_INVALID)) {
+                g_warning ("SetUserName call failed: %s", error->message);
+                g_error_free (error);
+                return;
+        }
+}
+
+/**
+ * act_user_set_real_name:
+ * @user: the user object to alter.
+ * @real_name: a new name
+ *
+ * Assigns a new name for @user.
+ *
+ * Note this function is synchronous and ignores errors.
+ **/
+void
+act_user_set_real_name (ActUser    *user,
+                        const char *real_name)
+{
+        GError *error = NULL;
+
+        g_return_if_fail (ACT_IS_USER (user));
+        g_return_if_fail (real_name != NULL);
+
+        if (!dbus_g_proxy_call (user->object_proxy,
+                                "SetRealName",
+                                &error,
+                                G_TYPE_STRING, real_name,
+                                G_TYPE_INVALID,
+                                G_TYPE_INVALID)) {
+                g_warning ("SetRealName call failed: %s", error->message);
+                g_error_free (error);
+                return;
+        }
+}
+
+/**
+ * act_user_set_icon_file:
+ * @user: the user object to alter.
+ * @icon_file: path to an icon
+ *
+ * Assigns a new icon for @user.
+ *
+ * Note this function is synchronous and ignores errors.
+ **/
+void
+act_user_set_icon_file (ActUser    *user,
+                        const char *icon_file)
+{
+        GError *error = NULL;
+
+        g_return_if_fail (ACT_IS_USER (user));
+        g_return_if_fail (icon_file != NULL);
+
+        if (!dbus_g_proxy_call (user->object_proxy,
+                                "SetIconFile",
+                                &error,
+                                G_TYPE_STRING, icon_file,
+                                G_TYPE_INVALID,
+                                G_TYPE_INVALID)) {
+                g_warning ("SetIconFile call failed: %s", error->message);
+                g_error_free (error);
+                return;
+        }
+}
+
+/**
+ * act_user_set_account_type:
+ * @user: the user object to alter.
+ * @account_type: a #ActUserAccountType
+ *
+ * Changes the account type of @user.
+ *
+ * Note this function is synchronous and ignores errors.
+ **/
+void
+act_user_set_account_type (ActUser            *user,
+                           ActUserAccountType  account_type)
+{
+        GError *error = NULL;
+
+        g_return_if_fail (ACT_IS_USER (user));
+
+        if (!dbus_g_proxy_call (user->object_proxy,
+                                "SetAccountType",
+                                &error,
+                                G_TYPE_INT, account_type,
+                                G_TYPE_INVALID,
+                                G_TYPE_INVALID)) {
+                g_warning ("SetAccountType call failed: %s", error->message);
+                g_error_free (error);
+                return;
+        }
+}
+
+static gchar
+salt_char (GRand *rand)
+{
+        gchar salt[] = "ABCDEFGHIJKLMNOPQRSTUVXYZ"
+                       "abcdefghijklmnopqrstuvxyz"
+                       "./0123456789";
+
+        return salt[g_rand_int_range (rand, 0, G_N_ELEMENTS (salt))];
+}
+
+static gchar *
+make_crypted (const gchar *plain)
+{
+        GString *salt;
+        gchar *result;
+        GRand *rand;
+        gint i;
+
+        rand = g_rand_new ();
+        salt = g_string_sized_new (21);
+
+        /* SHA 256 */
+        g_string_append (salt, "$6$");
+        for (i = 0; i < 16; i++) {
+                g_string_append_c (salt, salt_char (rand));
+        }
+        g_string_append_c (salt, '$');
+
+        result = g_strdup (crypt (plain, salt->str));
+
+        g_string_free (salt, TRUE);
+        g_rand_free (rand);
+
+        return result;
+}
+
+/**
+ * act_user_set_password:
+ * @user: the user object to alter.
+ * @password: a password
+ * @hint: a hint to help user recall password
+ *
+ * Changes the password of @user to @password.
+ * @hint is displayed to the user if they forget the password.
+ *
+ * Note this function is synchronous and ignores errors.
+ **/
+void
+act_user_set_password (ActUser             *user,
+                       const gchar         *password,
+                       const gchar         *hint)
+{
+        GError *error = NULL;
+        gchar *crypted;
+
+        g_return_if_fail (ACT_IS_USER (user));
+        g_return_if_fail (password != NULL);
+
+        crypted = make_crypted (password);
+        if (!dbus_g_proxy_call (user->object_proxy,
+                                "SetPassword",
+                                &error,
+                                G_TYPE_STRING, crypted,
+                                G_TYPE_STRING, hint,
+                                G_TYPE_INVALID,
+                                G_TYPE_INVALID)) {
+                g_warning ("SetPassword call failed: %s", error->message);
+                g_error_free (error);
+        }
+        memset (crypted, 0, strlen (crypted));
+        g_free (crypted);
+}
+
+/**
+ * act_user_set_password_mode:
+ * @user: the user object to alter.
+ * @password_mode: a #ActUserPasswordMode
+ *
+ * Changes the password of @user.  If @password_mode is
+ * ACT_USER_PASSWORD_MODE_SET_AT_LOGIN then the user will
+ * be asked for a new password at the next login.  If @password_mode
+ * is ACT_USER_PASSWORD_MODE_NONE then the user will not require
+ * a password to log in.
+ *
+ * Note this function is synchronous and ignores errors.
+ **/
+void
+act_user_set_password_mode (ActUser             *user,
+                            ActUserPasswordMode  password_mode)
+{
+        GError *error = NULL;
+
+        g_return_if_fail (ACT_IS_USER (user));
+
+        if (!dbus_g_proxy_call (user->object_proxy,
+                                "SetPasswordMode",
+                                &error,
+                                G_TYPE_INT, (int) password_mode,
+                                G_TYPE_INVALID,
+                                G_TYPE_INVALID)) {
+                g_warning ("SetPasswordMode call failed: %s", error->message);
+                g_error_free (error);
+        }
+}
+
+/**
+ * act_user_set_locked:
+ * @user: the user object to alter.
+ * @locked: whether or not the account is locked
+ *
+ * Note this function is synchronous and ignores errors.
+ **/
+void
+act_user_set_locked (ActUser  *user,
+                     gboolean  locked)
+{
+        GError *error = NULL;
+
+        g_return_if_fail (ACT_IS_USER (user));
+
+        if (!dbus_g_proxy_call (user->object_proxy,
+                                "SetLocked",
+                                &error,
+                                G_TYPE_BOOLEAN, locked,
+                                G_TYPE_INVALID,
+                                G_TYPE_INVALID)) {
+                g_warning ("SetLocked call failed: %s", error->message);
+                g_error_free (error);
+        }
+}
+
+/**
+ * act_user_set_automatic_login:
+ * @enabled: whether or not to autologin for user.
+ *
+ * If enabled is set to %TRUE then this user will automatically be logged in
+ * at boot up time.  Only one user can be configured to auto login at any given
+ * time, so subsequent calls to act_user_set_automatic_login() override previous
+ * calls.
+ *
+ * Note this function is synchronous and ignores errors.
+ **/
+void
+act_user_set_automatic_login (ActUser   *user,
+                              gboolean  enabled)
+{
+        GError *error = NULL;
+
+        g_return_if_fail (ACT_IS_USER (user));
+
+        if (!dbus_g_proxy_call (user->object_proxy,
+                                "SetAutomaticLogin",
+                                &error,
+                                G_TYPE_BOOLEAN, enabled,
+                                G_TYPE_INVALID,
+                                G_TYPE_INVALID)) {
+                g_warning ("SetAutomaticLogin call failed: %s", error->message);
+                g_error_free (error);
+        }
+}

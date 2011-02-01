@@ -52,6 +52,7 @@ libaccountsservice_la_LDFLAGS =                                               \
 
 libaccountsservice_la_LIBADD =                                                \
         $(LIBACCOUNTSSERVICE_LIBS)                                            \
+        -lcrypt                                                               \
         $(END_OF_LIST)
 
 libaccountsservice_la_SOURCES =                                               \
