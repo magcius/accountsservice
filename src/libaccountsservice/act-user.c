@@ -46,9 +46,19 @@ enum {
         PROP_UID,
         PROP_USER_NAME,
         PROP_REAL_NAME,
+        PROP_ACCOUNT_TYPE,
+        PROP_PASSWORD_MODE,
+        PROP_PASSWORD_HINT,
+        PROP_HOME_DIR,
+        PROP_SHELL,
+        PROP_EMAIL,
+        PROP_LOCATION,
+        PROP_LOCKED,
+        PROP_AUTOMATIC_LOGIN,
         PROP_LOGIN_FREQUENCY,
         PROP_ICON_FILE,
         PROP_LANGUAGE,
+        PROP_X_SESSION,
         PROP_IS_LOADED
 };
 
@@ -70,12 +80,23 @@ struct _ActUser {
         uid_t           uid;
         char           *user_name;
         char           *real_name;
+        char           *password_hint;
+        char           *home_dir;
+        char           *shell;
+        char           *email;
+        char           *location;
         char           *icon_file;
         char           *language;
+        char           *x_session;
         GList          *sessions;
         int             login_frequency;
 
+        ActUserAccountType  account_type;
+        ActUserPasswordMode password_mode;
+
         guint           is_loaded : 1;
+        guint           locked : 1;
+        guint           automatic_login : 1;
 };
 
 struct _ActUserClass
@@ -184,14 +205,44 @@ act_user_get_property (GObject    *object,
         case PROP_REAL_NAME:
                 g_value_set_string (value, user->real_name);
                 break;
+        case PROP_ACCOUNT_TYPE:
+                g_value_set_int (value, user->account_type);
+                break;
+        case PROP_PASSWORD_MODE:
+                g_value_set_int (value, user->password_mode);
+                break;
+        case PROP_PASSWORD_HINT:
+                g_value_set_string (value, user->password_hint);
+                break;
+        case PROP_HOME_DIR:
+                g_value_set_string (value, user->home_dir);
+                break;
         case PROP_LOGIN_FREQUENCY:
                 g_value_set_int (value, user->login_frequency);
+                break;
+        case PROP_SHELL:
+                g_value_set_string (value, user->shell);
+                break;
+        case PROP_EMAIL:
+                g_value_set_string (value, user->email);
+                break;
+        case PROP_LOCATION:
+                g_value_set_string (value, user->location);
                 break;
         case PROP_ICON_FILE:
                 g_value_set_string (value, user->icon_file);
                 break;
         case PROP_LANGUAGE:
                 g_value_set_string (value, user->language);
+                break;
+        case PROP_X_SESSION:
+                g_value_set_string (value, user->x_session);
+                break;
+        case PROP_LOCKED:
+                g_value_set_boolean (value, user->locked);
+                break;
+        case PROP_AUTOMATIC_LOGIN:
+                g_value_set_boolean (value, user->automatic_login);
                 break;
         case PROP_IS_LOADED:
                 g_value_set_boolean (value, user->is_loaded);
@@ -223,6 +274,33 @@ act_user_class_init (ActUserClass *class)
                                                               G_PARAM_READABLE));
 
         g_object_class_install_property (gobject_class,
+                                         PROP_ACCOUNT_TYPE,
+                                         g_param_spec_int ("account-type",
+                                                           "Account Type",
+                                                           "The account type for this user.",
+                                                           ACT_USER_ACCOUNT_TYPE_STANDARD,
+                                                           ACT_USER_ACCOUNT_TYPE_SUPERVISED,
+                                                           ACT_USER_ACCOUNT_TYPE_STANDARD,
+                                                           G_PARAM_READABLE));
+        g_object_class_install_property (gobject_class,
+                                         PROP_PASSWORD_MODE,
+                                         g_param_spec_int ("password-mode",
+                                                           "Password Mode",
+                                                           "The password mode for this user.",
+                                                           ACT_USER_PASSWORD_MODE_REGULAR,
+                                                           ACT_USER_PASSWORD_MODE_NONE,
+                                                           ACT_USER_PASSWORD_MODE_REGULAR,
+                                                           G_PARAM_READABLE));
+
+        g_object_class_install_property (gobject_class,
+                                         PROP_PASSWORD_HINT,
+                                         g_param_spec_string ("password-hint",
+                                                              "Password Hint",
+                                                              "Hint to help this user remember his password",
+                                                              NULL,
+                                                              G_PARAM_READABLE));
+
+        g_object_class_install_property (gobject_class,
                                          PROP_UID,
                                          g_param_spec_int ("uid",
                                                            "User ID",
@@ -234,6 +312,34 @@ act_user_class_init (ActUserClass *class)
                                          g_param_spec_string ("user-name",
                                                               "User Name",
                                                               "The login name for this user.",
+                                                              NULL,
+                                                              G_PARAM_READABLE));
+        g_object_class_install_property (gobject_class,
+                                         PROP_HOME_DIR,
+                                         g_param_spec_string ("home-directory",
+                                                              "Home Directory",
+                                                              "The home directory for this user.",
+                                                              NULL,
+                                                              G_PARAM_READABLE));
+        g_object_class_install_property (gobject_class,
+                                         PROP_SHELL,
+                                         g_param_spec_string ("shell",
+                                                              "Shell",
+                                                              "The shell for this user.",
+                                                              NULL,
+                                                              G_PARAM_READABLE));
+        g_object_class_install_property (gobject_class,
+                                         PROP_EMAIL,
+                                         g_param_spec_string ("email",
+                                                              "Email",
+                                                              "The email address for this user.",
+                                                              NULL,
+                                                              G_PARAM_READABLE));
+        g_object_class_install_property (gobject_class,
+                                         PROP_LOCATION,
+                                         g_param_spec_string ("location",
+                                                              "Location",
+                                                              "The location of this user.",
                                                               NULL,
                                                               G_PARAM_READABLE));
         g_object_class_install_property (gobject_class,
@@ -260,10 +366,32 @@ act_user_class_init (ActUserClass *class)
                                                               NULL,
                                                               G_PARAM_READABLE));
         g_object_class_install_property (gobject_class,
+                                         PROP_X_SESSION,
+                                         g_param_spec_string ("x-session",
+                                                              "X session",
+                                                              "User's X session.",
+                                                              NULL,
+                                                              G_PARAM_READABLE));
+        g_object_class_install_property (gobject_class,
                                          PROP_IS_LOADED,
                                          g_param_spec_boolean ("is-loaded",
                                                                NULL,
                                                                NULL,
+                                                               FALSE,
+                                                               G_PARAM_READABLE));
+        g_object_class_install_property (gobject_class,
+                                         PROP_LOCKED,
+                                         g_param_spec_boolean ("locked",
+                                                               "Locked",
+                                                               "Locked",
+                                                               FALSE,
+                                                              G_PARAM_READABLE));
+
+        g_object_class_install_property (gobject_class,
+                                         PROP_AUTOMATIC_LOGIN,
+                                         g_param_spec_boolean ("automatic-login",
+                                                               "Automatic Login",
+                                                               "Automatic Login",
                                                                FALSE,
                                                                G_PARAM_READABLE));
 
@@ -313,6 +441,12 @@ act_user_finalize (GObject *object)
         g_free (user->icon_file);
         g_free (user->language);
         g_free (user->object_path);
+        g_free (user->password_hint);
+        g_free (user->home_dir);
+        g_free (user->shell);
+        g_free (user->email);
+        g_free (user->location);
+        g_free (user->language);
 
         if (user->accounts_proxy != NULL) {
                 g_object_unref (user->accounts_proxy);
@@ -373,6 +507,123 @@ act_user_get_real_name (ActUser *user)
         g_return_val_if_fail (ACT_IS_USER (user), NULL);
 
         return (user->real_name ? user->real_name : user->user_name);
+}
+
+/**
+ * act_user_get_account_type:
+ * @user: the user object to examine.
+ *
+ * Retrieves the account type of @user.
+ *
+ * Returns: a #ActUserAccountType
+ **/
+ActUserAccountType
+act_user_get_account_type (ActUser *user)
+{
+        g_return_val_if_fail (ACT_IS_USER (user), ACT_USER_ACCOUNT_TYPE_STANDARD);
+
+        return user->account_type;
+}
+
+/**
+ * act_user_get_password_mode:
+ * @user: the user object to examine.
+ *
+ * Retrieves the password mode of @user.
+ *
+ * Returns: a #ActUserPasswordMode
+ **/
+ActUserPasswordMode
+act_user_get_password_mode (ActUser *user)
+{
+        g_return_val_if_fail (ACT_IS_USER (user), ACT_USER_PASSWORD_MODE_REGULAR);
+
+        return user->password_mode;
+}
+
+/**
+ * act_user_get_password_hint:
+ * @user: the user object to examine.
+ *
+ * Retrieves the password hint set by @user.
+ *
+ * Returns: (transfer none): a pointer to an array of characters which must not be modified or
+ *  freed, or %NULL.
+ **/
+const char *
+act_user_get_password_hint (ActUser *user)
+{
+        g_return_val_if_fail (ACT_IS_USER (user), NULL);
+
+        return user->password_hint;
+}
+
+/**
+ * act_user_get_home_dir:
+ * @user: the user object to examine.
+ *
+ * Retrieves the home directory for @user.
+ *
+ * Returns: (transfer none): a pointer to an array of characters which must not be modified or
+ *  freed, or %NULL.
+ **/
+const char *
+act_user_get_home_dir (ActUser *user)
+{
+        g_return_val_if_fail (ACT_IS_USER (user), NULL);
+
+        return user->home_dir;
+}
+
+/**
+ * act_user_get_shell:
+ * @user: the user object to examine.
+ *
+ * Retrieves the shell assigned to @user.
+ *
+ * Returns: (transfer none): a pointer to an array of characters which must not be modified or
+ *  freed, or %NULL.
+ **/
+const char *
+act_user_get_shell (ActUser *user)
+{
+        g_return_val_if_fail (ACT_IS_USER (user), NULL);
+
+        return user->shell;
+}
+
+/**
+ * act_user_get_email:
+ * @user: the user object to examine.
+ *
+ * Retrieves the email address set by @user.
+ *
+ * Returns: (transfer none): a pointer to an array of characters which must not be modified or
+ *  freed, or %NULL.
+ **/
+const char *
+act_user_get_email (ActUser *user)
+{
+        g_return_val_if_fail (ACT_IS_USER (user), NULL);
+
+        return user->email;
+}
+
+/**
+ * act_user_get_location:
+ * @user: the user object to examine.
+ *
+ * Retrieves the location set by @user.
+ *
+ * Returns: (transfer none): a pointer to an array of characters which must not be modified or
+ *  freed, or %NULL.
+ **/
+const char *
+act_user_get_location (ActUser *user)
+{
+        g_return_val_if_fail (ACT_IS_USER (user), NULL);
+
+        return user->location;
 }
 
 /**
@@ -489,6 +740,34 @@ act_user_is_logged_in (ActUser *user)
 }
 
 /**
+ * act_user_get_locked:
+ * @user: a #ActUser
+ *
+ * Returns whether or not the #ActUser account is locked.
+ *
+ * Returns: %TRUE or %FALSE
+ */
+gboolean
+act_user_get_locked (ActUser *user)
+{
+        return user->locked;;
+}
+
+/**
+ * act_user_get_automatic_login:
+ * @user: a #ActUser
+ *
+ * Returns whether or not #ActUser is automatically logged in at boot time.
+ *
+ * Returns: %TRUE or %FALSE
+ */
+gboolean
+act_user_get_automatic_login (ActUser *user)
+{
+        return user->automatic_login;
+}
+
+/**
  * act_user_get_icon_file:
  * @user: a #ActUser
  *
@@ -518,6 +797,22 @@ act_user_get_language (ActUser *user)
         g_return_val_if_fail (ACT_IS_USER (user), NULL);
 
         return user->language;
+}
+
+/**
+ * act_user_get_x_session:
+ * @user: a #ActUser
+ *
+ * Returns the path to the configured X session for @user.
+ *
+ * Returns: (transfer none): a path to an icon
+ */
+const char *
+act_user_get_x_session (ActUser *user)
+{
+        g_return_val_if_fail (ACT_IS_USER (user), NULL);
+
+        return user->x_session;
 }
 
 /**
@@ -593,6 +888,83 @@ collect_props (const gchar    *key,
                         user->real_name = g_strdup (new_real_name);
                         g_object_notify (G_OBJECT (user), "real-name");
                 }
+        } else if (strcmp (key, "AccountType") == 0) {
+                int new_account_type;
+
+                new_account_type = g_value_get_int (value);
+                if ((int) user->account_type != new_account_type) {
+                        user->account_type = (ActUserAccountType) new_account_type;
+                        g_object_notify (G_OBJECT (user), "account-type");
+                }
+        } else if (strcmp (key, "PasswordMode") == 0) {
+                int new_password_mode;
+
+                new_password_mode = g_value_get_int (value);
+                if ((int) user->password_mode != new_password_mode) {
+                        user->password_mode = (ActUserPasswordMode) new_password_mode;
+                        g_object_notify (G_OBJECT (user), "password-mode");
+                }
+        } else if (strcmp (key, "PasswordHint") == 0) {
+                const char *new_password_hint;
+
+                new_password_hint = g_value_get_string (value);
+                if (g_strcmp0 (user->password_hint, new_password_hint) != 0) {
+                        g_free (user->password_hint);
+                        user->password_hint = g_value_dup_string (value);
+                        g_object_notify (G_OBJECT (user), "password-hint");
+                }
+        } else if (strcmp (key, "HomeDir") == 0) {
+                const char *new_home_dir;
+
+                new_home_dir = g_value_get_string (value);
+                if (g_strcmp0 (user->home_dir, new_home_dir) != 0) {
+                        g_free (user->home_dir);
+                        user->home_dir = g_strdup (new_home_dir);
+                        g_object_notify (G_OBJECT (user), "home-dir");
+                }
+        } else if (strcmp (key, "Shell") == 0) {
+                const char *new_shell;
+
+                new_shell = g_value_get_string (value);
+                if (g_strcmp0 (user->shell, new_shell) != 0) {
+                        g_free (user->shell);
+                        user->shell = g_strdup (new_shell);
+                        g_object_notify (G_OBJECT (user), "shell");
+                }
+        } else if (strcmp (key, "Email") == 0) {
+                const char *new_email;
+
+                new_email = g_value_get_string (value);
+                if (g_strcmp0 (user->email, new_email) != 0) {
+                        g_free (user->email);
+                        user->email = g_strdup (new_email);
+                        g_object_notify (G_OBJECT (user), "email");
+                }
+        } else if (strcmp (key, "Location") == 0) {
+                const char *new_location;
+
+                new_location = g_value_get_string (value);
+                if (g_strcmp0 (user->location, new_location) != 0) {
+                        g_free (user->location);
+                        user->location = g_strdup (new_location);
+                        g_object_notify (G_OBJECT (user), "location");
+                }
+        } else if (strcmp (key, "Locked") == 0) {
+                gboolean new_locked_state;
+
+                new_locked_state = g_value_get_boolean (value);
+                if (new_locked_state != user->locked) {
+                        user->locked = new_locked_state;
+                        g_object_notify (G_OBJECT (user), "locked");
+                }
+        } else if (strcmp (key, "AutomaticLogin") == 0) {
+                gboolean new_automatic_login_state;
+
+                new_automatic_login_state = g_value_get_boolean (value);
+                if (new_automatic_login_state != user->automatic_login) {
+                        user->automatic_login = new_automatic_login_state;
+                        g_object_notify (G_OBJECT (user), "automatic-login");
+                }
         } else if (strcmp (key, "LoginFrequency") == 0) {
                 int new_login_frequency;
 
@@ -618,6 +990,15 @@ collect_props (const gchar    *key,
                         g_free (user->language);
                         user->language = g_value_dup_string (value);
                         g_object_notify (G_OBJECT (user), "language");
+                }
+        } else if (strcmp (key, "XSession") == 0) {
+                const char *new_x_session;
+
+                new_x_session = g_value_get_string (value);
+                if (g_strcmp0 (user->x_session, new_x_session) != 0) {
+                        g_free (user->x_session);
+                        user->x_session = g_value_dup_string (value);
+                        g_object_notify (G_OBJECT (user), "x-session");
                 }
         } else {
                 handled = FALSE;

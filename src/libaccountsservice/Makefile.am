@@ -1,6 +1,8 @@
 END_OF_LIST =
 
+BUILT_SOURCES = $(END_OF_LIST)
 CLEANFILES = $(END_OF_LIST)
+
 AM_CPPFLAGS = \
         -I.                                                                   \
         -I..                                                                  \
@@ -10,10 +12,35 @@ lib_LTLIBRARIES =                                                             \
         libaccountsservice.la                                                 \
         $(END_OF_LIST)
 
+act-user-enum-types.h: act-user.h
+	$(AM_V_GEN) (cd $(srcdir) && \
+	         glib-mkenums \
+	          --fhead "#ifndef __ACT_USER_ENUM_TYPES_H__\n#define __ACT_USER_ENUM_TYPES_H__\n\n#include <glib-object.h>\n\nG_BEGIN_DECLS\n" \
+	          --fprod "/* enumerations from \"@filename@\" */\n" \
+	          --vhead "GType @enum_name@_get_type (void);\n#define ACT_USER_TYPE_@ENUMSHORT@ (@enum_name@_get_type())\n"    \
+	          --ftail "G_END_DECLS\n\n#endif /* __ACT_USER_ENUM_TYPES_H__ */" \
+	          act-user.h) > $@
+
+act-user-enum-types.c: act-user.h act-user-enum-types.h
+	$(AM_V_GEN) (cd $(srcdir) && \
+	         glib-mkenums \
+	          --fhead "#include \"act-user.h\"\n" \
+	          --fhead "#include \"act-user-enum-types.h\"\n" \
+	          --fhead "#include <glib-object.h>" \
+	          --fprod "\n/* enumerations from \"@filename@\" */" \
+	          --vhead "GType\n@enum_name@_get_type (void)\n{\n  static GType etype = 0;\n  if (etype == 0) {\n    static const G@Type@Value values[] = {"    \
+	          --vprod "      { @VALUENAME@, \"@VALUENAME@\", \"@valuenick@\" }," \
+	          --vtail "      { 0, NULL, NULL }\n    };\n    etype = g_@type@_register_static (\"@EnumName@\", values);\n  }\n  return etype;\n}\n" \
+	         act-user.h) > $@
+
+BUILT_SOURCES += act-user-enum-types.c act-user-enum-types.h
+CLEANFILES += $(BUILT_SOURCES)
+
 libaccountsservicedir = $(includedir)/accountsservice-1.0/act
 libaccountsservice_HEADERS =                                                  \
         act-user.h                                                            \
         act-user-manager.h                                                    \
+        act-user-enum-types.h                                                 \
         $(END_OF_LIST)
 
 libaccountsservice_la_CFLAGS = $(LIBACCOUNTSSERVICE_CFLAGS)
@@ -32,6 +59,7 @@ libaccountsservice_la_SOURCES =                                               \
         act-user-private.h                                                    \
         act-user.c                                                            \
         act-user-manager.c                                                    \
+        $(BUILT_SOURCES)                                                      \
         $(END_OF_LIST)
 
 pkgconfigdir = $(libdir)/pkgconfig
@@ -62,7 +90,8 @@ AccountsService_1_0_gir_SCANNERFLAGS =                                        \
 AccountsService_1_0_gir_INCLUDES = $(LIBACCOUNTSSERVICE_GIR_INCLUDES)
 AccountsService_1_0_gir_LIBS = libaccountsservice.la
 AccountsService_1_0_gir_FILES =                                               \
-        $(filter-out %-private.h, $(libaccountsservice_la_SOURCES))
+        $(filter-out %-private.h, $(libaccountsservice_la_SOURCES))           \
+        $(BUILT_SOURCES)                                                      \
         $(END_OF_LIST)
 
 CLEANFILES += $(gir_DATA) $(typelibs_DATA)

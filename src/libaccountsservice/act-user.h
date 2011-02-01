@@ -35,6 +35,18 @@ G_BEGIN_DECLS
 #define ACT_USER(object) (G_TYPE_CHECK_INSTANCE_CAST ((object), ACT_TYPE_USER, ActUser))
 #define ACT_IS_USER(object) (G_TYPE_CHECK_INSTANCE_TYPE ((object), ACT_TYPE_USER))
 
+typedef enum {
+        ACT_USER_ACCOUNT_TYPE_STANDARD,
+        ACT_USER_ACCOUNT_TYPE_ADMINISTRATOR,
+        ACT_USER_ACCOUNT_TYPE_SUPERVISED,
+} ActUserAccountType;
+
+typedef enum {
+        ACT_USER_PASSWORD_MODE_REGULAR,
+        ACT_USER_PASSWORD_MODE_SET_AT_LOGIN,
+        ACT_USER_PASSWORD_MODE_NONE,
+} ActUserPasswordMode;
+
 typedef struct _ActUser ActUser;
 typedef struct _ActUserClass ActUserClass;
 
@@ -45,11 +57,21 @@ const char    *act_user_get_object_path           (ActUser *user);
 uid_t          act_user_get_uid                   (ActUser   *user);
 const char    *act_user_get_user_name             (ActUser   *user);
 const char    *act_user_get_real_name             (ActUser   *user);
+ActUserAccountType act_user_get_account_type      (ActUser   *user);
+ActUserPasswordMode act_user_get_password_mode    (ActUser   *user);
+const char    *act_user_get_password_hint         (ActUser   *user);
+const char    *act_user_get_home_dir              (ActUser   *user);
+const char    *act_user_get_shell                 (ActUser   *user);
+const char    *act_user_get_email                 (ActUser   *user);
+const char    *act_user_get_location              (ActUser   *user);
 guint          act_user_get_num_sessions          (ActUser   *user);
 gboolean       act_user_is_logged_in              (ActUser   *user);
 int            act_user_get_login_frequency       (ActUser   *user);
+gboolean       act_user_get_locked                (ActUser   *user);
+gboolean       act_user_get_automatic_login       (ActUser   *user);
 const char    *act_user_get_icon_file             (ActUser   *user);
 const char    *act_user_get_language              (ActUser   *user);
+const char    *act_user_get_x_session             (ActUser   *user);
 const char    *act_user_get_primary_session_id    (ActUser   *user);
 
 gint           act_user_collate                   (ActUser   *user1,
