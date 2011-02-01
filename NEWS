@@ -1,3 +1,12 @@
+Changes in 0.6.3
+================
+
+* Add more getters to client library
+
+* Add an initial cut at a setter api
+
+* Add XSession property type
+
 Changes in 0.6.2
 ================
 
