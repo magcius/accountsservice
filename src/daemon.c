@@ -601,13 +601,13 @@ reload_autologin_timeout (Daemon *daemon)
         }
 
         if (enabled) {
-                g_print ("automatic login is enabled for '%s'\n", name);
+                g_debug ("automatic login is enabled for '%s'\n", name);
                 user = daemon_local_find_user_by_name (daemon, name);
                 g_object_set (user, "automatic-login", TRUE, NULL);
                 daemon->priv->autologin = g_object_ref (user);
         }
         else {
-                g_print ("automatic login is disabled\n");
+                g_debug ("automatic login is disabled\n");
         }
 
         g_free (name);
