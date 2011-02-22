@@ -913,14 +913,14 @@ collect_props (const gchar    *key,
                         user->password_hint = g_value_dup_string (value);
                         g_object_notify (G_OBJECT (user), "password-hint");
                 }
-        } else if (strcmp (key, "HomeDir") == 0) {
+        } else if (strcmp (key, "HomeDirectory") == 0) {
                 const char *new_home_dir;
 
                 new_home_dir = g_value_get_string (value);
                 if (g_strcmp0 (user->home_dir, new_home_dir) != 0) {
                         g_free (user->home_dir);
                         user->home_dir = g_strdup (new_home_dir);
-                        g_object_notify (G_OBJECT (user), "home-dir");
+                        g_object_notify (G_OBJECT (user), "home-directory");
                 }
         } else if (strcmp (key, "Shell") == 0) {
                 const char *new_shell;
