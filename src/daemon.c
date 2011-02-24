@@ -213,6 +213,18 @@ daemon_class_init (DaemonClass *klass)
                                                               G_PARAM_READABLE));
 }
 
+static gboolean
+user_is_excluded (Daemon *daemon, const gchar *username, uid_t uid)
+{
+        if (uid < MINIMAL_UID) {
+                return TRUE;
+        }
+        if (g_hash_table_lookup (daemon->priv->exclusions, username)) {
+                return TRUE;
+        }
+
+        return FALSE;
+}
 
 static void
 listify_hash_values_hfunc (gpointer key,
@@ -325,7 +337,8 @@ process_ck_history_line (Daemon      *daemon,
                 return;
         }
 
-        if (g_hash_table_lookup (daemon->priv->exclusions, username)) {
+        /* pass MINIMAL_UID to just check the name here */
+        if (user_is_excluded (daemon, username, MINIMAL_UID)) {
                 g_debug ("excluding user '%s'", username);
                 g_free (username);
                 return;
@@ -474,13 +487,8 @@ reload_passwd (Daemon *daemon)
 
         for (pwent = fgetpwent (fp); pwent != NULL; pwent = fgetpwent (fp)) {
                 /* Skip users below MINIMAL_UID... */
-                if (pwent->pw_uid < MINIMAL_UID) {
-                        continue;
-                }
-
-                /* ...and explicitly excluded users */
-                if (g_hash_table_lookup (daemon->priv->exclusions, pwent->pw_name)) {
-                        g_debug ("explicitly skipping user: %s", pwent->pw_name);
+                if (user_is_excluded (daemon, pwent->pw_name, pwent->pw_uid)) {
+                        g_debug ("skipping user: %s", pwent->pw_name);
                         continue;
                 }
 
@@ -919,20 +927,11 @@ daemon_find_user_by_name (Daemon                *daemon,
         return TRUE;
 }
 
-static void
-enumerate_cb (gpointer key,
-              gpointer value,
-              gpointer user_data)
-{
-        User *user = USER (value);
-        GPtrArray *object_paths = user_data;
-        g_ptr_array_add (object_paths, g_strdup (user_local_get_object_path (user)));
-}
-
 typedef struct {
         Daemon *daemon;
         DBusGMethodInvocation *context;
 } ListUserData;
+
 
 static ListUserData *
 list_user_data_new (Daemon                *daemon,
@@ -960,9 +959,21 @@ finish_list_cached_users (gpointer user_data)
 {
         ListUserData *data = user_data;
         GPtrArray *object_paths;
+        GHashTableIter iter;
+        const gchar *name;
+        User *user;
+        uid_t uid;
 
         object_paths = g_ptr_array_new ();
-        g_hash_table_foreach (data->daemon->priv->users, enumerate_cb, object_paths);
+
+        g_hash_table_iter_init (&iter, data->daemon->priv->users);
+        while (g_hash_table_iter_next (&iter, (gpointer *)&name, (gpointer *)&user)) {
+                uid = user_local_get_uid (user);
+                if (!user_is_excluded (data->daemon, name, uid)) {
+                        g_debug ("user %s %ld not excluded\n", name, uid);
+                        g_ptr_array_add (object_paths, g_strdup (user_local_get_object_path (user)));
+                }
+        }
 
         dbus_g_method_return (data->context, object_paths);
 
