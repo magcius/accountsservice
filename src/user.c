@@ -773,6 +773,12 @@ user_local_get_object_path (User *user)
         return user->object_path;
 }
 
+uid_t
+user_local_get_uid (User *user)
+{
+        return user->uid;
+}
+
 static void
 throw_error (DBusGMethodInvocation *context,
              gint                   error_code,
