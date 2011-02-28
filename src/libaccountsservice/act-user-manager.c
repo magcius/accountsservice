@@ -1274,6 +1274,10 @@ maybe_add_new_session (ActUserManagerNewSession *new_session)
 
         manager = ACT_USER_MANAGER (new_session->manager);
 
+        if (session_is_login_window (manager, new_session->id)) {
+                return;
+        }
+
         errno = 0;
         get_pwent_for_uid (new_session->uid, &pwent);
         if (pwent == NULL) {
