@@ -631,6 +631,16 @@
     </doc:doc>
   </property>
 
+  <property name="XSession" type="s" access="read">
+    <doc:doc>
+      <doc:description>
+        <doc:para>
+          The users x session.
+        </doc:para>
+      </doc:description>
+    </doc:doc>
+  </property>
+
   <property name="Location" type="s" access="read">
     <doc:doc>
       <doc:description>
