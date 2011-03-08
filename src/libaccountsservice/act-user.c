@@ -1173,8 +1173,9 @@ act_user_set_email (ActUser    *user,
 
         g_return_if_fail (ACT_IS_USER (user));
         g_return_if_fail (email != NULL);
+        g_return_if_fail (DBUS_IS_G_PROXY (user->accounts_proxy));
 
-        if (!dbus_g_proxy_call (user->object_proxy,
+        if (!dbus_g_proxy_call (user->accounts_proxy,
                                 "SetEmail",
                                 &error,
                                 G_TYPE_STRING, email,
@@ -1203,8 +1204,9 @@ act_user_set_language (ActUser    *user,
 
         g_return_if_fail (ACT_IS_USER (user));
         g_return_if_fail (language != NULL);
+        g_return_if_fail (DBUS_IS_G_PROXY (user->accounts_proxy));
 
-        if (!dbus_g_proxy_call (user->object_proxy,
+        if (!dbus_g_proxy_call (user->accounts_proxy,
                                 "SetLanguage",
                                 &error,
                                 G_TYPE_STRING, language,
@@ -1233,8 +1235,9 @@ act_user_set_x_session (ActUser    *user,
 
         g_return_if_fail (ACT_IS_USER (user));
         g_return_if_fail (x_session != NULL);
+        g_return_if_fail (DBUS_IS_G_PROXY (user->accounts_proxy));
 
-        if (!dbus_g_proxy_call (user->object_proxy,
+        if (!dbus_g_proxy_call (user->accounts_proxy,
                                 "SetXSession",
                                 &error,
                                 G_TYPE_STRING, x_session,
@@ -1264,8 +1267,9 @@ act_user_set_location (ActUser    *user,
 
         g_return_if_fail (ACT_IS_USER (user));
         g_return_if_fail (location != NULL);
+        g_return_if_fail (DBUS_IS_G_PROXY (user->accounts_proxy));
 
-        if (!dbus_g_proxy_call (user->object_proxy,
+        if (!dbus_g_proxy_call (user->accounts_proxy,
                                 "SetLocation",
                                 &error,
                                 G_TYPE_STRING, location,
@@ -1294,8 +1298,9 @@ act_user_set_user_name (ActUser    *user,
 
         g_return_if_fail (ACT_IS_USER (user));
         g_return_if_fail (user_name != NULL);
+        g_return_if_fail (DBUS_IS_G_PROXY (user->accounts_proxy));
 
-        if (!dbus_g_proxy_call (user->object_proxy,
+        if (!dbus_g_proxy_call (user->accounts_proxy,
                                 "SetUserName",
                                 &error,
                                 G_TYPE_STRING, user_name,
@@ -1324,8 +1329,9 @@ act_user_set_real_name (ActUser    *user,
 
         g_return_if_fail (ACT_IS_USER (user));
         g_return_if_fail (real_name != NULL);
+        g_return_if_fail (DBUS_IS_G_PROXY (user->accounts_proxy));
 
-        if (!dbus_g_proxy_call (user->object_proxy,
+        if (!dbus_g_proxy_call (user->accounts_proxy,
                                 "SetRealName",
                                 &error,
                                 G_TYPE_STRING, real_name,
@@ -1354,8 +1360,9 @@ act_user_set_icon_file (ActUser    *user,
 
         g_return_if_fail (ACT_IS_USER (user));
         g_return_if_fail (icon_file != NULL);
+        g_return_if_fail (DBUS_IS_G_PROXY (user->accounts_proxy));
 
-        if (!dbus_g_proxy_call (user->object_proxy,
+        if (!dbus_g_proxy_call (user->accounts_proxy,
                                 "SetIconFile",
                                 &error,
                                 G_TYPE_STRING, icon_file,
@@ -1383,8 +1390,9 @@ act_user_set_account_type (ActUser            *user,
         GError *error = NULL;
 
         g_return_if_fail (ACT_IS_USER (user));
+        g_return_if_fail (DBUS_IS_G_PROXY (user->accounts_proxy));
 
-        if (!dbus_g_proxy_call (user->object_proxy,
+        if (!dbus_g_proxy_call (user->accounts_proxy,
                                 "SetAccountType",
                                 &error,
                                 G_TYPE_INT, account_type,
@@ -1453,9 +1461,10 @@ act_user_set_password (ActUser             *user,
 
         g_return_if_fail (ACT_IS_USER (user));
         g_return_if_fail (password != NULL);
+        g_return_if_fail (DBUS_IS_G_PROXY (user->accounts_proxy));
 
         crypted = make_crypted (password);
-        if (!dbus_g_proxy_call (user->object_proxy,
+        if (!dbus_g_proxy_call (user->accounts_proxy,
                                 "SetPassword",
                                 &error,
                                 G_TYPE_STRING, crypted,
@@ -1489,8 +1498,9 @@ act_user_set_password_mode (ActUser             *user,
         GError *error = NULL;
 
         g_return_if_fail (ACT_IS_USER (user));
+        g_return_if_fail (DBUS_IS_G_PROXY (user->accounts_proxy));
 
-        if (!dbus_g_proxy_call (user->object_proxy,
+        if (!dbus_g_proxy_call (user->accounts_proxy,
                                 "SetPasswordMode",
                                 &error,
                                 G_TYPE_INT, (int) password_mode,
@@ -1515,8 +1525,9 @@ act_user_set_locked (ActUser  *user,
         GError *error = NULL;
 
         g_return_if_fail (ACT_IS_USER (user));
+        g_return_if_fail (DBUS_IS_G_PROXY (user->accounts_proxy));
 
-        if (!dbus_g_proxy_call (user->object_proxy,
+        if (!dbus_g_proxy_call (user->accounts_proxy,
                                 "SetLocked",
                                 &error,
                                 G_TYPE_BOOLEAN, locked,
@@ -1545,8 +1556,9 @@ act_user_set_automatic_login (ActUser   *user,
         GError *error = NULL;
 
         g_return_if_fail (ACT_IS_USER (user));
+        g_return_if_fail (DBUS_IS_G_PROXY (user->accounts_proxy));
 
-        if (!dbus_g_proxy_call (user->object_proxy,
+        if (!dbus_g_proxy_call (user->accounts_proxy,
                                 "SetAutomaticLogin",
                                 &error,
                                 G_TYPE_BOOLEAN, enabled,
