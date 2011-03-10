@@ -601,7 +601,7 @@ reload_autologin_timeout (Daemon *daemon)
         daemon->priv->autologin_id = 0;
 
         if (!load_autologin (daemon, &name, &enabled, &error)) {
-                g_warning ("failed to load gdms custom.conf: %s", error->message);
+                g_debug ("failed to load gdms custom.conf: %s", error->message);
                 g_error_free (error);
                 g_free (name);
 
@@ -854,7 +854,7 @@ daemon_local_find_user_by_id (Daemon *daemon,
 
         pwent = getpwuid (uid);
         if (pwent == NULL) {
-                g_warning ("unable to lookup uid %d", (int)uid);
+                g_debug ("unable to lookup uid %d", (int)uid);
                 return NULL;
         }
 
@@ -875,7 +875,7 @@ daemon_local_find_user_by_name (Daemon      *daemon,
 
         pwent = getpwnam (name);
         if (pwent == NULL) {
-                g_warning ("unable to lookup name %s", name);
+                g_debug ("unable to lookup name %s", name);
                 return NULL;
         }
 

@@ -45,7 +45,7 @@ name_lost (DBusGProxy  *system_bus_proxy,
            const gchar *name_which_was_lost,
            gpointer     user_data)
 {
-        g_warning ("got NameLost, exiting");
+        g_debug ("got NameLost, exiting");
         g_main_loop_quit (loop);
 }
 

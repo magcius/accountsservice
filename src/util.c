@@ -245,7 +245,7 @@ get_user_groups (const gchar  *user,
         ngroups = 0;
         res = getgrouplist (user, group, NULL, &ngroups);
 
-        g_warning ("user %s has %d groups\n", user, ngroups);
+        g_debug ("user %s has %d groups\n", user, ngroups);
         *groups = g_new (gid_t, ngroups);
         res = getgrouplist (user, group, *groups, &ngroups);
 

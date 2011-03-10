@@ -420,14 +420,14 @@ account_type_from_groups (struct passwd *pwent)
 
         grp = getgrnam ("desktop_user_r");
         if (grp == NULL) {
-                g_warning ("desktop_user_r group not found");
+                g_debug ("desktop_user_r group not found");
                 return ACCOUNT_TYPE_STANDARD;
         }
         desktop_user_r = grp->gr_gid;
 
         grp = getgrnam ("desktop_admin_r");
         if (grp == NULL) {
-                g_warning ("desktop_admin_r group not found");
+                g_debug ("desktop_admin_r group not found");
                 return ACCOUNT_TYPE_STANDARD;
         }
         desktop_admin_r = grp->gr_gid;
@@ -1363,7 +1363,7 @@ user_change_icon_file_authorized_cb (Daemon                *daemon,
         g_object_unref (file);
 
         if (size > 1048576) {
-                g_warning ("file too large\n");
+                g_debug ("file too large\n");
                 /* 1MB ought to be enough for everybody */
                 throw_error (context, ERROR_FAILED, "file '%s' is too large to be used as an icon", filename);
                 g_free (filename);
