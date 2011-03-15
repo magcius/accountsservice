@@ -506,7 +506,12 @@ act_user_get_real_name (ActUser *user)
 {
         g_return_val_if_fail (ACT_IS_USER (user), NULL);
 
-        return (user->real_name ? user->real_name : user->user_name);
+        if (user->real_name == NULL ||
+            user->real_name[0] == '\0') {
+                return user->user_name;
+        }
+
+        return user->real_name;
 }
 
 /**
