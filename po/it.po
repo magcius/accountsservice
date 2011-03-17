@@ -1,0 +1,64 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: accounts service\n"
+"Report-Msgid-Bugs-To: http://bugs.freedesktop.org/\n"
+"POT-Creation-Date: 2011-03-17 14:45-0400\n"
+"PO-Revision-Date: 2011-03-17 19:46+0000\n"
+"Last-Translator: ElleUca <elle.uca@libero.it>\n"
+"Language-Team: Italian <>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: it\n"
+"Plural-Forms: nplurals=2; plural=(n != 1)\n"
+
+#: ../data/org.freedesktop.accounts.policy.in.h:1
+msgid "Authentication is required to change the login screen configuration"
+msgstr ""
+"È richiesto autenticarsi per cambiare la configurazione della schermata di "
+"accesso"
+
+#: ../data/org.freedesktop.accounts.policy.in.h:2
+msgid "Authentication is required to change user data"
+msgstr "È richiesto autenticarsi per cambiare i dati utente"
+
+#: ../data/org.freedesktop.accounts.policy.in.h:3
+msgid "Authentication is required to change your own user data"
+msgstr "È richiesto autenticarsi per cambiare i propri dati utente"
+
+#: ../data/org.freedesktop.accounts.policy.in.h:4
+msgid "Change the login screen configuration"
+msgstr "Cambia la configurazione della schermata di accesso"
+
+#: ../data/org.freedesktop.accounts.policy.in.h:5
+msgid "Change your own user data"
+msgstr "Cambia i propri dati utente"
+
+#: ../data/org.freedesktop.accounts.policy.in.h:6
+msgid "Manage user accounts"
+msgstr "Gestisci gli account utente"
+
+#: ../src/main.c:141
+msgid "Output version information and exit"
+msgstr "Stampa le informazioni di versione ed esce"
+
+#: ../src/main.c:142
+msgid "Replace existing instance"
+msgstr "Sostituisce l'istanza esistente"
+
+#: ../src/main.c:143
+msgid "Enable debugging code"
+msgstr "Abilita il codice di debug"
+
+#: ../src/main.c:163
+msgid ""
+"Provides D-Bus interfaces for querying and manipulating\n"
+"user account information."
+msgstr ""
+"Fornisce interfacce D-Bus per interrogare e manipolare\n"
+"le informazioni degli account utente."

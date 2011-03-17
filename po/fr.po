@@ -1,0 +1,66 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: accounts service\n"
+"Report-Msgid-Bugs-To: http://bugs.freedesktop.org/\n"
+"POT-Creation-Date: 2011-03-17 14:45-0400\n"
+"PO-Revision-Date: 2011-03-17 19:06+0000\n"
+"Last-Translator: claudep <claude@2xlibre.net>\n"
+"Language-Team: French <traduc@traduc.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: fr\n"
+"Plural-Forms: nplurals=2; plural=(n > 1)\n"
+
+#: ../data/org.freedesktop.accounts.policy.in.h:1
+msgid "Authentication is required to change the login screen configuration"
+msgstr ""
+"Il est nécessaire de s'authentifier pour modifier la configuration de "
+"l'écran de connexion"
+
+#: ../data/org.freedesktop.accounts.policy.in.h:2
+msgid "Authentication is required to change user data"
+msgstr ""
+"Il est nécessaire de s'authentifier pour modifier des données utilisateur"
+
+#: ../data/org.freedesktop.accounts.policy.in.h:3
+msgid "Authentication is required to change your own user data"
+msgstr ""
+"Vous devez vous authentifier pour modifier vos propres données utilisateur"
+
+#: ../data/org.freedesktop.accounts.policy.in.h:4
+msgid "Change the login screen configuration"
+msgstr "Modifier la configuration de l'écran de connexion"
+
+#: ../data/org.freedesktop.accounts.policy.in.h:5
+msgid "Change your own user data"
+msgstr "Modifier ses propres données"
+
+#: ../data/org.freedesktop.accounts.policy.in.h:6
+msgid "Manage user accounts"
+msgstr "Gérer les comptes des utilisateurs"
+
+#: ../src/main.c:141
+msgid "Output version information and exit"
+msgstr "Affiche la version et quitte"
+
+#: ../src/main.c:142
+msgid "Replace existing instance"
+msgstr "Remplace une instance existante"
+
+#: ../src/main.c:143
+msgid "Enable debugging code"
+msgstr "Active le code de débogage"
+
+#: ../src/main.c:163
+msgid ""
+"Provides D-Bus interfaces for querying and manipulating\n"
+"user account information."
+msgstr ""
+"Fournit des interfaces D-Bus pour interroger et manipuler\n"
+"des informations sur les comptes des utilisateurs."
