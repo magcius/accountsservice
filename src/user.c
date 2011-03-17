@@ -409,13 +409,18 @@ user_finalize (GObject *object)
 }
 
 static gint
-account_type_from_groups (struct passwd *pwent)
+account_type_from_pwent (struct passwd *pwent)
 {
         struct group *grp;
         gid_t wheel;
         gid_t *groups;
         gint ngroups;
         gint i;
+
+        if (pwent->pw_uid == 0) {
+                g_debug ("user is root so account type is administrator");
+                return ACCOUNT_TYPE_ADMINISTRATOR;
+        }
 
         grp = getgrnam ("wheel");
         if (grp == NULL) {
@@ -504,7 +509,7 @@ user_local_update_from_pwent (User          *user,
         /* GID */
         user->gid = pwent->pw_gid;
 
-        user->account_type = account_type_from_groups (pwent);
+        user->account_type = account_type_from_pwent (pwent);
 
         /* Username */
         if (g_strcmp0 (user->user_name, pwent->pw_name) != 0) {
