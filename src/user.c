@@ -412,32 +412,22 @@ static gint
 account_type_from_groups (struct passwd *pwent)
 {
         struct group *grp;
-        gid_t desktop_user_r;
-        gid_t desktop_admin_r;
+        gid_t wheel;
         gid_t *groups;
         gint ngroups;
         gint i;
 
-        grp = getgrnam ("desktop_user_r");
+        grp = getgrnam ("wheel");
         if (grp == NULL) {
-                g_debug ("desktop_user_r group not found");
+                g_debug ("wheel group not found");
                 return ACCOUNT_TYPE_STANDARD;
         }
-        desktop_user_r = grp->gr_gid;
-
-        grp = getgrnam ("desktop_admin_r");
-        if (grp == NULL) {
-                g_debug ("desktop_admin_r group not found");
-                return ACCOUNT_TYPE_STANDARD;
-        }
-        desktop_admin_r = grp->gr_gid;
+        wheel = grp->gr_gid;
 
         ngroups = get_user_groups (pwent->pw_name, pwent->pw_gid, &groups);
 
         for (i = 0; i < ngroups; i++) {
-                if (groups[i] == desktop_user_r)
-                        return ACCOUNT_TYPE_STANDARD;
-                if (groups[i] == desktop_admin_r)
+                if (groups[i] == wheel)
                         return ACCOUNT_TYPE_ADMINISTRATOR;
         }
 
@@ -1589,8 +1579,7 @@ user_change_account_type_authorized_cb (Daemon                *daemon,
         gid_t *groups;
         gint ngroups;
         GString *str;
-        gid_t desktop_user_r;
-        gid_t desktop_admin_r;
+        gid_t wheel;
         struct group *grp;
         gint i;
         gchar *argv[5];
@@ -1600,34 +1589,24 @@ user_change_account_type_authorized_cb (Daemon                *daemon,
                          "change account type of user '%s' (%d) to %d",
                          user->user_name, user->uid, account_type);
 
-                grp = getgrnam ("desktop_user_r");
+                grp = getgrnam ("wheel");
                 if (grp == NULL) {
-                        throw_error (context, ERROR_FAILED, "failed to set account type: desktop_user_r group not found");
+                        throw_error (context, ERROR_FAILED, "failed to set account type: wheel group not found");
                         return;
                 }
-                desktop_user_r = grp->gr_gid;
-
-                grp = getgrnam ("desktop_admin_r");
-                if (grp == NULL) {
-                        throw_error (context, ERROR_FAILED, "failed to set account type: desktop_admin_r group not found");
-                        return;
-                }
-                desktop_admin_r = grp->gr_gid;
+                wheel = grp->gr_gid;
 
                 ngroups = get_user_groups (user->user_name, user->gid, &groups);
 
                 str = g_string_new ("");
                 for (i = 0; i < ngroups; i++) {
-                        if (groups[i] == desktop_user_r || groups[i] == desktop_admin_r)
+                        if (groups[i] == wheel)
                                 continue;
                         g_string_append_printf (str, "%d,", groups[i]);
                 }
                 switch (account_type) {
-                case ACCOUNT_TYPE_STANDARD:
-                        g_string_append_printf (str, "%d", desktop_user_r);
-                        break;
                 case ACCOUNT_TYPE_ADMINISTRATOR:
-                        g_string_append_printf (str, "%d", desktop_admin_r);
+                        g_string_append_printf (str, "%d", wheel);
                         break;
                 default:
                         /* remove excess comma */
