@@ -14,7 +14,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 
 #: ../data/org.freedesktop.accounts.policy.in.h:1
-msgid "Administer user accounts"
+msgid "Manage user accounts"
 msgstr "Administracja kontami użytkowników"
 
 #: ../data/org.freedesktop.accounts.policy.in.h:2

@@ -19,7 +19,7 @@ msgstr ""
 "Plural-Forms: nplurals=3; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2;\n"
 
 #: ../data/org.freedesktop.accounts.policy.in.h:1
-msgid "Administer user accounts"
+msgid "Manage user accounts"
 msgstr "Spravovat uživatelské účty"
 
 #: ../data/org.freedesktop.accounts.policy.in.h:2

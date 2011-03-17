@@ -18,7 +18,7 @@
   </action>
 
   <action id="org.freedesktop.accounts.user-administration">
-    <_description>Administer user accounts</_description>
+    <_description>Manage user accounts</_description>
     <_message>Authentication is required to change user data</_message>
     <defaults>
       <allow_any>no</allow_any>
