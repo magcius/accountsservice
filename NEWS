@@ -1,3 +1,19 @@
+Changes in 0.6.6
+================
+
+* Make it possible to disable user icon
+
+* Drop Supervised user role
+
+* Use "wheel" instead of "desktop_admin_r" as admin group
+  since that's what everyone uses for this purpose anyway.
+
+* Crasher fixes
+
+* Translation Updates
+
+* Misc distro integration fixes
+
 Changes in 0.6.5
 ================
 
