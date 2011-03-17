@@ -38,7 +38,6 @@ G_BEGIN_DECLS
 typedef enum {
         ACT_USER_ACCOUNT_TYPE_STANDARD,
         ACT_USER_ACCOUNT_TYPE_ADMINISTRATOR,
-        ACT_USER_ACCOUNT_TYPE_SUPERVISED,
 } ActUserAccountType;
 
 typedef enum {

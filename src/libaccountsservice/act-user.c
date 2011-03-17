@@ -279,7 +279,7 @@ act_user_class_init (ActUserClass *class)
                                                            "Account Type",
                                                            "The account type for this user.",
                                                            ACT_USER_ACCOUNT_TYPE_STANDARD,
-                                                           ACT_USER_ACCOUNT_TYPE_SUPERVISED,
+                                                           ACT_USER_ACCOUNT_TYPE_ADMINISTRATOR,
                                                            ACT_USER_ACCOUNT_TYPE_STANDARD,
                                                            G_PARAM_READABLE));
         g_object_class_install_property (gobject_class,

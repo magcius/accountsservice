@@ -1117,8 +1117,8 @@ daemon_create_user_authorized_cb (Daemon                *daemon,
                 argv[7] = NULL;
         }
         else {
-                argv[4] = cd->user_name;
-                argv[5] = NULL;
+                throw_error (context, ERROR_FAILED, "Don't know how to add user of type %d", cd->account_type);
+                return;
         }
 
         error = NULL;

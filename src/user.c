@@ -443,7 +443,7 @@ account_type_from_groups (struct passwd *pwent)
 
         g_free (groups);
 
-        return ACCOUNT_TYPE_SUPERVISED;
+        return ACCOUNT_TYPE_STANDARD;
 }
 
 void

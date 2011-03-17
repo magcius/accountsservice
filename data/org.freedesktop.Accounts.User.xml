@@ -380,10 +380,6 @@
               <doc:term>1</doc:term>
               <doc:definition>Administrator</doc:definition>
             </doc:item>
-            <doc:item>
-              <doc:term>2</doc:term>
-              <doc:definition>Supervised user</doc:definition>
-            </doc:item>
           </doc:list>
         </doc:summary>
       </doc:doc>
@@ -580,10 +576,6 @@
             <doc:item>
               <doc:term>1</doc:term>
               <doc:definition>Administrator</doc:definition>
-            </doc:item>
-            <doc:item>
-              <doc:term>2</doc:term>
-              <doc:definition>Supervised user</doc:definition>
             </doc:item>
           </doc:list>
         </doc:para>
