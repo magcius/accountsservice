@@ -1,3 +1,12 @@
+Changes in 0.6.7
+================
+
+* Fix call to useradd for normal users
+
+* Correct free array of groups
+
+* Translation Updates
+
 Changes in 0.6.6
 ================
 
