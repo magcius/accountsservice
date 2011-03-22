@@ -186,8 +186,8 @@ static void     set_is_loaded (ActUserManager *manager, gboolean is_loaded);
 static void     on_new_user_loaded (ActUser        *user,
                                     GParamSpec     *pspec,
                                     ActUserManager *manager);
-static void     give_up_and_fetch_user_locally (ActUserManager                 *manager,
-                                                ActUserManagerFetchUserRequest *request);
+static void     give_up (ActUserManager                 *manager,
+                         ActUserManagerFetchUserRequest *request);
 static void     fetch_user_incrementally       (ActUserManagerFetchUserRequest *request);
 
 static void     maybe_set_is_loaded            (ActUserManager *manager);
@@ -1072,7 +1072,7 @@ on_find_user_by_name_finished (DBusGProxy                     *proxy,
                         g_debug ("ActUserManager: Failed to find user %s",
                                  request->username);
                 }
-                give_up_and_fetch_user_locally (manager, request);
+                give_up (manager, request);
                 return;
         }
 
@@ -1115,7 +1115,7 @@ find_user_in_accounts_service (ActUserManager                 *manager,
         return;
 
 failed:
-        give_up_and_fetch_user_locally (manager, request);
+        give_up (manager, request);
 }
 
 static void
@@ -1557,13 +1557,12 @@ free_fetch_user_request (ActUserManagerFetchUserRequest *request)
 }
 
 static void
-give_up_and_fetch_user_locally (ActUserManager                 *manager,
-                                ActUserManagerFetchUserRequest *request)
+give_up (ActUserManager                 *manager,
+         ActUserManagerFetchUserRequest *request)
 {
 
         g_debug ("ActUserManager: account service unavailable, "
-                 "fetching user %s locally",
-                 request->username);
+                 "giving up");
         request->state = ACT_USER_MANAGER_GET_USER_STATE_UNFETCHED;
 }
 
@@ -1606,7 +1605,7 @@ fetch_user_incrementally (ActUserManagerFetchUserRequest *request)
 
         case ACT_USER_MANAGER_GET_USER_STATE_ASK_ACCOUNTS_SERVICE:
                 if (manager->priv->accounts_proxy == NULL) {
-                        give_up_and_fetch_user_locally (manager, request);
+                        give_up (manager, request);
                 } else {
                         find_user_in_accounts_service (manager, request);
                 }
