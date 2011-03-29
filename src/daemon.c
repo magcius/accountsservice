@@ -1371,7 +1371,7 @@ load_autologin (Daemon      *daemon,
                 g_free (string);
                 return FALSE;
         }
-        if (g_strcmp0 (string, "True") == 0) {
+        if (string != NULL && (g_ascii_strcasecmp (string, "true") == 0 || strcmp (string, "1") == 0)) {
                 *enabled = TRUE;
         }
         else {
