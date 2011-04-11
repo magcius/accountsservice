@@ -68,6 +68,7 @@ gboolean       act_user_is_logged_in              (ActUser   *user);
 int            act_user_get_login_frequency       (ActUser   *user);
 gboolean       act_user_get_locked                (ActUser   *user);
 gboolean       act_user_get_automatic_login       (ActUser   *user);
+gboolean       act_user_is_system_account         (ActUser   *user);
 const char    *act_user_get_icon_file             (ActUser   *user);
 const char    *act_user_get_language              (ActUser   *user);
 const char    *act_user_get_x_session             (ActUser   *user);

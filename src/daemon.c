@@ -220,8 +220,8 @@ daemon_class_init (DaemonClass *klass)
                                                               G_PARAM_READABLE));
 }
 
-static gboolean
-user_is_excluded (Daemon *daemon, const gchar *username, uid_t uid)
+gboolean
+daemon_local_user_is_excluded (Daemon *daemon, const gchar *username, uid_t uid)
 {
         if (uid < daemon->priv->minimal_uid) {
                 return TRUE;
@@ -344,7 +344,7 @@ process_ck_history_line (Daemon      *daemon,
                 return;
         }
 
-        if (user_is_excluded (daemon, username, daemon->priv->minimal_uid)) {
+        if (daemon_local_user_is_excluded (daemon, username, daemon->priv->minimal_uid)) {
                 g_debug ("excluding user '%s'", username);
                 g_free (username);
                 return;
@@ -493,7 +493,7 @@ reload_passwd (Daemon *daemon)
 
         for (pwent = fgetpwent (fp); pwent != NULL; pwent = fgetpwent (fp)) {
                 /* Skip users below MINIMAL_UID... */
-                if (user_is_excluded (daemon, pwent->pw_name, pwent->pw_uid)) {
+                if (daemon_local_user_is_excluded (daemon, pwent->pw_name, pwent->pw_uid)) {
                         g_debug ("skipping user: %s", pwent->pw_name);
                         continue;
                 }
@@ -1029,7 +1029,7 @@ finish_list_cached_users (gpointer user_data)
         g_hash_table_iter_init (&iter, data->daemon->priv->users);
         while (g_hash_table_iter_next (&iter, (gpointer *)&name, (gpointer *)&user)) {
                 uid = user_local_get_uid (user);
-                if (!user_is_excluded (data->daemon, name, uid)) {
+                if (!daemon_local_user_is_excluded (data->daemon, name, uid)) {
                         g_debug ("user %s %ld not excluded\n", name, uid);
                         g_ptr_array_add (object_paths, g_strdup (user_local_get_object_path (user)));
                 }

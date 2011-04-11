@@ -55,6 +55,7 @@ enum {
         PROP_LOCATION,
         PROP_LOCKED,
         PROP_AUTOMATIC_LOGIN,
+        PROP_SYSTEM_ACCOUNT,
         PROP_LOGIN_FREQUENCY,
         PROP_ICON_FILE,
         PROP_LANGUAGE,
@@ -97,6 +98,7 @@ struct _ActUser {
         guint           is_loaded : 1;
         guint           locked : 1;
         guint           automatic_login : 1;
+        guint           system_account : 1;
 };
 
 struct _ActUserClass
@@ -243,6 +245,9 @@ act_user_get_property (GObject    *object,
                 break;
         case PROP_AUTOMATIC_LOGIN:
                 g_value_set_boolean (value, user->automatic_login);
+                break;
+        case PROP_SYSTEM_ACCOUNT:
+                g_value_set_boolean (value, user->system_account);
                 break;
         case PROP_IS_LOADED:
                 g_value_set_boolean (value, user->is_loaded);
@@ -394,6 +399,15 @@ act_user_class_init (ActUserClass *class)
                                                                "Automatic Login",
                                                                FALSE,
                                                                G_PARAM_READABLE));
+
+        g_object_class_install_property (gobject_class,
+                                         PROP_SYSTEM_ACCOUNT,
+                                         g_param_spec_boolean ("system-account",
+                                                               "System Account",
+                                                               "System Account",
+                                                               FALSE,
+                                                               G_PARAM_READABLE));
+
 
         signals [CHANGED] =
                 g_signal_new ("changed",
@@ -773,6 +787,21 @@ act_user_get_automatic_login (ActUser *user)
 }
 
 /**
+ * act_user_is_system_account:
+ * @user: a #ActUser
+ *
+ * Returns whether or not #ActUser represents a 'system account' like
+ * 'root' or 'nobody'.
+ *
+ * Returns: %TRUE or %FALSE
+ */
+gboolean
+act_user_is_system_account (ActUser *user)
+{
+        return user->system_account;
+}
+
+/**
  * act_user_get_icon_file:
  * @user: a #ActUser
  *
@@ -969,6 +998,14 @@ collect_props (const gchar    *key,
                 if (new_automatic_login_state != user->automatic_login) {
                         user->automatic_login = new_automatic_login_state;
                         g_object_notify (G_OBJECT (user), "automatic-login");
+                }
+        } else if (strcmp (key, "SystemAccount") == 0) {
+                gboolean new_system_account_state;
+
+                new_system_account_state = g_value_get_boolean (value);
+                if (new_system_account_state != user->system_account) {
+                        user->system_account = new_system_account_state;
+                        g_object_notify (G_OBJECT (user), "system-account");
                 }
         } else if (strcmp (key, "LoginFrequency") == 0) {
                 int new_login_frequency;

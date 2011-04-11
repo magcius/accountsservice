@@ -717,6 +717,18 @@
     </doc:doc>
   </property>
 
+  <property name="SystemAccount" type="b" access="read">
+    <doc:doc>
+      <doc:description>
+        <doc:para>
+           Whether this is a 'system' account, like 'root' or 'nobody'.
+           System accounts should normally not appear in lists of
+           users, and ListCachedUsers will not include such accounts.
+        </doc:para>
+      </doc:description>
+    </doc:doc>
+  </property>
+
   <signal name="Changed">
     <doc:doc>
       <doc:description>

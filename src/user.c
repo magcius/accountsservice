@@ -65,7 +65,8 @@ enum {
         PROP_LOGIN_FREQUENCY,
         PROP_ICON_FILE,
         PROP_LOCKED,
-        PROP_AUTOMATIC_LOGIN
+        PROP_AUTOMATIC_LOGIN,
+        PROP_SYSTEM_ACCOUNT
 };
 
 enum {
@@ -100,6 +101,7 @@ struct User {
         gchar        *icon_file;
         gboolean      locked;
         gboolean      automatic_login;
+        gboolean      system_account;
 };
 
 typedef struct UserClass
@@ -137,6 +139,9 @@ user_set_property (GObject      *object,
                 break;
         case PROP_AUTOMATIC_LOGIN:
                 user->automatic_login = g_value_get_boolean (value);
+                break;
+        case PROP_SYSTEM_ACCOUNT:
+                user->system_account = g_value_get_boolean (value);
                 break;
         default:
                 G_OBJECT_WARN_INVALID_PROPERTY_ID (object, param_id, pspec);
@@ -207,6 +212,9 @@ user_get_property (GObject    *object,
                 break;
         case PROP_AUTOMATIC_LOGIN:
                 g_value_set_boolean (value, user->automatic_login);
+                break;
+        case PROP_SYSTEM_ACCOUNT:
+                g_value_set_boolean (value, user->system_account);
                 break;
         default:
                 G_OBJECT_WARN_INVALID_PROPERTY_ID (object, param_id, pspec);
@@ -361,6 +369,14 @@ user_class_init (UserClass *class)
                                                                "Automatic Login",
                                                                FALSE,
                                                                G_PARAM_READWRITE));
+
+        g_object_class_install_property (gobject_class,
+                                         PROP_SYSTEM_ACCOUNT,
+                                         g_param_spec_boolean ("system-account",
+                                                               "System Account",
+                                                               "System Account",
+                                                               FALSE,
+                                                               G_PARAM_READWRITE));
 }
 
 
@@ -383,6 +399,7 @@ user_init (User *user)
         user->password_hint = NULL;
         user->locked = FALSE;
         user->automatic_login = FALSE;
+        user->system_account = FALSE;
 }
 
 static void
@@ -573,6 +590,10 @@ user_local_update_from_pwent (User          *user,
                 changed = TRUE;
                 g_object_notify (G_OBJECT (user), "password-mode");
         }
+
+        user->system_account = daemon_local_user_is_excluded (user->daemon,
+                                                              user->user_name,
+                                                              user->uid);
 
         g_object_thaw_notify (G_OBJECT (user));
 
