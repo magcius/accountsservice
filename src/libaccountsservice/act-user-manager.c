@@ -732,7 +732,10 @@ remove_user (ActUserManager *manager,
         if (act_user_get_object_path (user) != NULL) {
                 g_hash_table_remove (manager->priv->users_by_object_path, act_user_get_object_path (user));
         }
-        g_hash_table_remove (manager->priv->users_by_name, act_user_get_user_name (user));
+        if (act_user_get_user_name (user) != NULL) {
+                g_hash_table_remove (manager->priv->users_by_name, act_user_get_user_name (user));
+
+        }
 
         if (manager->priv->is_loaded) {
                 g_signal_emit (manager, signals[USER_REMOVED], 0, user);
