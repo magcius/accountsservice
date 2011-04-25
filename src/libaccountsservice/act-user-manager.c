@@ -801,7 +801,7 @@ on_new_user_loaded (ActUser        *user,
         g_object_unref (user);
 
         if (manager->priv->new_users == NULL) {
-                set_is_loaded (manager, TRUE);
+                maybe_set_is_loaded (manager);
         }
 }
 
