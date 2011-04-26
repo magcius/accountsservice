@@ -793,7 +793,7 @@ on_new_user_loaded (ActUser        *user,
                                    (int) act_user_get_uid (user));
                 }
                 g_object_unref (user);
-                return;
+                goto out;
         }
 
         g_debug ("ActUserManager: user '%s' is now loaded", username);
@@ -801,7 +801,7 @@ on_new_user_loaded (ActUser        *user,
         if (username_in_exclude_list (manager, username)) {
                 g_debug ("ActUserManager: excluding user '%s'", username);
                 g_object_unref (user);
-                return;
+                goto out;
         }
 
         old_user = g_hash_table_lookup (manager->priv->users_by_name, username);
@@ -817,6 +817,7 @@ on_new_user_loaded (ActUser        *user,
         add_user (manager, user);
         g_object_unref (user);
 
+out:
         if (manager->priv->new_users == NULL) {
                 g_debug ("ActUserManager: no pending users, trying to set loaded property");
                 maybe_set_is_loaded (manager);
@@ -1187,8 +1188,12 @@ on_list_cached_users_finished (DBusGProxy     *proxy,
                 return;
         }
 
-        g_debug ("ActUserManager: ListCachedUsers finished, so trying to set loaded property");
-        maybe_set_is_loaded (manager);
+        /* We now have a batch of unloaded users that we know about. Once that initial
+         * batch is loaded up, we can mark the manager as loaded.
+         *
+         * (see on_new_user_loaded)
+         */
+        g_debug ("ActUserManager: ListCachedUsers finished, will set loaded property after list is fully loaded");
         g_ptr_array_foreach (paths, (GFunc)add_new_user_for_object_path, manager);
 
         g_ptr_array_foreach (paths, (GFunc)g_free, NULL);
@@ -1765,6 +1770,11 @@ maybe_set_is_loaded (ActUserManager *manager)
 
         if (manager->priv->listing_cached_users) {
                 g_debug ("ActUserManager: Listing cached users, so not setting loaded property");
+                return;
+        }
+
+        if (manager->priv->new_users != NULL) {
+                g_debug ("ActUserManager: Loading new users, so not setting loaded property");
                 return;
         }
 
