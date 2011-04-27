@@ -140,6 +140,7 @@ struct ActUserManagerPrivate
 
         GSList                *new_sessions;
         GSList                *new_users;
+        GSList                *new_users_inhibiting_load;
         GSList                *fetch_user_requests;
 
         GSList                *exclude_usernames;
@@ -771,11 +772,16 @@ on_new_user_loaded (ActUser        *user,
         ActUser *old_user;
 
         if (!act_user_is_loaded (user)) {
+                g_debug ("ActUserManager: user '%s' loaded function called when not loaded",
+                         act_user_get_user_name (user));
                 return;
         }
         g_signal_handlers_disconnect_by_func (user, on_new_user_loaded, manager);
+
         manager->priv->new_users = g_slist_remove (manager->priv->new_users,
                                                    user);
+        manager->priv->new_users_inhibiting_load = g_slist_remove (manager->priv->new_users_inhibiting_load,
+                                                                   user);
 
         username = act_user_get_user_name (user);
 
@@ -818,9 +824,11 @@ on_new_user_loaded (ActUser        *user,
         g_object_unref (user);
 
 out:
-        if (manager->priv->new_users == NULL) {
+        if (manager->priv->new_users_inhibiting_load == NULL) {
                 g_debug ("ActUserManager: no pending users, trying to set loaded property");
                 maybe_set_is_loaded (manager);
+        } else {
+                g_debug ("ActUserManager: not all users loaded yet");
         }
 }
 
@@ -1165,6 +1173,19 @@ set_is_loaded (ActUserManager *manager,
 }
 
 static void
+add_new_inhibiting_user_for_object_path (const char     *object_path,
+                                         ActUserManager *manager)
+{
+        ActUser *user;
+
+        user = add_new_user_for_object_path (object_path, manager);
+
+        if (!manager->priv->is_loaded) {
+                manager->priv->new_users_inhibiting_load = g_slist_prepend (manager->priv->new_users_inhibiting_load, user);
+        }
+}
+
+static void
 on_list_cached_users_finished (DBusGProxy     *proxy,
                                DBusGProxyCall *call_id,
                                gpointer        data)
@@ -1194,7 +1215,7 @@ on_list_cached_users_finished (DBusGProxy     *proxy,
          * (see on_new_user_loaded)
          */
         g_debug ("ActUserManager: ListCachedUsers finished, will set loaded property after list is fully loaded");
-        g_ptr_array_foreach (paths, (GFunc)add_new_user_for_object_path, manager);
+        g_ptr_array_foreach (paths, (GFunc)add_new_inhibiting_user_for_object_path, manager);
 
         g_ptr_array_foreach (paths, (GFunc)g_free, NULL);
         g_ptr_array_free (paths, TRUE);
@@ -1616,6 +1637,9 @@ on_user_manager_maybe_ready_for_request (ActUserManager                 *manager
                 return;
         }
 
+        g_debug ("ActUserManager: user manager now loaded, proceeding with fetch user request for user '%s'",
+                 request->username);
+
         g_signal_handlers_disconnect_by_func (manager, on_user_manager_maybe_ready_for_request, request);
 
         request->state++;
@@ -1714,6 +1738,7 @@ act_user_manager_get_user (ActUserManager *manager,
 
         /* if we don't have it loaded try to load it now */
         if (user == NULL) {
+                g_debug ("ActUserManager: trying to track new user with username %s", username);
                 user = create_new_user (manager);
 
                 if (manager->priv->accounts_proxy != NULL) {
@@ -1773,7 +1798,7 @@ maybe_set_is_loaded (ActUserManager *manager)
                 return;
         }
 
-        if (manager->priv->new_users != NULL) {
+        if (manager->priv->new_users_inhibiting_load != NULL) {
                 g_debug ("ActUserManager: Loading new users, so not setting loaded property");
                 return;
         }
@@ -2185,6 +2210,8 @@ act_user_manager_finalize (GObject *object)
         g_slist_foreach (manager->priv->fetch_user_requests,
                          (GFunc) free_fetch_user_request, NULL);
         g_slist_free (manager->priv->fetch_user_requests);
+
+        g_slist_free (manager->priv->new_users_inhibiting_load);
 
         node = manager->priv->new_users;
         while (node != NULL) {
