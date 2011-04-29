@@ -8,8 +8,8 @@ msgstr ""
 "Project-Id-Version: accounts service\n"
 "Report-Msgid-Bugs-To: http://bugs.freedesktop.org/\n"
 "POT-Creation-Date: 2011-03-17 14:45-0400\n"
-"PO-Revision-Date: 2011-03-22 21:31+0000\n"
-"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"PO-Revision-Date: 2011-03-27 04:59+0000\n"
+"Last-Translator: aalam <apreet.alam@gmail.com>\n"
 "Language-Team: Panjabi (Punjabi) <None>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -19,42 +19,42 @@ msgstr ""
 
 #: ../data/org.freedesktop.accounts.policy.in.h:1
 msgid "Authentication is required to change the login screen configuration"
-msgstr ""
+msgstr "ਲਾਗਇਨ ਸਕਰੀਨ ਸੰਰਚਨਾ ਬਦਲਣ ਲਈ ਪਰਮਾਣਿਤ ਹੋਣ ਦੀ ਲੋੜ ਹੈ"
 
 #: ../data/org.freedesktop.accounts.policy.in.h:2
 msgid "Authentication is required to change user data"
-msgstr ""
+msgstr "ਯੂਜ਼ਰ ਡਾਟਾ ਬਦਲਣ ਲਈ ਪਰਮਾਣਿਤ ਹੋਣ ਦੀ ਲੋੜ ਹੈ"
 
 #: ../data/org.freedesktop.accounts.policy.in.h:3
 msgid "Authentication is required to change your own user data"
-msgstr ""
+msgstr "ਤੁਹਾਡਾ ਯੂਜ਼ਰ ਡਾਟਾ ਬਦਲਣ ਲਈ ਪਰਮਾਣਿਤ ਹੋਣ ਦੀ ਲੋੜ ਹੈ"
 
 #: ../data/org.freedesktop.accounts.policy.in.h:4
 msgid "Change the login screen configuration"
-msgstr ""
+msgstr "ਲਾਗਇਨ ਸਕਰੀਨ ਸੰਰਚਨਾ ਬਦਲੋ"
 
 #: ../data/org.freedesktop.accounts.policy.in.h:5
 msgid "Change your own user data"
-msgstr ""
+msgstr "ਆਪਣਾ ਯੂਜ਼ਰ ਡਾਟਾ ਬਦਲੋ"
 
 #: ../data/org.freedesktop.accounts.policy.in.h:6
 msgid "Manage user accounts"
-msgstr ""
+msgstr "ਯੂਜ਼ਰ ਅਕਾਊਂਟ ਪਰਬੰਧ"
 
 #: ../src/main.c:141
 msgid "Output version information and exit"
-msgstr ""
+msgstr "ਵਰਜਨ ਜਾਣਕਾਰੀ ਦਿਉ ਅਤੇ ਬੰਦ ਕਰੋ"
 
 #: ../src/main.c:142
 msgid "Replace existing instance"
-msgstr ""
+msgstr "ਮੌਜੂਦਗੀਆਂ ਬਦਲੋ"
 
 #: ../src/main.c:143
 msgid "Enable debugging code"
-msgstr ""
+msgstr "ਡੀਬੱਗ ਕੋਡ ਚਾਲੂ"
 
 #: ../src/main.c:163
 msgid ""
 "Provides D-Bus interfaces for querying and manipulating\n"
 "user account information."
-msgstr ""
+msgstr "ਯੂਜ਼ਰ ਅਕਾਊਂਟ ਜਾਣਕਾਰੀ ਲੈਣ ਅਤੇ ਬਦਲਣ ਲਈ ਡੀ-ਬੱਸ ਇੰਟਰਫੇਸ ਦਿੰਦਾ ਹੈ"
