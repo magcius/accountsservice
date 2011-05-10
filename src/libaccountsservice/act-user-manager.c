@@ -572,10 +572,9 @@ on_get_seat_id_finished (DBusGProxy     *proxy,
                         g_debug ("Failed to identify the seat of the "
                                  "current session");
                 }
-                unload_seat (manager);
 
-                g_debug ("ActUserManager: GetSeatId call failed, so trying to set loaded property");
-                maybe_set_is_loaded (manager);
+                g_debug ("ActUserManager: GetSeatId call failed, so unloading seat");
+                unload_seat (manager);
                 return;
         }
 
@@ -924,8 +923,6 @@ on_get_current_session_finished (DBusGProxy     *proxy,
                         g_debug ("Failed to identify the current session");
                 }
                 unload_seat (manager);
-                g_debug ("ActUserManager: no current session, so trying to set loaded property");
-                maybe_set_is_loaded (manager);
                 return;
         }
 
@@ -1549,6 +1546,9 @@ unload_seat (ActUserManager *manager)
 
         g_free (manager->priv->seat.session_id);
         manager->priv->seat.session_id = NULL;
+
+        g_debug ("ActUserManager: seat unloaded, so trying to set loaded property");
+        maybe_set_is_loaded (manager);
 }
 
 static void
