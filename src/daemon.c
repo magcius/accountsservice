@@ -88,6 +88,7 @@ enum {
 enum {
         USER_ADDED,
         USER_REMOVED,
+        CK_HISTORY_LOADED,
         LAST_SIGNAL
 };
 
@@ -203,6 +204,16 @@ daemon_class_init (DaemonClass *klass)
                                               G_TYPE_NONE,
                                               1,
                                               DBUS_TYPE_G_OBJECT_PATH);
+
+        signals[CK_HISTORY_LOADED] = g_signal_new ("ck-history-loaded",
+                                              G_OBJECT_CLASS_TYPE (klass),
+                                              G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
+                                              0,
+                                              NULL,
+                                              NULL,
+                                              g_cclosure_marshal_VOID__VOID,
+                                              G_TYPE_NONE,
+                                              0);
 
         dbus_g_object_type_install_info (TYPE_DAEMON,
                                          &dbus_glib_daemon_object_info);
@@ -393,6 +404,7 @@ ck_history_watch (GIOChannel   *source,
 
         if (done) {
                 daemon->priv->ck_history_id = 0;
+                g_signal_emit (daemon, signals[CK_HISTORY_LOADED], 0);
                 return FALSE;
         }
 
@@ -1045,6 +1057,18 @@ finish_list_cached_users (gpointer user_data)
         return FALSE;
 }
 
+static void
+on_ck_history_loaded (Daemon       *daemon,
+                      ListUserData *data)
+{
+        /* ck-history loaded, so finish pending ListCachedUsers call */
+        g_idle_add (finish_list_cached_users, data);
+
+        g_signal_handlers_disconnect_by_func (daemon,
+                                              on_ck_history_loaded,
+                                              data);
+}
+
 gboolean
 daemon_list_cached_users (Daemon                *daemon,
                           DBusGMethodInvocation *context)
@@ -1053,8 +1077,13 @@ daemon_list_cached_users (Daemon                *daemon,
 
         data = list_user_data_new (daemon, context);
 
-        if (daemon->priv->reload_id > 0) {
-                /* reload in progress, wait */
+        if (daemon->priv->ck_history_id > 0) {
+                /* loading ck-history, wait for it */
+                g_signal_connect (daemon, "ck-history-loaded",
+                                  G_CALLBACK (on_ck_history_loaded),
+                                  data);
+        } else if (daemon->priv->reload_id > 0) {
+                /* reload in progress, wait a bit */
                 g_idle_add (finish_list_cached_users, data);
         }
         else {
