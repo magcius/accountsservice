@@ -1216,8 +1216,13 @@ on_list_cached_users_finished (DBusGProxy     *proxy,
          *
          * (see on_new_user_loaded)
          */
-        g_debug ("ActUserManager: ListCachedUsers finished, will set loaded property after list is fully loaded");
-        g_ptr_array_foreach (paths, (GFunc)add_new_inhibiting_user_for_object_path, manager);
+        if (paths->len > 0) {
+                g_debug ("ActUserManager: ListCachedUsers finished, will set loaded property after list is fully loaded");
+                g_ptr_array_foreach (paths, (GFunc)add_new_inhibiting_user_for_object_path, manager);
+        } else {
+                g_debug ("ActUserManager: ListCachedUsers finished with empty list, maybe setting loaded property now");
+                maybe_set_is_loaded (manager);
+        }
 
         g_ptr_array_foreach (paths, (GFunc)g_free, NULL);
         g_ptr_array_free (paths, TRUE);
