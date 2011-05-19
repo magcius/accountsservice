@@ -1,16 +1,15 @@
 # SOME DESCRIPTIVE TITLE.
 # Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
 # This file is distributed under the same license as the PACKAGE package.
-# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 # 
 msgid ""
 msgstr ""
 "Project-Id-Version: accounts service\n"
 "Report-Msgid-Bugs-To: http://bugs.freedesktop.org/\n"
 "POT-Creation-Date: 2011-03-17 14:45-0400\n"
-"PO-Revision-Date: 2011-04-29 14:48+0000\n"
-"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
-"Language-Team: Indonesian <None>\n"
+"PO-Revision-Date: 2011-05-15 14:30+0000\n"
+"Last-Translator: andika <andika@gmail.com>\n"
+"Language-Team: Indonesian (http://www.transifex.net/projects/p/freedesktop/team/id/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -19,42 +18,46 @@ msgstr ""
 
 #: ../data/org.freedesktop.accounts.policy.in.h:1
 msgid "Authentication is required to change the login screen configuration"
-msgstr ""
+msgstr "Otentikasi diperlukan untuk mengubah konfigurasi layar log masuk"
 
 #: ../data/org.freedesktop.accounts.policy.in.h:2
 msgid "Authentication is required to change user data"
-msgstr ""
+msgstr "Otentikasi diperlukan untuk mengubah data pengguna"
 
 #: ../data/org.freedesktop.accounts.policy.in.h:3
 msgid "Authentication is required to change your own user data"
-msgstr ""
+msgstr "Otentikasi diperlukan untuk mengubah data pengguna milikmu"
 
 #: ../data/org.freedesktop.accounts.policy.in.h:4
 msgid "Change the login screen configuration"
-msgstr ""
+msgstr "Ubah konfigurasi layar log masuk"
 
 #: ../data/org.freedesktop.accounts.policy.in.h:5
 msgid "Change your own user data"
-msgstr ""
+msgstr "Ubah data penggunamu sendiri"
 
 #: ../data/org.freedesktop.accounts.policy.in.h:6
 msgid "Manage user accounts"
-msgstr ""
+msgstr "Kelola akun pengguna"
 
 #: ../src/main.c:141
 msgid "Output version information and exit"
-msgstr ""
+msgstr "Tampilkan informasi versi dan keluar"
 
 #: ../src/main.c:142
 msgid "Replace existing instance"
-msgstr ""
+msgstr "Ganti instansi yang ada"
 
 #: ../src/main.c:143
 msgid "Enable debugging code"
-msgstr ""
+msgstr "Aktifkan kode pengawakutuan"
 
 #: ../src/main.c:163
 msgid ""
 "Provides D-Bus interfaces for querying and manipulating\n"
 "user account information."
 msgstr ""
+"Menyediakan antar muka D-Bus untuk menanyakan dan memanipulasi\n"
+"informasi akun pengguna"
+
+
