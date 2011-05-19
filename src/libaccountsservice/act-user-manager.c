@@ -2282,3 +2282,44 @@ act_user_manager_get_default (void)
 
         return ACT_USER_MANAGER (user_manager_object);
 }
+
+
+gboolean
+act_user_manager_create_user (ActUserManager     *manager,
+                              const char         *username,
+                              const char         *fullname,
+                              ActUserAccountType  accounttype)
+{
+        GError *error;
+        gboolean res;
+        gchar *path;
+
+        g_debug ("ActUserManager: Creating user '%s', '%s', %d",
+                 username, fullname, accounttype);
+
+        g_assert (manager->priv->accounts_proxy != NULL);
+
+        error = NULL;
+        res = dbus_g_proxy_call (manager->priv->accounts_proxy,
+                                 "CreateUser",
+                                 &error,
+                                 G_TYPE_STRING, username,
+                                 G_TYPE_STRING, fullname,
+                                 G_TYPE_INT, accounttype,
+                                 G_TYPE_INVALID,
+                                 DBUS_TYPE_G_OBJECT_PATH, &path,
+                                 G_TYPE_INVALID);
+        if (! res) {
+                if (error != NULL) {
+                        g_warning ("Failed to create user: %s", error->message);
+                        g_error_free (error);
+                } else {
+                        g_warning ("Failed to create user");
+                }
+                goto out;
+        }
+out:
+        g_free (path);
+
+        return res;
+}

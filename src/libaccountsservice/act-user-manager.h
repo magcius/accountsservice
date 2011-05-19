@@ -83,6 +83,12 @@ gboolean            act_user_manager_can_switch            (ActUserManager *mana
 
 gboolean            act_user_manager_goto_login_session    (ActUserManager *manager);
 
+gboolean            act_user_manager_create_user           (ActUserManager     *manager,
+                                                            const char         *username,
+                                                            const char         *fullname,
+                                                            ActUserAccountType  accounttype);
+
+
 G_END_DECLS
 
 #endif /* __ACT_USER_MANAGER_H__ */
