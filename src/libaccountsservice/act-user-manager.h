@@ -83,10 +83,16 @@ gboolean            act_user_manager_can_switch            (ActUserManager *mana
 
 gboolean            act_user_manager_goto_login_session    (ActUserManager *manager);
 
-gboolean            act_user_manager_create_user           (ActUserManager     *manager,
+ActUser *           act_user_manager_create_user           (ActUserManager     *manager,
                                                             const char         *username,
                                                             const char         *fullname,
-                                                            ActUserAccountType  accounttype);
+                                                            ActUserAccountType  accounttype,
+                                                            GError             **error);
+
+gboolean            act_user_manager_delete_user           (ActUserManager     *manager,
+                                                            ActUser            *user,
+                                                            gboolean            remove_files,
+                                                            GError             **error);
 
 
 G_END_DECLS
