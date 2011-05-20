@@ -6,6 +6,7 @@ CLEANFILES = $(END_OF_LIST)
 AM_CPPFLAGS = \
         -I.                                                                   \
         -I..                                                                  \
+        -DG_LOG_DOMAIN=\"AccountsService\"                                    \
         $(END_OF_LIST)
 
 lib_LTLIBRARIES =                                                             \
