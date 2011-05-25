@@ -1344,7 +1344,7 @@ maybe_add_new_session (ActUserManagerNewSession *new_session)
         manager = ACT_USER_MANAGER (new_session->manager);
 
         if (session_is_login_window (manager, new_session->id)) {
-                return;
+                goto done;
         }
 
         errno = 0;
@@ -1374,7 +1374,8 @@ maybe_add_new_session (ActUserManagerNewSession *new_session)
                 _act_user_update_login_frequency (user, 1);
         }
 
-        manager->priv->seat.state = ACT_USER_MANAGER_SEAT_STATE_LOADED;
+done:
+        new_session->state = ACT_USER_MANAGER_NEW_SESSION_STATE_LOADED;
         unload_new_session (new_session);
         return;
 
