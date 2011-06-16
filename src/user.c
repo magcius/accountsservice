@@ -827,7 +827,7 @@ user_change_real_name_authorized_cb (Daemon                *daemon,
 {
         gchar *name = data;
         GError *error;
-        gchar *argv[5];
+        gchar *argv[6];
 
         if (g_strcmp0 (user->real_name, name) != 0) {
                 sys_log (context,
@@ -837,8 +837,9 @@ user_change_real_name_authorized_cb (Daemon                *daemon,
                 argv[0] = "/usr/sbin/usermod";
                 argv[1] = "-c";
                 argv[2] = name;
-                argv[3] = user->user_name;
-                argv[4] = NULL;
+                argv[3] = "--";
+                argv[4] = user->user_name;
+                argv[5] = NULL;
 
                 error = NULL;
                 if (!spawn_with_login_uid (context, argv, &error)) {
@@ -907,7 +908,7 @@ user_change_user_name_authorized_cb (Daemon                *daemon,
         gchar *name = data;
         gchar *old_name;
         GError *error;
-        gchar *argv[5];
+        gchar *argv[6];
 
         if (g_strcmp0 (user->user_name, name) != 0) {
                 old_name = g_strdup (user->user_name);
@@ -918,8 +919,9 @@ user_change_user_name_authorized_cb (Daemon                *daemon,
                 argv[0] = "/usr/sbin/usermod";
                 argv[1] = "-l";
                 argv[2] = name;
-                argv[3] = user->user_name;
-                argv[4] = NULL;
+                argv[3] = "--";
+                argv[4] = user->user_name;
+                argv[5] = NULL;
 
                 error = NULL;
                 if (!spawn_with_login_uid (context, argv, &error)) {
@@ -1236,7 +1238,7 @@ user_change_home_dir_authorized_cb (Daemon                *daemon,
 {
         gchar *home_dir = data;
         GError *error;
-        gchar *argv[6];
+        gchar *argv[7];
 
         if (g_strcmp0 (user->home_dir, home_dir) != 0) {
                 sys_log (context,
@@ -1247,8 +1249,9 @@ user_change_home_dir_authorized_cb (Daemon                *daemon,
                 argv[1] = "-m";
                 argv[2] = "-d";
                 argv[3] = home_dir;
-                argv[4] = user->user_name;
-                argv[5] = NULL;
+                argv[4] = "--";
+                argv[5] = user->user_name;
+                argv[6] = NULL;
 
                 error = NULL;
                 if (!spawn_with_login_uid (context, argv, &error)) {
@@ -1294,7 +1297,7 @@ user_change_shell_authorized_cb (Daemon                *daemon,
 {
         gchar *shell = data;
         GError *error;
-        gchar *argv[5];
+        gchar *argv[6];
 
         if (g_strcmp0 (user->shell, shell) != 0) {
                 sys_log (context,
@@ -1304,8 +1307,9 @@ user_change_shell_authorized_cb (Daemon                *daemon,
                 argv[0] = "/usr/sbin/usermod";
                 argv[1] = "-s";
                 argv[2] = shell;
-                argv[3] = user->user_name;
-                argv[4] = NULL;
+                argv[3] = "--";
+                argv[4] = user->user_name;
+                argv[5] = NULL;
 
                 error = NULL;
                 if (!spawn_with_login_uid (context, argv, &error)) {
@@ -1550,7 +1554,7 @@ user_change_locked_authorized_cb (Daemon                *daemon,
 {
         gboolean locked = GPOINTER_TO_INT (data);
         GError *error;
-        gchar *argv[4];
+        gchar *argv[5];
 
         if (user->locked != locked) {
                 sys_log (context,
@@ -1558,8 +1562,9 @@ user_change_locked_authorized_cb (Daemon                *daemon,
                          locked ? "locking" : "unlocking", user->user_name, user->uid);
                 argv[0] = "/usr/sbin/usermod";
                 argv[1] = locked ? "-L" : "-U";
-                argv[2] = user->user_name;
-                argv[3] = NULL;
+                argv[2] = "--";
+                argv[3] = user->user_name;
+                argv[4] = NULL;
 
                 error = NULL;
                 if (!spawn_with_login_uid (context, argv, &error)) {
@@ -1610,7 +1615,7 @@ user_change_account_type_authorized_cb (Daemon                *daemon,
         gid_t wheel;
         struct group *grp;
         gint i;
-        gchar *argv[5];
+        gchar *argv[6];
 
         if (user->account_type != account_type) {
                 sys_log (context,
@@ -1646,8 +1651,9 @@ user_change_account_type_authorized_cb (Daemon                *daemon,
                 argv[0] = "/usr/sbin/usermod";
                 argv[1] = "-G";
                 argv[2] = str->str;
-                argv[3] = user->user_name;
-                argv[4] = NULL;
+                argv[3] = "--";
+                argv[4] = user->user_name;
+                argv[5] = NULL;
 
                 g_string_free (str, FALSE);
 
@@ -1699,7 +1705,7 @@ user_change_password_mode_authorized_cb (Daemon                *daemon,
 {
         gint mode = GPOINTER_TO_INT (data);
         GError *error;
-        gchar *argv[5];
+        gchar *argv[6];
 
         if (user->password_mode != mode) {
                 sys_log (context,
@@ -1713,8 +1719,9 @@ user_change_password_mode_authorized_cb (Daemon                *daemon,
 
                         argv[0] = "/usr/bin/passwd";
                         argv[1] = "-d";
-                        argv[2] = user->user_name;
-                        argv[3] = NULL;
+                        argv[2] = "--";
+                        argv[3] = user->user_name;
+                        argv[4] = NULL;
 
                         error = NULL;
                         if (!spawn_with_login_uid (context, argv, &error)) {
@@ -1727,8 +1734,9 @@ user_change_password_mode_authorized_cb (Daemon                *daemon,
                                 argv[0] = "/usr/bin/chage";
                                 argv[1] = "-d";
                                 argv[2] = "0";
-                                argv[3] = user->user_name;
-                                argv[4] = NULL;
+                                argv[3] = "--";
+                                argv[4] = user->user_name;
+                                argv[5] = NULL;
 
                                 error = NULL;
                                 if (!spawn_with_login_uid (context, argv, &error)) {
@@ -1754,8 +1762,9 @@ user_change_password_mode_authorized_cb (Daemon                *daemon,
                 else if (user->locked) {
                         argv[0] = "/usr/sbin/usermod";
                         argv[1] = "-U";
-                        argv[2] = user->user_name;
-                        argv[3] = NULL;
+                        argv[2] = "--";
+                        argv[3] = user->user_name;
+                        argv[4] = NULL;
 
                         error = NULL;
                         if (!spawn_with_login_uid (context, argv, &error)) {
@@ -1832,7 +1841,7 @@ user_change_password_authorized_cb (Daemon                *daemon,
 {
         gchar **strings = data;
         GError *error;
-        gchar *argv[5];
+        gchar *argv[6];
 
         sys_log (context,
                  "set password and hint of user '%s' (%d)",
@@ -1843,8 +1852,9 @@ user_change_password_authorized_cb (Daemon                *daemon,
         argv[0] = "/usr/sbin/usermod";
         argv[1] = "-p";
         argv[2] = strings[0];
-        argv[3] = user->user_name;
-        argv[4] = NULL;
+        argv[3] = "--";
+        argv[4] = user->user_name;
+        argv[5] = NULL;
 
         error = NULL;
         if (!spawn_with_login_uid (context, argv, &error)) {

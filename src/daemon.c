@@ -1119,7 +1119,7 @@ daemon_create_user_authorized_cb (Daemon                *daemon,
         CreateUserData *cd = data;
         User *user;
         GError *error;
-        gchar *argv[8];
+        gchar *argv[9];
 
         if (getpwnam (cd->user_name) != NULL) {
                 throw_error (context, ERROR_USER_EXISTS, "A user with name '%s' already exists", cd->user_name);
@@ -1136,12 +1136,14 @@ daemon_create_user_authorized_cb (Daemon                *daemon,
         if (cd->account_type == ACCOUNT_TYPE_ADMINISTRATOR) {
                 argv[4] = "-G";
                 argv[5] = "wheel";
-                argv[6] = cd->user_name;
-                argv[7] = NULL;
+                argv[6] = "--";
+                argv[7] = cd->user_name;
+                argv[8] = NULL;
         }
         else if (cd->account_type == ACCOUNT_TYPE_STANDARD) {
-                argv[4] = cd->user_name;
-                argv[5] = NULL;
+                argv[4] = "--";
+                argv[5] = cd->user_name;
+                argv[6] = NULL;
         }
         else {
                 throw_error (context, ERROR_FAILED, "Don't know how to add user of type %d", cd->account_type);
@@ -1202,7 +1204,7 @@ daemon_delete_user_authorized_cb (Daemon                *daemon,
         GError *error;
         gchar *filename;
         struct passwd *pwent;
-        gchar *argv[4];
+        gchar *argv[5];
 
         pwent = getpwuid (ud->uid);
 
@@ -1217,12 +1219,14 @@ daemon_delete_user_authorized_cb (Daemon                *daemon,
         argv[0] = "/usr/sbin/userdel";
         if (ud->remove_files) {
                 argv[1] = "-r";
-                argv[2] = pwent->pw_name;
-                argv[3] = NULL;
+                argv[2] = "--";
+                argv[3] = pwent->pw_name;
+                argv[4] = NULL;
         }
         else {
-                argv[1] = pwent->pw_name;
-                argv[2] = NULL;
+                argv[1] = "--";
+                argv[2] = pwent->pw_name;
+                argv[3] = NULL;
         }
 
         error = NULL;
