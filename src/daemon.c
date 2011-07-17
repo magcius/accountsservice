@@ -32,6 +32,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <sys/types.h>
+#include <utmpx.h>
 
 #include <glib.h>
 #include <glib/gi18n.h>
@@ -88,7 +89,6 @@ enum {
 enum {
         USER_ADDED,
         USER_REMOVED,
-        CK_HISTORY_LOADED,
         LAST_SIGNAL
 };
 
@@ -108,7 +108,6 @@ struct DaemonPrivate {
         GFileMonitor *shadow_monitor;
 
         guint reload_id;
-        guint ck_history_id;
         guint autologin_id;
 
         PolkitAuthority *authority;
@@ -205,16 +204,6 @@ daemon_class_init (DaemonClass *klass)
                                               1,
                                               DBUS_TYPE_G_OBJECT_PATH);
 
-        signals[CK_HISTORY_LOADED] = g_signal_new ("ck-history-loaded",
-                                              G_OBJECT_CLASS_TYPE (klass),
-                                              G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
-                                              0,
-                                              NULL,
-                                              NULL,
-                                              g_cclosure_marshal_VOID__VOID,
-                                              G_TYPE_NONE,
-                                              0);
-
         dbus_g_object_type_install_info (TYPE_DAEMON,
                                          &dbus_glib_daemon_object_info);
 
@@ -245,6 +234,72 @@ daemon_local_user_is_excluded (Daemon *daemon, const gchar *username, uid_t uid)
 }
 
 static void
+reload_wtmp_history (Daemon *daemon)
+{
+        struct utmpx *wtmp_entry;
+        GHashTable *login_frequency_hash;
+        GHashTableIter iter;
+        gpointer key, value;
+
+        utmpxname(_PATH_WTMPX);
+        setutxent ();
+
+        login_frequency_hash = g_hash_table_new_full (g_str_hash, g_str_equal, NULL, NULL);
+
+        while ((wtmp_entry = getutxent ())) {
+                if (wtmp_entry->ut_type != USER_PROCESS)
+                        continue;
+
+                if (wtmp_entry->ut_user[0] == 0)
+                        continue;
+
+                if (daemon_local_user_is_excluded (daemon,
+                                                   wtmp_entry->ut_user,
+                                                   daemon->priv->minimal_uid)) {
+                        g_debug ("excluding user '%s'", wtmp_entry->ut_user);
+                        continue;
+                }
+
+                if (!g_hash_table_lookup_extended (login_frequency_hash,
+                                                   wtmp_entry->ut_user,
+                                                   &key, &value)) {
+                        value = GUINT_TO_POINTER (0);
+                        g_hash_table_insert (login_frequency_hash,
+                                             g_strdup (wtmp_entry->ut_user),
+                                             GUINT_TO_POINTER (0));
+                } else {
+                        guint frequency;
+
+                        frequency = GPOINTER_TO_UINT (value) + 1;
+
+                        g_hash_table_insert (login_frequency_hash,
+                                             key,
+                                             GUINT_TO_POINTER (frequency));
+                }
+
+        }
+        endutxent ();
+
+        g_hash_table_iter_init (&iter, login_frequency_hash);
+        while (g_hash_table_iter_next (&iter, &key, &value)) {
+                User *user;
+                char *username = (char *) key;
+                guint64 frequency = (guint64) GPOINTER_TO_UINT (value);
+
+                user = daemon_local_find_user_by_name (daemon, username);
+                if (user == NULL) {
+                        g_debug ("unable to lookup user '%s'", username);
+                        continue;
+                }
+
+                g_object_set (user, "login-frequency", frequency, NULL);
+        }
+
+        g_hash_table_foreach (login_frequency_hash, (GHFunc) g_free, NULL);
+        g_hash_table_unref (login_frequency_hash);
+}
+
+static void
 listify_hash_values_hfunc (gpointer key,
                            gpointer value,
                            gpointer user_data)
@@ -252,224 +307,6 @@ listify_hash_values_hfunc (gpointer key,
         GSList **list = user_data;
 
         *list = g_slist_prepend (*list, value);
-}
-
-static gboolean
-parse_value_as_ulong (const gchar *value,
-                      gulong      *ulongval)
-{
-        gchar *end_of_valid_long;
-        glong long_value;
-        gulong ulong_value;
-
-        errno = 0;
-        long_value = strtol (value, &end_of_valid_long, 10);
-
-        if (*value == '\0' || *end_of_valid_long != '\0') {
-                return FALSE;
-        }
-
-        ulong_value = long_value;
-        if (ulong_value != long_value || errno == ERANGE) {
-                return FALSE;
-        }
-
-        *ulongval = ulong_value;
-
-        return TRUE;
-}
-
-static gboolean
-parse_ck_history_line (const gchar  *line,
-                       gchar       **user_namep,
-                       gulong       *frequencyp)
-{
-        GRegex *re;
-        GMatchInfo *match_info;
-        gboolean res;
-        gboolean ret;
-        GError *error;
-
-        ret = FALSE;
-        re = NULL;
-        match_info = NULL;
-
-        error = NULL;
-        re = g_regex_new ("(?P<username>[0-9a-zA-Z]+)[ ]+(?P<frequency>[0-9]+)", 0, 0, &error);
-        if (re == NULL) {
-                if (error != NULL) {
-                        g_critical ("%s", error->message);
-                } else {
-                       g_critical ("Error in regex call");
-                }
-                goto out;
-        }
-
-        g_regex_match (re, line, 0, &match_info);
-
-        res = g_match_info_matches (match_info);
-        if (! res) {
-                g_warning ("Unable to parse history: %s", line);
-                goto out;
-        }
-
-        if (user_namep != NULL) {
-                *user_namep = g_match_info_fetch_named (match_info, "username");
-        }
-
-        if (frequencyp != NULL) {
-                char *freq;
-                freq = g_match_info_fetch_named (match_info, "frequency");
-                res = parse_value_as_ulong (freq, frequencyp);
-                g_free (freq);
-                if (! res) {
-                        goto out;
-                }
-        }
-
-        ret = TRUE;
-
- out:
-        if (match_info != NULL) {
-                g_match_info_free (match_info);
-        }
-        if (re != NULL) {
-                g_regex_unref (re);
-        }
-        return ret;
-}
-
-static void
-process_ck_history_line (Daemon      *daemon,
-                         const gchar *line)
-{
-        gboolean res;
-        gchar *username;
-        gulong frequency;
-        User *user;
-
-        frequency = 0;
-        username = NULL;
-        res = parse_ck_history_line (line, &username, &frequency);
-        if (! res) {
-                return;
-        }
-
-        if (daemon_local_user_is_excluded (daemon, username, daemon->priv->minimal_uid)) {
-                g_debug ("excluding user '%s'", username);
-                g_free (username);
-                return;
-        }
-
-        user = daemon_local_find_user_by_name (daemon, username);
-        if (user == NULL) {
-                g_debug ("unable to lookup user '%s'", username);
-                g_free (username);
-                return;
-        }
-
-        g_object_set (user, "login-frequency", (guint64) frequency, NULL);
-        g_free (username);
-}
-
-static gboolean
-ck_history_watch (GIOChannel   *source,
-                  GIOCondition  condition,
-                  Daemon       *daemon)
-{
-        GIOStatus status;
-        gboolean done = FALSE;
-
-        if (condition & G_IO_IN) {
-                gchar   *str;
-                GError *error;
-
-                error = NULL;
-                status = g_io_channel_read_line (source, &str, NULL, NULL, &error);
-                if (error != NULL) {
-                        g_warning ("unable to read line: %s", error->message);
-                        g_error_free (error);
-                }
-                if (status == G_IO_STATUS_NORMAL) {
-                        g_debug ("history output: %s", str);
-                        process_ck_history_line (daemon, str);
-                } else if (status == G_IO_STATUS_EOF) {
-                        done = TRUE;
-                }
-
-                g_free (str);
-        } else if (condition & G_IO_HUP) {
-                done = TRUE;
-        }
-
-        if (done) {
-                daemon->priv->ck_history_id = 0;
-                g_signal_emit (daemon, signals[CK_HISTORY_LOADED], 0);
-                return FALSE;
-        }
-
-        return TRUE;
-}
-
-static void
-reload_ck_history (Daemon *daemon)
-{
-        gchar *command;
-        GError *error;
-        gboolean res;
-        gchar **argv;
-        gint standard_out;
-        GIOChannel *channel;
-
-        command = g_strdup ("ck-history --frequent --session-type=''");
-        g_debug ("running '%s'", command);
-        error = NULL;
-        if (! g_shell_parse_argv (command, NULL, &argv, &error)) {
-                if (error != NULL) {
-                        g_warning ("Could not parse command: %s", error->message);
-                        g_error_free (error);
-                } else {
-                        g_warning ("Could not parse command");
-                }
-                goto out;
-        }
-
-        error = NULL;
-        res = g_spawn_async_with_pipes (NULL,
-                                        argv,
-                                        NULL,
-                                        G_SPAWN_SEARCH_PATH,
-                                        NULL,
-                                        NULL,
-                                        NULL, /* pid */
-                                        NULL,
-                                        &standard_out,
-                                        NULL,
-                                        &error);
-        g_strfreev (argv);
-        if (! res) {
-                if (error != NULL) {
-                        g_warning ("Unable to run ck-history: %s", error->message);
-                        g_error_free (error);
-                } else {
-                        g_warning ("Unable to run ck-history");
-                }
-                goto out;
-        }
-
-        channel = g_io_channel_unix_new (standard_out);
-        g_io_channel_set_close_on_unref (channel, TRUE);
-        g_io_channel_set_flags (channel,
-                                g_io_channel_get_flags (channel) | G_IO_FLAG_NONBLOCK,
-                                NULL);
-        daemon->priv->ck_history_id = g_io_add_watch (channel,
-                                                       G_IO_IN | G_IO_HUP | G_IO_ERR | G_IO_NVAL,
-                                                       (GIOFunc)ck_history_watch,
-                                                       daemon);
-        g_io_channel_unref (channel);
-
- out:
-        g_free (command);
 }
 
 static gint
@@ -589,7 +426,7 @@ reload_data (Daemon *daemon)
 static void
 reload_users (Daemon *daemon)
 {
-        reload_ck_history (daemon);
+        reload_wtmp_history (daemon);
         reload_passwd (daemon);
         reload_data (daemon);
 }
@@ -784,7 +621,7 @@ daemon_init (Daemon *daemon)
         } else {
                 g_warning ("Unable to monitor %s: %s", PATH_SHADOW, error->message);
                 g_error_free (error);
-       } 
+       }
 
         queue_reload_users (daemon);
         queue_reload_autologin (daemon);
@@ -1057,18 +894,6 @@ finish_list_cached_users (gpointer user_data)
         return FALSE;
 }
 
-static void
-on_ck_history_loaded (Daemon       *daemon,
-                      ListUserData *data)
-{
-        /* ck-history loaded, so finish pending ListCachedUsers call */
-        g_idle_add (finish_list_cached_users, data);
-
-        g_signal_handlers_disconnect_by_func (daemon,
-                                              on_ck_history_loaded,
-                                              data);
-}
-
 gboolean
 daemon_list_cached_users (Daemon                *daemon,
                           DBusGMethodInvocation *context)
@@ -1077,12 +902,7 @@ daemon_list_cached_users (Daemon                *daemon,
 
         data = list_user_data_new (daemon, context);
 
-        if (daemon->priv->ck_history_id > 0) {
-                /* loading ck-history, wait for it */
-                g_signal_connect (daemon, "ck-history-loaded",
-                                  G_CALLBACK (on_ck_history_loaded),
-                                  data);
-        } else if (daemon->priv->reload_id > 0) {
+        if (daemon->priv->reload_id > 0) {
                 /* reload in progress, wait a bit */
                 g_idle_add (finish_list_cached_users, data);
         }
@@ -1488,4 +1308,3 @@ daemon_local_set_automatic_login (Daemon    *daemon,
 
         return TRUE;
 }
-
