@@ -263,10 +263,9 @@ reload_wtmp_history (Daemon *daemon)
                 if (!g_hash_table_lookup_extended (login_frequency_hash,
                                                    wtmp_entry->ut_user,
                                                    &key, &value)) {
-                        value = GUINT_TO_POINTER (0);
                         g_hash_table_insert (login_frequency_hash,
                                              g_strdup (wtmp_entry->ut_user),
-                                             GUINT_TO_POINTER (0));
+                                             GUINT_TO_POINTER (1));
                 } else {
                         guint frequency;
 
