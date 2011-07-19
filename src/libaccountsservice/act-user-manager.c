@@ -1021,12 +1021,9 @@ on_get_unix_user_finished (DBusGProxy               *proxy,
                            DBusGProxyCall           *call,
                            ActUserManagerNewSession *new_session)
 {
-        ActUserManager *manager;
         GError         *error;
         guint           uid;
         gboolean        res;
-
-        manager = new_session->manager;
 
         g_assert (new_session->get_unix_user_call == call);
 
@@ -1561,11 +1558,9 @@ static void
 get_accounts_proxy (ActUserManager *manager)
 {
         DBusGProxy      *proxy;
-        GError          *error;
 
         g_assert (manager->priv->accounts_proxy == NULL);
 
-        error = NULL;
         proxy = dbus_g_proxy_new_for_name (manager->priv->connection,
                                            ACCOUNTS_NAME,
                                            ACCOUNTS_PATH,
