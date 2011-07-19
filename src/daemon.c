@@ -885,7 +885,7 @@ finish_list_cached_users (gpointer user_data)
         while (g_hash_table_iter_next (&iter, (gpointer *)&name, (gpointer *)&user)) {
                 uid = user_local_get_uid (user);
                 if (!daemon_local_user_is_excluded (data->daemon, name, uid)) {
-                        g_debug ("user %s %ld not excluded\n", name, uid);
+                        g_debug ("user %s %ld not excluded\n", name, (long) uid);
                         g_ptr_array_add (object_paths, g_strdup (user_local_get_object_path (user)));
                 }
         }
