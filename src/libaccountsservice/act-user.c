@@ -857,7 +857,7 @@ act_user_get_x_session (ActUser *user)
  * or %NULL if @user doesn't have an object path associated
  * with it.
  *
- * Returns: (transfer none): the primary ConsoleKit session id of the user
+ * Returns: (transfer none): the object path of the user
  */
 const char *
 act_user_get_object_path (ActUser *user)
