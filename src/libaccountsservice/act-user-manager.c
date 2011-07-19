@@ -2290,6 +2290,18 @@ act_user_manager_get_default (void)
 }
 
 
+/**
+ * act_user_manager_create_user:
+ * @manager: a #ActUserManager
+ * @username: a unix user name
+ * @fullname: a unix GECOS value
+ * @accounttype: a #ActUserAccountType
+ * @error: a #GError
+ *
+ * Creates a user account on the system.
+ *
+ * Returns: (transfer full): user object
+ */
 ActUser *
 act_user_manager_create_user (ActUserManager      *manager,
                               const char          *username,
