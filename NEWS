@@ -1,3 +1,18 @@
+Changes in 0.6.13
+=================
+
+* honor aclocal flags environment variable
+
+* set log domain so it can be hushed
+
+* use wtmp instead of consolekit for determining login frequency
+
+* leak and warning fixes
+
+* clean up polkit deprectation warnings
+
+* add '--' before username to account helper programs
+
 Changes in 0.6.12
 =================
 
