@@ -521,7 +521,7 @@ get_minimal_uid (void)
         const char *uid_min_string, *start_of_uid_string;
         char *end;
         uid_t uid = FALLBACK_MINIMAL_UID;
-        guint64 uid_as_number;
+        gint64 uid_as_number;
 
         error = NULL;
         contents = NULL;
