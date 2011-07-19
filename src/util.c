@@ -83,7 +83,7 @@ _polkit_subject_get_cmdline (PolkitSubject *subject, gint *pid, gint *uid)
     }
 
   *pid = polkit_unix_process_get_pid (POLKIT_UNIX_PROCESS (process));
-  *uid = polkit_unix_process_get_owner (POLKIT_UNIX_PROCESS (process), NULL);
+  *uid = polkit_unix_process_get_uid (POLKIT_UNIX_PROCESS (process));
 
   filename = g_strdup_printf ("/proc/%d/cmdline", *pid);
 
@@ -258,7 +258,6 @@ get_caller_uid (DBusGMethodInvocation *context, gint *uid)
 {
         PolkitSubject *subject;
         PolkitSubject *process;
-        GError *error;
 
         subject = polkit_system_bus_name_new (dbus_g_method_get_sender (context));
         process = polkit_system_bus_name_get_process_sync (POLKIT_SYSTEM_BUS_NAME (subject), NULL, NULL);
@@ -267,15 +266,7 @@ get_caller_uid (DBusGMethodInvocation *context, gint *uid)
                 return FALSE;
         }
 
-        error = NULL;
-        *uid = polkit_unix_process_get_owner (POLKIT_UNIX_PROCESS (process), &error);
-        if (error) {
-                g_error_free (error);
-                g_object_unref (subject);
-                g_object_unref (process);
-
-                return FALSE;
-        }
+        *uid = polkit_unix_process_get_uid (POLKIT_UNIX_PROCESS (process));
 
         g_object_unref (subject);
         g_object_unref (process);
