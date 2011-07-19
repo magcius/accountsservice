@@ -2343,7 +2343,7 @@ act_user_manager_delete_user (ActUserManager  *manager,
         GError *local_error;
         gboolean res;
 
-        g_debug ("ActUserManager: Deleting user '%s' (uid %ld)", act_user_get_user_name (user), act_user_get_uid (user));
+        g_debug ("ActUserManager: Deleting user '%s' (uid %ld)", act_user_get_user_name (user), (long) act_user_get_uid (user));
 
         g_assert (manager->priv->accounts_proxy != NULL);
 
