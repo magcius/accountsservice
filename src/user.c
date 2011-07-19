@@ -469,7 +469,7 @@ user_local_update_from_pwent (User          *user,
         gboolean changed;
         const gchar *passwd;
         gboolean locked;
-        gint mode;
+        PasswordMode mode;
 
         g_object_freeze_notify (G_OBJECT (user));
 
