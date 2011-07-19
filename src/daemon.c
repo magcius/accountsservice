@@ -653,9 +653,16 @@ register_accounts_daemon (Daemon *daemon)
         DBusError dbus_error;
         GError *error = NULL;
 
-        daemon->priv->authority = polkit_authority_get ();
+        daemon->priv->authority = polkit_authority_get_sync (NULL, &error);
 
-        error = NULL;
+        if (daemon->priv->authority == NULL) {
+                if (error != NULL) {
+                        g_critical ("error getting polkit authority: %s", error->message);
+                        g_error_free (error);
+                }
+                goto error;
+        }
+
         daemon->priv->bus_connection = dbus_g_bus_get (DBUS_BUS_SYSTEM, &error);
         if (daemon->priv->bus_connection == NULL) {
                 if (error != NULL) {
