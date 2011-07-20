@@ -1294,6 +1294,10 @@ daemon_local_set_automatic_login (Daemon    *daemon,
                 return TRUE;
         }
 
+        if (daemon->priv->autologin != user && !enabled) {
+                return TRUE;
+        }
+
         if (!save_autologin (daemon, user_local_get_user_name (user), enabled, error)) {
                 return FALSE;
         }
