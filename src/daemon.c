@@ -50,6 +50,7 @@
 #define PATH_PASSWD "/etc/passwd"
 #define PATH_SHADOW "/etc/shadow"
 #define PATH_LOGIN_DEFS "/etc/login.defs"
+#define PATH_GDM_CUSTOM "/etc/gdm/custom.conf"
 
 #ifndef FALLBACK_MINIMAL_UID
 #define FALLBACK_MINIMAL_UID 500
@@ -1207,15 +1208,12 @@ load_autologin (Daemon      *daemon,
                 GError     **error)
 {
         GKeyFile *keyfile;
-        const gchar *filename;
         GError *local_error;
         gchar *string;
 
-        filename = "/etc/gdm/custom.conf";
-
         keyfile = g_key_file_new ();
         if (!g_key_file_load_from_file (keyfile,
-                                        filename,
+                                        PATH_GDM_CUSTOM,
                                         G_KEY_FILE_KEEP_COMMENTS,
                                         error)) {
                 g_key_file_free (keyfile);
@@ -1257,15 +1255,12 @@ save_autologin (Daemon      *daemon,
                 GError     **error)
 {
         GKeyFile *keyfile;
-        const gchar *filename;
         gchar *data;
         gboolean result;
 
-        filename = "/etc/gdm/custom.conf";
-
         keyfile = g_key_file_new ();
         if (!g_key_file_load_from_file (keyfile,
-                                        filename,
+                                        PATH_GDM_CUSTOM,
                                         G_KEY_FILE_KEEP_COMMENTS,
                                         error)) {
                 g_key_file_free (keyfile);
@@ -1276,7 +1271,7 @@ save_autologin (Daemon      *daemon,
         g_key_file_set_string (keyfile, "daemon", "AutomaticLogin", name);
 
         data = g_key_file_to_data (keyfile, NULL, NULL);
-        result = g_file_set_contents (filename, data, -1, error);
+        result = g_file_set_contents (PATH_GDM_CUSTOM, data, -1, error);
 
         g_key_file_free (keyfile);
         g_free (data);
