@@ -492,6 +492,19 @@ reload_autologin_timeout (Daemon *daemon)
 }
 
 static void
+queue_reload_users_soon (Daemon *daemon)
+{
+        if (daemon->priv->reload_id > 0) {
+                return;
+        }
+
+        /* we wait half a second or so in case /etc/passwd and
+         * /etc/shadow are changed at the same time, or repeatedly.
+         */
+        daemon->priv->reload_id = g_timeout_add (500, (GSourceFunc)reload_users_timeout, daemon);
+}
+
+static void
 queue_reload_users (Daemon *daemon)
 {
         if (daemon->priv->reload_id > 0) {
@@ -523,7 +536,7 @@ on_passwd_monitor_changed (GFileMonitor      *monitor,
                 return;
         }
 
-        reload_users (daemon);
+        queue_reload_users_soon (daemon);
 }
 
 static void
