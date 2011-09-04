@@ -125,10 +125,10 @@
         <doc:para>
           Sets the users language.
         </doc:para>
-        <doc:language>
+        <doc:para>
           The expectation is that display managers will start the
           users session with this locale.
-        </doc:language>
+        </doc:para>
       </doc:description>
       <doc:permission>
         The caller needs one of the following PolicyKit authorizations:
@@ -165,10 +165,10 @@
         <doc:para>
           Sets the users x session.
         </doc:para>
-        <doc:language>
+        <doc:para>
           The expectation is that display managers will log the user in to this
           specified session, if available.
-        </doc:language>
+        </doc:para>
       </doc:description>
       <doc:permission>
         The caller needs one of the following PolicyKit authorizations:
