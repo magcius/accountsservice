@@ -256,20 +256,18 @@
 </xsl:template>
 
 <xsl:template match="doc:list">
-  <para>
-    <xsl:choose>
-      <xsl:when test="contains(@type,'number')">
-        <orderedlist>
-          <xsl:call-template name="do-listitems"/>
-        </orderedlist>
-      </xsl:when>
-      <xsl:otherwise>
-        <itemizedlist>
-          <xsl:call-template name="do-listitems"/>
-        </itemizedlist>
-      </xsl:otherwise>
-    </xsl:choose>
-  </para>
+  <xsl:choose>
+    <xsl:when test="contains(@type,'number')">
+      <orderedlist>
+        <xsl:call-template name="do-listitems"/>
+      </orderedlist>
+    </xsl:when>
+    <xsl:otherwise>
+      <itemizedlist>
+        <xsl:call-template name="do-listitems"/>
+      </itemizedlist>
+    </xsl:otherwise>
+  </xsl:choose>
 </xsl:template>
 
 <xsl:template match="doc:para">
@@ -386,7 +384,7 @@ See also:
       <variablelist role="params">
         <xsl:for-each select="arg">
 <varlistentry><term><parameter><xsl:value-of select="@name"/></parameter>:</term>
-<listitem><simpara><xsl:apply-templates select="doc:doc/doc:summary"/></simpara></listitem>
+<listitem><para><xsl:apply-templates select="doc:doc/doc:summary"/></para></listitem>
 </varlistentry>
         </xsl:for-each>
       </variablelist>
