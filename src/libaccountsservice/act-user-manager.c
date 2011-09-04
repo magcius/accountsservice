@@ -213,7 +213,7 @@ start_new_login_session (ActUserManager *manager)
         GError  *error;
         gboolean res;
 
-        res = g_spawn_command_line_async ("actflexiserver -s", &error);
+        res = g_spawn_command_line_async ("gdmflexiserver -s", &error);
         if (! res) {
                 if (error != NULL) {
                         g_warning ("Unable to start new login: %s", error->message);
