@@ -427,8 +427,8 @@ reload_data (Daemon *daemon)
 static void
 reload_users (Daemon *daemon)
 {
-        reload_wtmp_history (daemon);
         reload_passwd (daemon);
+        reload_wtmp_history (daemon);
         reload_data (daemon);
 }
 
