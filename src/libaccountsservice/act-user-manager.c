@@ -1340,6 +1340,12 @@ maybe_add_new_session (ActUserManagerNewSession *new_session)
 
         manager = ACT_USER_MANAGER (new_session->manager);
 
+        if (new_session->x11_display == NULL || new_session->x11_display[0] == '\0') {
+                g_debug ("AcUserManager: ignoring session '%s' since it's not graphical",
+                         new_session->id);
+                goto done;
+        }
+
         if (session_is_login_window (manager, new_session->id)) {
                 goto done;
         }
