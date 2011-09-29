@@ -1370,6 +1370,7 @@ user_change_icon_file_authorized_cb (Daemon                *daemon,
         GFile *file;
         GFileInfo *info;
         guint32 mode;
+        GFileType type;
         guint64 size;
 
         filename = g_strdup (data);
@@ -1400,13 +1401,22 @@ user_change_icon_file_authorized_cb (Daemon                *daemon,
 
         file = g_file_new_for_path (filename);
         info = g_file_query_info (file, G_FILE_ATTRIBUTE_UNIX_MODE ","
+                                        G_FILE_ATTRIBUTE_STANDARD_TYPE ","
                                         G_FILE_ATTRIBUTE_STANDARD_SIZE,
                                   0, NULL, NULL);
         mode = g_file_info_get_attribute_uint32 (info, G_FILE_ATTRIBUTE_UNIX_MODE);
+        type = g_file_info_get_file_type (info);
         size = g_file_info_get_attribute_uint64 (info, G_FILE_ATTRIBUTE_STANDARD_SIZE);
 
         g_object_unref (info);
         g_object_unref (file);
+
+        if (type != G_FILE_TYPE_REGULAR) {
+                g_debug ("not a regular file\n");
+                throw_error (context, ERROR_FAILED, "file '%s' is not a regular file", filename);
+                g_free (filename);
+                return;
+        }
 
         if (size > 1048576) {
                 g_debug ("file too large\n");
