@@ -24,8 +24,8 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 #include <fcntl.h>
-#include <wait.h>
 #include <grp.h>
 
 #include <syslog.h>
