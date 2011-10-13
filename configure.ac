@@ -120,6 +120,8 @@ AC_CACHE_CHECK([for supported warning flags], accountsservice_cv_warn_cflags, [
 WARN_CFLAGS="$accountsservice_cv_warn_cflags"
 AC_SUBST(WARN_CFLAGS)
 
+AC_CHECK_HEADERS([utmpx.h])
+
 dnl ---------------------------------------------------------------------------
 dnl - DocBook Documentation
 dnl ---------------------------------------------------------------------------

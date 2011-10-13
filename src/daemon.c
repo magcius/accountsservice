@@ -32,7 +32,9 @@
 #include <errno.h>
 #include <unistd.h>
 #include <sys/types.h>
+#ifdef HAVE_UTMPX_H
 #include <utmpx.h>
+#endif
 
 #include <glib.h>
 #include <glib/gi18n.h>
@@ -238,13 +240,19 @@ daemon_local_user_is_excluded (Daemon *daemon, const gchar *username, uid_t uid)
 static void
 reload_wtmp_history (Daemon *daemon)
 {
+#ifdef HAVE_UTMPX_H
         struct utmpx *wtmp_entry;
         GHashTable *login_frequency_hash;
         GHashTableIter iter;
         gpointer key, value;
 
-        utmpxname(_PATH_WTMPX);
+#ifdef UTXDB_LOG
+        if (setutxdb (UTXDB_LOG, NULL) != 0)
+                return;
+#else
+        utmpxname (_PATH_WTMPX);
         setutxent ();
+#endif
 
         login_frequency_hash = g_hash_table_new_full (g_str_hash, g_str_equal, NULL, NULL);
 
@@ -298,6 +306,7 @@ reload_wtmp_history (Daemon *daemon)
 
         g_hash_table_foreach (login_frequency_hash, (GHFunc) g_free, NULL);
         g_hash_table_unref (login_frequency_hash);
+#endif /* HAVE_UTMPX_H */
 }
 
 static void
