@@ -1,3 +1,14 @@
+Changes in 0.6.15
+=================
+
+* fix build on FreeBSD and OpenBSD
+
+* only accept regular files as icons
+
+* don't track non-graphical sessions
+
+* fix wtmp handling
+
 Changes in 0.6.14
 =================
 
