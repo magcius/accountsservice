@@ -578,11 +578,11 @@ user_local_update_from_pwent (User          *user,
                 g_object_notify (G_OBJECT (user), "locked");
         }
 
-        if (passwd[0] == 0) {
-                mode = PASSWORD_MODE_NONE;
+        if (passwd && passwd[0] != 0) {
+                mode = PASSWORD_MODE_REGULAR;
         }
         else {
-                mode = PASSWORD_MODE_REGULAR;
+                mode = PASSWORD_MODE_NONE;
         }
 
 #ifdef HAVE_SHADOW_H
