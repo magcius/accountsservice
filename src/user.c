@@ -1397,7 +1397,8 @@ user_change_icon_file_authorized_cb (Daemon                *daemon,
                 g_free (dest_path);
 
                 error = NULL;
-                if (!g_file_delete (dest, NULL, &error)) {
+                if (!g_file_delete (dest, NULL, &error) &&
+                    !g_error_matches (error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND)) {
                         g_object_unref (dest);
                         throw_error (context, ERROR_FAILED, "failed to remove user icon, %s", error->message);
                         g_error_free (error);
