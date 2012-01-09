@@ -6,5 +6,6 @@ export ACLOCAL
 (cd $(dirname $0);
  autoreconf --install --force --symlink --verbose &&
  intltoolize --force &&
- autoreconf --force --verbose &&
- ./configure $@)
+ autoreconf --force --verbose)
+
+test -n "$NOCONFIGURE" || "$(dirname $0)/configure" "$@"
