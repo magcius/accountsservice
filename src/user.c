@@ -732,7 +732,7 @@ compute_object_path (User *user)
         gchar *object_path;
 
         object_path = g_strdup_printf ("/org/freedesktop/Accounts/User%ld",
-                                       (gint64) user->uid);
+                                       (long) user->uid);
 
         return object_path;
 }
