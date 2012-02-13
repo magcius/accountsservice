@@ -41,12 +41,9 @@
 #include <glib-object.h>
 #include <glib/gstdio.h>
 #include <gio/gio.h>
-#include <dbus/dbus-glib.h>
-#include <dbus/dbus-glib-lowlevel.h>
 #include <polkit/polkit.h>
 
 #include "daemon.h"
-#include "daemon-glue.h"
 #include "util.h"
 
 #define PATH_PASSWD "/etc/passwd"
@@ -89,17 +86,9 @@ enum {
         PROP_DAEMON_VERSION
 };
 
-enum {
-        USER_ADDED,
-        USER_REMOVED,
-        LAST_SIGNAL
-};
-
-static guint signals[LAST_SIGNAL] = { 0 };
-
 struct DaemonPrivate {
-        DBusGConnection *bus_connection;
-        DBusGProxy *bus_proxy;
+        GDBusConnection *bus_connection;
+        GDBusProxy *bus_proxy;
 
         GHashTable *users;
         GHashTable *exclusions;
@@ -117,23 +106,32 @@ struct DaemonPrivate {
         PolkitAuthority *authority;
 };
 
-static void daemon_finalize   (GObject     *object);
+static void daemon_accounts_accounts_iface_init (AccountsAccountsIface *iface);
 
-G_DEFINE_TYPE (Daemon, daemon, G_TYPE_OBJECT)
+G_DEFINE_TYPE_WITH_CODE (Daemon, daemon, ACCOUNTS_TYPE_ACCOUNTS_SKELETON, G_IMPLEMENT_INTERFACE (ACCOUNTS_TYPE_ACCOUNTS, daemon_accounts_accounts_iface_init));
 
 #define DAEMON_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), TYPE_DAEMON, DaemonPrivate))
+
+static const GDBusErrorEntry accounts_error_entries[] =
+{ 
+        { ERROR_FAILED, "org.freedesktop.Accounts.Error.Failed" },
+        { ERROR_USER_EXISTS, "org.freedesktop.Accounts.Error.UserExists" },
+        { ERROR_USER_DOES_NOT_EXIST, "org.freedesktop.Accounts.Error.UserDoesNotExist" },
+        { ERROR_PERMISSION_DENIED, "org.freedesktop.Accounts.Error.PermissionDenied" },
+        { ERROR_NOT_SUPPORTED, "org.freedesktop.Accounts.Error.NotSupported" }
+};
 
 GQuark
 error_quark (void)
 {
-  static GQuark ret = 0;
+        static volatile gsize quark_volatile = 0;
 
-  if (ret == 0)
-    {
-      ret = g_quark_from_static_string ("accounts_error");
-    }
+        g_dbus_error_register_error_domain ("accounts_error",
+                                            &quark_volatile,
+                                            accounts_error_entries,
+                                            G_N_ELEMENTS (accounts_error_entries));
 
-  return ret;
+        return (GQuark) quark_volatile;
 }
 #define ENUM_ENTRY(NAME, DESC) { NAME, "" #NAME "", DESC }
 
@@ -157,71 +155,6 @@ error_get_type (void)
       etype = g_enum_register_static ("Error", values);
     }
   return etype;
-}
-
-static void
-get_property (GObject    *object,
-              guint       prop_id,
-              GValue     *value,
-              GParamSpec *pspec)
-{
-        switch (prop_id) {
-        case PROP_DAEMON_VERSION:
-                g_value_set_string (value, VERSION);
-                break;
-
-        default:
-                G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-                break;
-        }
-}
-
-static void
-daemon_class_init (DaemonClass *klass)
-{
-        GObjectClass *object_class = G_OBJECT_CLASS (klass);
-
-        object_class->finalize = daemon_finalize;
-        object_class->get_property = get_property;
-
-        g_type_class_add_private (klass, sizeof (DaemonPrivate));
-
-        signals[USER_ADDED] = g_signal_new ("user-added",
-                                            G_OBJECT_CLASS_TYPE (klass),
-                                            G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
-                                            0,
-                                            NULL,
-                                            NULL,
-                                            g_cclosure_marshal_VOID__BOXED,
-                                            G_TYPE_NONE,
-                                            1,
-                                            DBUS_TYPE_G_OBJECT_PATH);
-
-        signals[USER_REMOVED] = g_signal_new ("user-deleted",
-                                              G_OBJECT_CLASS_TYPE (klass),
-                                              G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
-                                              0,
-                                              NULL,
-                                              NULL,
-                                              g_cclosure_marshal_VOID__BOXED,
-                                              G_TYPE_NONE,
-                                              1,
-                                              DBUS_TYPE_G_OBJECT_PATH);
-
-        dbus_g_object_type_install_info (TYPE_DAEMON,
-                                         &dbus_glib_daemon_object_info);
-
-        dbus_g_error_domain_register (ERROR,
-                                      "org.freedesktop.Accounts.Error",
-                                      TYPE_ERROR);
-
-        g_object_class_install_property (object_class,
-                                         PROP_DAEMON_VERSION,
-                                         g_param_spec_string ("daemon-version",
-                                                              "Daemon version",
-                                                              "Daemon version",
-                                                              NULL,
-                                                              G_PARAM_READABLE));
 }
 
 gboolean
@@ -390,7 +323,7 @@ reload_passwd (Daemon *daemon)
         for (list = old_users; list; list = list->next) {
                 user = list->data;
                 if (! g_slist_find (new_users, user)) {
-                        g_signal_emit (daemon, signals[USER_REMOVED], 0, user_local_get_object_path (user));
+                        accounts_accounts_emit_user_deleted (ACCOUNTS_ACCOUNTS (daemon), user_local_get_object_path (user));
                         user_local_unregister (user);
                         g_hash_table_remove (daemon->priv->users,
                                              user_local_get_user_name (user));
@@ -406,7 +339,7 @@ reload_passwd (Daemon *daemon)
                                             g_strdup (user_local_get_user_name (user)),
                                             g_object_ref (user));
 
-                        g_signal_emit (daemon, signals[USER_ADDED], 0, user_local_get_object_path (user));
+                        accounts_accounts_emit_user_added (ACCOUNTS_ACCOUNTS (daemon), user_local_get_object_path (user));
                 }
         }
 
@@ -698,7 +631,7 @@ daemon_init (Daemon *daemon)
         } else {
                 g_warning ("Unable to monitor %s: %s", PATH_GDM_CUSTOM, error->message);
                 g_error_free (error);
-       }
+        }
 
         queue_reload_users (daemon);
         queue_reload_autologin (daemon);
@@ -717,7 +650,7 @@ daemon_finalize (GObject *object)
                 g_object_unref (daemon->priv->bus_proxy);
 
         if (daemon->priv->bus_connection != NULL)
-                dbus_g_connection_unref (daemon->priv->bus_connection);
+                g_object_unref (daemon->priv->bus_connection);
 
         g_hash_table_destroy (daemon->priv->users);
 
@@ -727,8 +660,6 @@ daemon_finalize (GObject *object)
 static gboolean
 register_accounts_daemon (Daemon *daemon)
 {
-        DBusConnection *connection;
-        DBusError dbus_error;
         GError *error = NULL;
 
         daemon->priv->authority = polkit_authority_get_sync (NULL, &error);
@@ -741,7 +672,7 @@ register_accounts_daemon (Daemon *daemon)
                 goto error;
         }
 
-        daemon->priv->bus_connection = dbus_g_bus_get (DBUS_BUS_SYSTEM, &error);
+        daemon->priv->bus_connection = g_bus_get_sync (G_BUS_TYPE_SYSTEM, NULL, &error);
         if (daemon->priv->bus_connection == NULL) {
                 if (error != NULL) {
                         g_critical ("error getting system bus: %s", error->message);
@@ -749,29 +680,16 @@ register_accounts_daemon (Daemon *daemon)
                 }
                 goto error;
         }
-        connection = dbus_g_connection_get_connection (daemon->priv->bus_connection);
 
-        dbus_g_connection_register_g_object (daemon->priv->bus_connection,
-                                             "/org/freedesktop/Accounts",
-                                             G_OBJECT (daemon));
-
-        daemon->priv->bus_proxy = dbus_g_proxy_new_for_name (daemon->priv->bus_connection,
-                                                             DBUS_SERVICE_DBUS,
-                                                             DBUS_PATH_DBUS,
-                                                             DBUS_INTERFACE_DBUS);
-        dbus_error_init (&dbus_error);
-        /* need to listen to NameOwnerChanged */
-        dbus_bus_add_match (connection,
-                            "type='signal'"
-                            ",interface='"DBUS_INTERFACE_DBUS"'"
-                            ",sender='"DBUS_SERVICE_DBUS"'"
-                            ",member='NameOwnerChanged'",
-                            &dbus_error);
-
-        if (dbus_error_is_set (&dbus_error)) {
-                g_warning ("Cannot add match rule: %s: %s", dbus_error.name, dbus_error.message);
-                dbus_error_free (&dbus_error);
-                goto error;
+        if (!g_dbus_interface_skeleton_export (G_DBUS_INTERFACE_SKELETON (daemon),
+                                               daemon->priv->bus_connection,
+                                               "/org/freedesktop/Accounts",
+                                               &error)) {
+                if (error != NULL) {
+                        g_critical ("error exporting interface: %s", error->message);
+                        g_error_free (error);
+                }
+                goto error;     
         }
 
         return TRUE;
@@ -799,12 +717,11 @@ daemon_new (void)
 }
 
 static void
-throw_error (DBusGMethodInvocation *context,
+throw_error (GDBusMethodInvocation *context,
              gint                   error_code,
              const gchar           *format,
              ...)
 {
-        GError *error;
         va_list args;
         gchar *message;
 
@@ -812,9 +729,7 @@ throw_error (DBusGMethodInvocation *context,
         message = g_strdup_vprintf (format, args);
         va_end (args);
 
-        error = g_error_new (ERROR, error_code, "%s", message);
-        dbus_g_method_return_error (context, error);
-        g_error_free (error);
+        g_dbus_method_invocation_return_error (context, ERROR, error_code, "%s", message);
 
         g_free (message);
 }
@@ -833,7 +748,7 @@ add_new_user_for_pwent (Daemon        *daemon,
                              g_strdup (user_local_get_user_name (user)),
                              user);
 
-        g_signal_emit (daemon, signals[USER_ADDED], 0, user_local_get_object_path (user));
+        accounts_accounts_emit_user_added (ACCOUNTS_ACCOUNTS (daemon), user_local_get_object_path (user));
 
         return user;
 }
@@ -880,18 +795,18 @@ daemon_local_find_user_by_name (Daemon      *daemon,
         return user;
 }
 
-gboolean
-daemon_find_user_by_id (Daemon                *daemon,
-                        gint64                 uid,
-                        DBusGMethodInvocation *context)
+static gboolean
+daemon_find_user_by_id (AccountsAccounts      *accounts,
+                        GDBusMethodInvocation *context,
+                        gint64                 uid)
 {
+        Daemon *daemon = (Daemon*)accounts;
         User *user;
 
         user = daemon_local_find_user_by_id (daemon, uid);
 
         if (user) {
-                dbus_g_method_return (context,
-                                      user_local_get_object_path (user));
+                accounts_accounts_complete_find_user_by_id (NULL, context, user_local_get_object_path (user));
         }
         else {
                 throw_error (context, ERROR_FAILED, "Failed to look up user with uid %d.", (int)uid);
@@ -900,18 +815,18 @@ daemon_find_user_by_id (Daemon                *daemon,
         return TRUE;
 }
 
-gboolean
-daemon_find_user_by_name (Daemon                *daemon,
-                          const gchar           *name,
-                          DBusGMethodInvocation *context)
+static gboolean
+daemon_find_user_by_name (AccountsAccounts      *accounts,
+                          GDBusMethodInvocation *context,
+                          const gchar           *name)
 {
+        Daemon *daemon = (Daemon*)accounts;
         User *user;
 
         user = daemon_local_find_user_by_name (daemon, name);
 
         if (user) {
-                dbus_g_method_return (context,
-                                      user_local_get_object_path (user));
+                accounts_accounts_complete_find_user_by_name (NULL, context, user_local_get_object_path (user));
         }
         else {
                 throw_error (context, ERROR_FAILED, "Failed to look up user with name %s.", name);
@@ -922,13 +837,13 @@ daemon_find_user_by_name (Daemon                *daemon,
 
 typedef struct {
         Daemon *daemon;
-        DBusGMethodInvocation *context;
+        GDBusMethodInvocation *context;
 } ListUserData;
 
 
 static ListUserData *
 list_user_data_new (Daemon                *daemon,
-                    DBusGMethodInvocation *context)
+                    GDBusMethodInvocation *context)
 {
         ListUserData *data;
 
@@ -964,13 +879,13 @@ finish_list_cached_users (gpointer user_data)
                 uid = user_local_get_uid (user);
                 if (!daemon_local_user_is_excluded (data->daemon, name, uid)) {
                         g_debug ("user %s %ld not excluded\n", name, (long) uid);
-                        g_ptr_array_add (object_paths, g_strdup (user_local_get_object_path (user)));
+                        g_ptr_array_add (object_paths, (gpointer) user_local_get_object_path (user));
                 }
         }
+        g_ptr_array_add (object_paths, NULL);
 
-        dbus_g_method_return (data->context, object_paths);
+        accounts_accounts_complete_list_cached_users (NULL, data->context, (const gchar * const *) object_paths->pdata);
 
-        g_ptr_array_foreach (object_paths, (GFunc) g_free, NULL);
         g_ptr_array_free (object_paths, TRUE);
 
         list_user_data_free (data);
@@ -978,10 +893,11 @@ finish_list_cached_users (gpointer user_data)
         return FALSE;
 }
 
-gboolean
-daemon_list_cached_users (Daemon                *daemon,
-                          DBusGMethodInvocation *context)
+static gboolean
+daemon_list_cached_users (AccountsAccounts      *accounts,
+                          GDBusMethodInvocation *context)
 {
+        Daemon *daemon = (Daemon*)accounts;
         ListUserData *data;
 
         data = list_user_data_new (daemon, context);
@@ -995,6 +911,12 @@ daemon_list_cached_users (Daemon                *daemon,
         }
 
         return TRUE;
+}
+
+static const gchar *
+daemon_get_daemon_version (AccountsAccounts *object)
+{
+    return VERSION;
 }
 
 typedef struct {
@@ -1016,14 +938,14 @@ create_data_free (gpointer data)
 static void
 daemon_create_user_authorized_cb (Daemon                *daemon,
                                   User                  *dummy,
-                                  DBusGMethodInvocation *context,
+                                  GDBusMethodInvocation *context,
                                   gpointer               data)
 
 {
         CreateUserData *cd = data;
         User *user;
         GError *error;
-        gchar *argv[9];
+        const gchar *argv[9];
 
         if (getpwnam (cd->user_name) != NULL) {
                 throw_error (context, ERROR_USER_EXISTS, "A user with name '%s' already exists", cd->user_name);
@@ -1063,16 +985,17 @@ daemon_create_user_authorized_cb (Daemon                *daemon,
 
         user = daemon_local_find_user_by_name (daemon, cd->user_name);
 
-        dbus_g_method_return (context, user_local_get_object_path (user));
+        accounts_accounts_complete_create_user (NULL, context, user_local_get_object_path (user));
 }
 
-gboolean
-daemon_create_user (Daemon                *daemon,
+static gboolean
+daemon_create_user (AccountsAccounts      *accounts,
+                    GDBusMethodInvocation *context,
                     const gchar           *user_name,
                     const gchar           *real_name,
-                    gint                   account_type,
-                    DBusGMethodInvocation *context)
+                    gint                   account_type)
 {
+        Daemon *daemon = (Daemon*)accounts;
         CreateUserData *data;
 
         data = g_new0 (CreateUserData, 1);
@@ -1100,7 +1023,7 @@ typedef struct {
 static void
 daemon_delete_user_authorized_cb (Daemon                *daemon,
                                   User                  *dummy,
-                                  DBusGMethodInvocation *context,
+                                  GDBusMethodInvocation *context,
                                   gpointer               data)
 
 {
@@ -1108,7 +1031,7 @@ daemon_delete_user_authorized_cb (Daemon                *daemon,
         GError *error;
         gchar *filename;
         struct passwd *pwent;
-        gchar *argv[5];
+        const gchar *argv[5];
 
         pwent = getpwuid (ud->uid);
 
@@ -1145,16 +1068,17 @@ daemon_delete_user_authorized_cb (Daemon                *daemon,
 
         g_free (filename);
 
-        dbus_g_method_return (context);
+        accounts_accounts_complete_delete_user (NULL, context);
 }
 
 
-gboolean
-daemon_delete_user (Daemon                *daemon,
+static gboolean
+daemon_delete_user (AccountsAccounts      *accounts,
+                    GDBusMethodInvocation *context,
                     gint64                 uid,
-                    gboolean               remove_files,
-                    DBusGMethodInvocation *context)
+                    gboolean               remove_files)
 {
+        Daemon *daemon = (Daemon*)accounts;
         DeleteUserData *data;
 
         data = g_new0 (DeleteUserData, 1);
@@ -1177,7 +1101,7 @@ typedef struct {
         Daemon *daemon;
         User *user;
         AuthorizedCallback authorized_cb;
-        DBusGMethodInvocation *context;
+        GDBusMethodInvocation *context;
         gpointer data;
         GDestroyNotify destroy_notify;
 } CheckAuthData;
@@ -1244,7 +1168,7 @@ daemon_local_check_auth (Daemon                *daemon,
                          const gchar           *action_id,
                          gboolean               allow_interaction,
                          AuthorizedCallback     authorized_cb,
-                         DBusGMethodInvocation *context,
+                         GDBusMethodInvocation *context,
                          gpointer               authorized_cb_data,
                          GDestroyNotify         destroy_notify)
 {
@@ -1261,7 +1185,7 @@ daemon_local_check_auth (Daemon                *daemon,
         data->data = authorized_cb_data;
         data->destroy_notify = destroy_notify;
 
-        subject = polkit_system_bus_name_new (dbus_g_method_get_sender (context));
+        subject = polkit_system_bus_name_new (g_dbus_method_invocation_get_sender (context));
 
         flags = POLKIT_CHECK_AUTHORIZATION_FLAGS_NONE;
         if (allow_interaction)
@@ -1389,4 +1313,65 @@ daemon_local_set_automatic_login (Daemon    *daemon,
         }
 
         return TRUE;
+}
+
+static void
+get_property (GObject    *object,
+              guint       prop_id,
+              GValue     *value,
+              GParamSpec *pspec)
+{
+       switch (prop_id) {
+        case PROP_DAEMON_VERSION:
+                g_value_set_string (value, VERSION);
+                break;
+
+        default:
+                G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+                break;
+        }
+}
+
+static void
+set_property (GObject      *object,
+              guint         prop_id,
+              const GValue *value,
+              GParamSpec   *pspec)
+{
+       switch (prop_id) {
+        case PROP_DAEMON_VERSION:
+                g_assert_not_reached ();
+                break;
+
+        default:
+                G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+                break;
+        }
+}
+
+static void
+daemon_class_init (DaemonClass *klass)
+{
+        GObjectClass *object_class = G_OBJECT_CLASS (klass);
+
+        object_class->finalize = daemon_finalize;
+        object_class->get_property = get_property;
+        object_class->set_property = set_property;
+
+        g_type_class_add_private (klass, sizeof (DaemonPrivate));
+
+        g_object_class_override_property (object_class,
+                                          PROP_DAEMON_VERSION,
+                                          "daemon-version");
+}
+
+static void
+daemon_accounts_accounts_iface_init (AccountsAccountsIface *iface)
+{
+        iface->handle_create_user = daemon_create_user;
+        iface->handle_delete_user = daemon_delete_user;
+        iface->handle_find_user_by_id = daemon_find_user_by_id;
+        iface->handle_find_user_by_name = daemon_find_user_by_name;
+        iface->handle_list_cached_users = daemon_list_cached_users;
+        iface->get_daemon_version = daemon_get_daemon_version;
 }

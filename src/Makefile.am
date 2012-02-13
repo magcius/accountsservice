@@ -8,15 +8,17 @@ INCLUDES = 			\
 	$(POLKIT_CFLAGS)	\
 	$(WARN_CFLAGS)
 
-BUILT_SOURCES = 		\
-	daemon-glue.h		\
-	user-glue.h
+BUILT_SOURCES = 			\
+	accounts-generated.c			\
+	accounts-generated.h			\
+	accounts-user-generated.c	\
+	accounts-user-generated.h
 
-daemon-glue.h: $(top_srcdir)/data/org.freedesktop.Accounts.xml Makefile
-	dbus-binding-tool --prefix=daemon --mode=glib-server --output=daemon-glue.h $(top_srcdir)/data/org.freedesktop.Accounts.xml
+accounts-generated.c accounts-generated.h: $(top_srcdir)/data/org.freedesktop.Accounts.xml Makefile
+	gdbus-codegen --generate-c-code accounts-generated --c-namespace Accounts --interface-prefix=org.freedesktop. $(top_srcdir)/data/org.freedesktop.Accounts.xml
 
-user-glue.h: $(top_srcdir)/data/org.freedesktop.Accounts.User.xml Makefile
-	dbus-binding-tool --prefix=user --mode=glib-server --output=user-glue.h $(top_srcdir)/data/org.freedesktop.Accounts.User.xml
+accounts-user-generated.c accounts-user-generated.h: $(top_srcdir)/data/org.freedesktop.Accounts.User.xml Makefile
+	gdbus-codegen --generate-c-code accounts-user-generated --c-namespace Accounts --interface-prefix=org.freedesktop.Accounts. $(top_srcdir)/data/org.freedesktop.Accounts.User.xml
 
 libexec_PROGRAMS = accounts-daemon
 

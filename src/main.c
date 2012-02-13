@@ -30,10 +30,6 @@
 #include <glib.h>
 #include <glib/gi18n.h>
 
-#define DBUS_API_SUBJECT_TO_CHANGE
-#include <dbus/dbus-glib.h>
-#include <dbus/dbus-glib-lowlevel.h>
-
 #include "daemon.h"
 
 #define NAME_TO_CLAIM "org.freedesktop.Accounts"
@@ -41,74 +37,32 @@
 static GMainLoop *loop;
 
 static void
-name_lost (DBusGProxy  *system_bus_proxy,
-           const gchar *name_which_was_lost,
-           gpointer     user_data)
+on_bus_acquired (GDBusConnection  *connection,
+                 const gchar      *name,
+                 gpointer          user_data)
+{
+        Daemon *daemon;
+
+        daemon = daemon_new ();
+
+        if (daemon == NULL) {
+                g_main_loop_quit (loop);
+                return;
+        }
+
+        openlog ("accounts-daemon", LOG_PID, LOG_DAEMON);
+        syslog (LOG_INFO, "started daemon version %s", VERSION);
+        closelog ();
+        openlog ("accounts-daemon", 0, LOG_AUTHPRIV);
+}
+
+static void
+on_name_lost (GDBusConnection  *connection,
+              const gchar      *name,
+              gpointer          user_data)
 {
         g_debug ("got NameLost, exiting");
         g_main_loop_quit (loop);
-}
-
-static gboolean
-acquire_name_on_proxy (DBusGProxy *system_bus_proxy,
-                       gboolean    replace)
-{
-        GError *error;
-        guint result;
-        gboolean res;
-        gboolean ret;
-        guint flags;
-
-        ret = FALSE;
-
-        flags = DBUS_NAME_FLAG_ALLOW_REPLACEMENT;
-        if (replace)
-                flags |= DBUS_NAME_FLAG_REPLACE_EXISTING;
-
-        error = NULL;
-        res = dbus_g_proxy_call (system_bus_proxy,
-                                 "RequestName",
-                                 &error,
-                                 G_TYPE_STRING,
-                                 NAME_TO_CLAIM,
-                                 G_TYPE_UINT,
-                                 flags,
-                                 G_TYPE_INVALID,
-                                 G_TYPE_UINT,
-                                 &result,
-                                 G_TYPE_INVALID);
-        if (!res) {
-                if (error != NULL) {
-                        g_warning ("Failed to acquire %s: %s",
-                                   NAME_TO_CLAIM, error->message);
-                        g_error_free (error);
-                }
-                else {
-                        g_warning ("Failed to acquire %s", NAME_TO_CLAIM);
-                }
-                goto out;
-        }
-
-        if (result != DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER) {
-                if (error != NULL) {
-                        g_warning ("Failed to acquire %s: %s",
-                                   NAME_TO_CLAIM, error->message);
-                        g_error_free (error);
-                }
-                else {
-                        g_warning ("Failed to acquire %s", NAME_TO_CLAIM);
-                }
-                goto out;
-        }
-
-        dbus_g_proxy_add_signal (system_bus_proxy, "NameLost",
-                                 G_TYPE_STRING, G_TYPE_INVALID);
-        dbus_g_proxy_connect_signal (system_bus_proxy, "NameLost",
-                                     G_CALLBACK (name_lost), NULL, NULL);
-        ret = TRUE;
-
- out:
-        return ret;
 }
 
 static gboolean debug;
@@ -129,11 +83,9 @@ log_handler (const gchar   *domain,
 int
 main (int argc, char *argv[])
 {
-        Daemon *daemon;
-        DBusGConnection *bus;
-        DBusGProxy *system_bus_proxy;
         GError *error;
         gint ret;
+        GBusNameOwnerFlags flags;
         GOptionContext *context;
         static gboolean replace;
         static gboolean show_version;
@@ -178,36 +130,17 @@ main (int argc, char *argv[])
 
         g_log_set_default_handler (log_handler, NULL);
 
-        bus = dbus_g_bus_get (DBUS_BUS_SYSTEM, &error);
-        if (bus == NULL) {
-                g_warning ("Could not connect to system bus: %s", error->message);
-                g_error_free (error);
-                goto out;
-        }
-
-        system_bus_proxy = dbus_g_proxy_new_for_name (bus,
-                                                      DBUS_SERVICE_DBUS,
-                                                      DBUS_PATH_DBUS,
-                                                      DBUS_INTERFACE_DBUS);
-        if (system_bus_proxy == NULL) {
-                g_warning ("Could not construct system_bus_proxy object");
-                goto out;
-        }
-
-        if (!acquire_name_on_proxy (system_bus_proxy, replace)) {
-                g_warning ("Could not acquire name");
-                goto out;
-        }
-
-        daemon = daemon_new ();
-
-        if (daemon == NULL)
-                goto out;
-
-        openlog ("accounts-daemon", LOG_PID, LOG_DAEMON);
-        syslog (LOG_INFO, "started daemon version %s", VERSION);
-        closelog ();
-        openlog ("accounts-daemon", 0, LOG_AUTHPRIV);
+        flags = G_BUS_NAME_OWNER_FLAGS_ALLOW_REPLACEMENT;
+        if (replace)
+                flags |= G_BUS_NAME_OWNER_FLAGS_REPLACE;
+        g_bus_own_name (G_BUS_TYPE_SYSTEM,
+                        NAME_TO_CLAIM,
+                        flags,
+                        on_bus_acquired,
+                        NULL,
+                        on_name_lost,
+                        NULL,
+                        NULL);
 
         loop = g_main_loop_new (NULL, FALSE);
 

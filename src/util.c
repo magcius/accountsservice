@@ -30,9 +30,6 @@
 
 #include <syslog.h>
 
-#include <dbus/dbus-glib.h>
-#include <dbus/dbus-glib-lowlevel.h>
-
 #include <polkit/polkit.h>
 
 #include "util.h"
@@ -117,7 +114,7 @@ _polkit_subject_get_cmdline (PolkitSubject *subject, gint *pid, gint *uid)
 }
 
 void
-sys_log (DBusGMethodInvocation *context,
+sys_log (GDBusMethodInvocation *context,
          const gchar           *format,
                                 ...)
 {
@@ -136,7 +133,7 @@ sys_log (DBusGMethodInvocation *context,
                 gint uid = 0;
                 gchar *tmp;
 
-                subject = polkit_system_bus_name_new (dbus_g_method_get_sender (context));
+                subject = polkit_system_bus_name_new (g_dbus_method_invocation_get_sender (context));
                 id = polkit_subject_to_string (subject);
                 cmdline = _polkit_subject_get_cmdline (subject, &pid, &uid);
 
@@ -161,7 +158,7 @@ sys_log (DBusGMethodInvocation *context,
 }
 
 static void
-get_caller_loginuid (DBusGMethodInvocation *context, gchar *loginuid, gint size)
+get_caller_loginuid (GDBusMethodInvocation *context, gchar *loginuid, gint size)
 {
         PolkitSubject *subject;
         gchar *cmdline;
@@ -170,7 +167,7 @@ get_caller_loginuid (DBusGMethodInvocation *context, gchar *loginuid, gint size)
         gchar *path;
         gchar *buf;
 
-        subject = polkit_system_bus_name_new (dbus_g_method_get_sender (context));
+        subject = polkit_system_bus_name_new (g_dbus_method_invocation_get_sender (context));
         cmdline = _polkit_subject_get_cmdline (subject, &pid, &uid);
         g_free (cmdline);
         g_object_unref (subject);
@@ -199,8 +196,8 @@ setup_loginuid (gpointer data)
 }
 
 gboolean
-spawn_with_login_uid (DBusGMethodInvocation  *context,
-                      gchar                  *argv[],
+spawn_with_login_uid (GDBusMethodInvocation  *context,
+                      const gchar            *argv[],
                       GError                **error)
 {
         GError *local_error;
@@ -213,7 +210,7 @@ spawn_with_login_uid (DBusGMethodInvocation  *context,
         local_error = NULL;
         std_err = NULL;
 
-        if (!g_spawn_sync (NULL, argv, NULL, 0, setup_loginuid, loginuid, NULL, &std_err, &status, &local_error)) {
+        if (!g_spawn_sync (NULL, (gchar**)argv, NULL, 0, setup_loginuid, loginuid, NULL, &std_err, &status, &local_error)) {
                 g_propagate_error (error, local_error);
                 g_free (std_err);
                 return FALSE;
@@ -254,12 +251,12 @@ get_user_groups (const gchar  *user,
 
 
 gboolean
-get_caller_uid (DBusGMethodInvocation *context, gint *uid)
+get_caller_uid (GDBusMethodInvocation *context, gint *uid)
 {
         PolkitSubject *subject;
         PolkitSubject *process;
 
-        subject = polkit_system_bus_name_new (dbus_g_method_get_sender (context));
+        subject = polkit_system_bus_name_new (g_dbus_method_invocation_get_sender (context));
         process = polkit_system_bus_name_get_process_sync (POLKIT_SYSTEM_BUS_NAME (subject), NULL, NULL);
         if (!process) {
                 g_object_unref (subject);

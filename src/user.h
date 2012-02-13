@@ -24,7 +24,7 @@
 #include <pwd.h>
 
 #include <glib.h>
-#include <dbus/dbus-glib.h>
+#include <gio/gio.h>
 
 #include "types.h"
 
@@ -65,52 +65,6 @@ const gchar *user_local_get_user_name       (User          *user);
 const gchar *user_local_get_user_name       (User          *user);
 const gchar *user_local_get_object_path     (User          *user);
 uid_t        user_local_get_uid             (User          *user);
-
-/* exported methods */
-
-gboolean       user_set_user_name      (User                  *user,
-                                        const gchar           *user_name,
-                                        DBusGMethodInvocation *context);
-gboolean       user_set_real_name      (User                  *user,
-                                        const gchar           *real_name,
-                                        DBusGMethodInvocation *context);
-gboolean       user_set_email          (User                  *user,
-                                        const gchar           *email,
-                                        DBusGMethodInvocation *context);
-gboolean       user_set_language       (User                  *user,
-                                        const gchar           *language,
-                                        DBusGMethodInvocation *context);
-gboolean       user_set_x_session      (User                  *user,
-                                        const gchar           *x_session,
-                                        DBusGMethodInvocation *context);
-gboolean       user_set_location       (User                  *user,
-                                        const gchar           *location,
-                                        DBusGMethodInvocation *context);
-gboolean       user_set_home_directory (User                  *user,
-                                        const gchar           *home_dir,
-                                        DBusGMethodInvocation *context);
-gboolean       user_set_shell          (User                  *user,
-                                        const gchar           *shell,
-                                        DBusGMethodInvocation *context);
-gboolean       user_set_icon_file      (User                  *user,
-                                        const gchar           *filename,
-                                        DBusGMethodInvocation *context);
-gboolean       user_set_locked         (User                  *user,
-                                        gboolean               locked,
-                                        DBusGMethodInvocation *context);
-gboolean       user_set_account_type   (User                  *user,
-                                        gint                   account_type,
-                                        DBusGMethodInvocation *context);
-gboolean       user_set_password_mode  (User                  *user,
-                                        gint                   mode,
-                                        DBusGMethodInvocation *context);
-gboolean       user_set_password       (User                  *user,
-                                        const gchar           *password,
-                                        const gchar           *hint,
-                                        DBusGMethodInvocation *context);
-gboolean       user_set_automatic_login(User                  *user,
-                                        gboolean               enabled,
-                                        DBusGMethodInvocation *context);
 
 G_END_DECLS
 

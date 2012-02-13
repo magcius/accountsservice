@@ -25,10 +25,10 @@
 #include <sys/types.h>
 #include <glib.h>
 #include <glib-object.h>
-#include <dbus/dbus-glib.h>
 
 #include "types.h"
 #include "user.h"
+#include "accounts-generated.h"
 
 G_BEGIN_DECLS
 
@@ -43,12 +43,12 @@ typedef struct DaemonClass DaemonClass;
 typedef struct DaemonPrivate DaemonPrivate;
 
 struct Daemon {
-        GObject parent;
+        AccountsAccountsSkeleton parent;
         DaemonPrivate *priv;
 };
 
 struct DaemonClass {
-        GObjectClass parent_class;
+        AccountsAccountsSkeletonClass parent_class;
 };
 
 typedef enum {
@@ -81,7 +81,7 @@ gboolean daemon_local_user_is_excluded (Daemon              *daemon,
 
 typedef void (*AuthorizedCallback)   (Daemon                *daemon,
                                       User                  *user,
-                                      DBusGMethodInvocation *context,
+                                      GDBusMethodInvocation *context,
                                       gpointer               data);
 
 void         daemon_local_check_auth (Daemon                *daemon,
@@ -89,7 +89,7 @@ void         daemon_local_check_auth (Daemon                *daemon,
                                       const gchar           *action_id,
                                       gboolean               allow_interaction,
                                       AuthorizedCallback     auth_cb,
-                                      DBusGMethodInvocation *context,
+                                      GDBusMethodInvocation *context,
                                       gpointer               data,
                                       GDestroyNotify         destroy_notify);
 
@@ -97,26 +97,6 @@ gboolean   daemon_local_set_automatic_login (Daemon         *daemon,
                                              User           *user,
                                              gboolean        enabled,
                                              GError        **error);
-
-/* exported methods */
-
-gboolean daemon_find_user_by_id   (Daemon                *daemon,
-                                   gint64                 uid,
-                                   DBusGMethodInvocation *context);
-gboolean daemon_find_user_by_name (Daemon                *daemon,
-                                   const gchar           *name,
-                                   DBusGMethodInvocation *context);
-gboolean daemon_list_cached_users (Daemon                *daemon,
-                                   DBusGMethodInvocation *context);
-gboolean daemon_create_user       (Daemon                *daemon,
-                                   const gchar           *user_name,
-                                   const gchar           *real_name,
-                                   gint                   account_type,
-                                   DBusGMethodInvocation *context);
-gboolean daemon_delete_user       (Daemon                *daemon,
-                                   gint64                 uid,
-                                   gboolean               remove_files,
-                                   DBusGMethodInvocation *context);
 
 G_END_DECLS
 
