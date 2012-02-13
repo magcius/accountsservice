@@ -26,13 +26,12 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include <dbus/dbus-glib.h>
-
 #include <glib.h>
 #include <glib/gi18n.h>
 #include <gio/gio.h>
 
 #include "act-user-private.h"
+#include "accounts-user-generated.h"
 
 #define ACT_USER_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST ((klass), ACT_TYPE_USER, ActUserClass))
 #define ACT_IS_USER_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), ACT_TYPE_USER))
@@ -72,10 +71,10 @@ enum {
 struct _ActUser {
         GObject         parent;
 
-        DBusGConnection *connection;
-        DBusGProxy      *accounts_proxy;
-        DBusGProxy      *object_proxy;
-        DBusGProxyCall  *get_all_call;
+        GDBusConnection *connection;
+        AccountsUser    *accounts_proxy;
+        GDBusProxy      *object_proxy;
+        GCancellable    *get_all_call;
         char            *object_path;
 
         uid_t           uid;
@@ -430,16 +429,16 @@ act_user_class_init (ActUserClass *class)
 static void
 act_user_init (ActUser *user)
 {
-        GError *error;
+        GError *error = NULL;
 
         user->user_name = NULL;
         user->real_name = NULL;
         user->sessions = NULL;
 
-        error = NULL;
-        user->connection = dbus_g_bus_get (DBUS_BUS_SYSTEM, &error);
+        user->connection = g_bus_get_sync (G_BUS_TYPE_SYSTEM, NULL, &error);
         if (user->connection == NULL) {
                 g_warning ("Couldn't connect to system bus: %s", error->message);
+                g_error_free (error);
         }
 }
 
@@ -470,8 +469,12 @@ act_user_finalize (GObject *object)
                 g_object_unref (user->object_proxy);
         }
 
+        if (user->get_all_call != NULL) {
+                g_object_unref (user->get_all_call);
+        }
+
         if (user->connection != NULL) {
-                dbus_g_connection_unref (user->connection);
+                g_object_unref (user->connection);
         }
 
         if (G_OBJECT_CLASS (act_user_parent_class)->finalize)
@@ -890,16 +893,16 @@ act_user_get_primary_session_id (ActUser *user)
 }
 
 static void
-collect_props (const gchar    *key,
-               const GValue   *value,
-               ActUser        *user)
+collect_props (const gchar *key,
+               GVariant    *value,
+               ActUser     *user)
 {
         gboolean handled = TRUE;
 
         if (strcmp (key, "Uid") == 0) {
                 guint64 new_uid;
 
-                new_uid = g_value_get_uint64 (value);
+                new_uid = g_variant_get_uint64 (value);
                 if ((guint64) user->uid != new_uid) {
                         user->uid = (uid_t) new_uid;
                         g_object_notify (G_OBJECT (user), "uid");
@@ -907,7 +910,7 @@ collect_props (const gchar    *key,
         } else if (strcmp (key, "UserName") == 0) {
                 const char *new_user_name;
 
-                new_user_name = g_value_get_string (value);
+                new_user_name = g_variant_get_string (value, NULL);
                 if (g_strcmp0 (user->user_name, new_user_name) != 0) {
                         g_free (user->user_name);
                         user->user_name = g_strdup (new_user_name);
@@ -916,7 +919,7 @@ collect_props (const gchar    *key,
         } else if (strcmp (key, "RealName") == 0) {
                 const char *new_real_name;
 
-                new_real_name = g_value_get_string (value);
+                new_real_name = g_variant_get_string (value, NULL);
                 if (g_strcmp0 (user->real_name, new_real_name) != 0) {
                         g_free (user->real_name);
                         user->real_name = g_strdup (new_real_name);
@@ -925,7 +928,7 @@ collect_props (const gchar    *key,
         } else if (strcmp (key, "AccountType") == 0) {
                 int new_account_type;
 
-                new_account_type = g_value_get_int (value);
+                new_account_type = g_variant_get_int32 (value);
                 if ((int) user->account_type != new_account_type) {
                         user->account_type = (ActUserAccountType) new_account_type;
                         g_object_notify (G_OBJECT (user), "account-type");
@@ -933,7 +936,7 @@ collect_props (const gchar    *key,
         } else if (strcmp (key, "PasswordMode") == 0) {
                 int new_password_mode;
 
-                new_password_mode = g_value_get_int (value);
+                new_password_mode = g_variant_get_int32 (value);
                 if ((int) user->password_mode != new_password_mode) {
                         user->password_mode = (ActUserPasswordMode) new_password_mode;
                         g_object_notify (G_OBJECT (user), "password-mode");
@@ -941,16 +944,16 @@ collect_props (const gchar    *key,
         } else if (strcmp (key, "PasswordHint") == 0) {
                 const char *new_password_hint;
 
-                new_password_hint = g_value_get_string (value);
+                new_password_hint = g_variant_get_string (value, NULL);
                 if (g_strcmp0 (user->password_hint, new_password_hint) != 0) {
                         g_free (user->password_hint);
-                        user->password_hint = g_value_dup_string (value);
+                        user->password_hint = g_strdup (new_password_hint);
                         g_object_notify (G_OBJECT (user), "password-hint");
                 }
         } else if (strcmp (key, "HomeDirectory") == 0) {
                 const char *new_home_dir;
 
-                new_home_dir = g_value_get_string (value);
+                new_home_dir = g_variant_get_string (value, NULL);
                 if (g_strcmp0 (user->home_dir, new_home_dir) != 0) {
                         g_free (user->home_dir);
                         user->home_dir = g_strdup (new_home_dir);
@@ -959,7 +962,7 @@ collect_props (const gchar    *key,
         } else if (strcmp (key, "Shell") == 0) {
                 const char *new_shell;
 
-                new_shell = g_value_get_string (value);
+                new_shell = g_variant_get_string (value, NULL);
                 if (g_strcmp0 (user->shell, new_shell) != 0) {
                         g_free (user->shell);
                         user->shell = g_strdup (new_shell);
@@ -968,7 +971,7 @@ collect_props (const gchar    *key,
         } else if (strcmp (key, "Email") == 0) {
                 const char *new_email;
 
-                new_email = g_value_get_string (value);
+                new_email = g_variant_get_string (value, NULL);
                 if (g_strcmp0 (user->email, new_email) != 0) {
                         g_free (user->email);
                         user->email = g_strdup (new_email);
@@ -977,7 +980,7 @@ collect_props (const gchar    *key,
         } else if (strcmp (key, "Location") == 0) {
                 const char *new_location;
 
-                new_location = g_value_get_string (value);
+                new_location = g_variant_get_string (value, NULL);
                 if (g_strcmp0 (user->location, new_location) != 0) {
                         g_free (user->location);
                         user->location = g_strdup (new_location);
@@ -986,7 +989,7 @@ collect_props (const gchar    *key,
         } else if (strcmp (key, "Locked") == 0) {
                 gboolean new_locked_state;
 
-                new_locked_state = g_value_get_boolean (value);
+                new_locked_state = g_variant_get_boolean (value);
                 if (new_locked_state != user->locked) {
                         user->locked = new_locked_state;
                         g_object_notify (G_OBJECT (user), "locked");
@@ -994,7 +997,7 @@ collect_props (const gchar    *key,
         } else if (strcmp (key, "AutomaticLogin") == 0) {
                 gboolean new_automatic_login_state;
 
-                new_automatic_login_state = g_value_get_boolean (value);
+                new_automatic_login_state = g_variant_get_boolean (value);
                 if (new_automatic_login_state != user->automatic_login) {
                         user->automatic_login = new_automatic_login_state;
                         g_object_notify (G_OBJECT (user), "automatic-login");
@@ -1002,7 +1005,7 @@ collect_props (const gchar    *key,
         } else if (strcmp (key, "SystemAccount") == 0) {
                 gboolean new_system_account_state;
 
-                new_system_account_state = g_value_get_boolean (value);
+                new_system_account_state = g_variant_get_boolean (value);
                 if (new_system_account_state != user->system_account) {
                         user->system_account = new_system_account_state;
                         g_object_notify (G_OBJECT (user), "system-account");
@@ -1010,7 +1013,7 @@ collect_props (const gchar    *key,
         } else if (strcmp (key, "LoginFrequency") == 0) {
                 int new_login_frequency;
 
-                new_login_frequency = (int) g_value_get_uint64 (value);
+                new_login_frequency = (int) g_variant_get_uint64 (value);
                 if ((int) user->login_frequency != (int) new_login_frequency) {
                         user->login_frequency = new_login_frequency;
                         g_object_notify (G_OBJECT (user), "login-frequency");
@@ -1018,28 +1021,28 @@ collect_props (const gchar    *key,
         } else if (strcmp (key, "IconFile") == 0) {
                 const char *new_icon_file;
 
-                new_icon_file = g_value_get_string (value);
+                new_icon_file = g_variant_get_string (value, NULL);
                 if (g_strcmp0 (user->icon_file, new_icon_file) != 0) {
                         g_free (user->icon_file);
-                        user->icon_file = g_value_dup_string (value);
+                        user->icon_file = g_strdup (new_icon_file);
                         g_object_notify (G_OBJECT (user), "icon-file");
                 }
         } else if (strcmp (key, "Language") == 0) {
                 const char *new_language;
 
-                new_language = g_value_get_string (value);
+                new_language = g_variant_get_string (value, NULL);
                 if (g_strcmp0 (user->language, new_language) != 0) {
                         g_free (user->language);
-                        user->language = g_value_dup_string (value);
+                        user->language = g_strdup (new_language);
                         g_object_notify (G_OBJECT (user), "language");
                 }
         } else if (strcmp (key, "XSession") == 0) {
                 const char *new_x_session;
 
-                new_x_session = g_value_get_string (value);
+                new_x_session = g_variant_get_string (value, NULL);
                 if (g_strcmp0 (user->x_session, new_x_session) != 0) {
                         g_free (user->x_session);
-                        user->x_session = g_value_dup_string (value);
+                        user->x_session = g_strdup (new_x_session);
                         g_object_notify (G_OBJECT (user), "x-session");
                 }
         } else {
@@ -1052,25 +1055,24 @@ collect_props (const gchar    *key,
 }
 
 static void
-on_get_all_finished (DBusGProxy     *proxy,
-                     DBusGProxyCall *call,
-                     ActUser        *user)
+on_get_all_finished (GObject        *object,
+                     GAsyncResult   *result,
+                     gpointer data)
 {
+        GDBusProxy  *proxy = G_DBUS_PROXY (object);
+        ActUser     *user = data;
         GError      *error;
-        GHashTable  *hash_table;
-        gboolean     res;
+        GVariant    *res;
+        GVariantIter *iter;
+        const gchar *key;
+        GVariant    *value;
 
-        g_assert (user->get_all_call == call);
-        g_assert (DBUS_IS_G_PROXY (user->object_proxy));
+        g_assert (G_IS_DBUS_PROXY (user->object_proxy));
         g_assert (user->object_proxy == proxy);
 
         error = NULL;
-        res = dbus_g_proxy_end_call (proxy,
-                                     call,
-                                     &error,
-                                     dbus_g_type_get_map ("GHashTable", G_TYPE_STRING, G_TYPE_VALUE),
-                                     &hash_table,
-                                     G_TYPE_INVALID);
+        res = g_dbus_proxy_call_finish (proxy, result, &error);
+        g_object_unref (user->get_all_call);
         user->get_all_call = NULL;
 
         if (! res) {
@@ -1079,8 +1081,13 @@ on_get_all_finished (DBusGProxy     *proxy,
                 g_error_free (error);
                 return;
         }
-        g_hash_table_foreach (hash_table, (GHFunc) collect_props, user);
-        g_hash_table_unref (hash_table);
+
+        g_variant_get (res, "(a{sv})", &iter);
+        while (g_variant_iter_next (iter, "{sv}", &key, &value)) {
+                collect_props (key, value, user);
+        }
+        g_variant_iter_free (iter);
+        g_variant_unref (res);
 
         if (!user->is_loaded) {
                 set_is_loaded (user, TRUE);
@@ -1092,30 +1099,22 @@ on_get_all_finished (DBusGProxy     *proxy,
 static gboolean
 update_info (ActUser *user)
 {
-        DBusGProxyCall *call;
-
-        g_assert (DBUS_IS_G_PROXY (user->object_proxy));
-
-        call = dbus_g_proxy_begin_call (user->object_proxy,
-                                        "GetAll",
-                                        (DBusGProxyCallNotify)
-                                        on_get_all_finished,
-                                        user,
-                                        NULL,
-                                        G_TYPE_STRING,
-                                        ACCOUNTS_USER_INTERFACE,
-                                        G_TYPE_INVALID);
-
-        if (call == NULL) {
-                g_warning ("ActUser: failed to make GetAll call");
-                goto failed;
-        }
+        g_assert (G_IS_DBUS_PROXY (user->object_proxy));
 
         if (user->get_all_call != NULL) {
-                dbus_g_proxy_cancel_call (user->object_proxy, user->get_all_call);
+                g_cancellable_cancel (user->get_all_call);
+                g_object_unref (user->get_all_call);
         }
 
-        user->get_all_call = call;
+        user->get_all_call = g_cancellable_new ();
+        g_dbus_proxy_call (user->object_proxy,
+                           "GetAll",
+                           g_variant_new ("(s)", ACCOUNTS_USER_INTERFACE),
+                           G_DBUS_CALL_FLAGS_NONE,
+                           0,
+                           user->get_all_call,
+                           on_get_all_finished,
+                           user);
         return TRUE;
 
 failed:
@@ -1123,7 +1122,7 @@ failed:
 }
 
 static void
-changed_handler (DBusGProxy *proxy,
+changed_handler (AccountsUser *object,
                  gpointer   *data)
 {
         ActUser *user = ACT_USER (data);
@@ -1143,26 +1142,42 @@ void
 _act_user_update_from_object_path (ActUser    *user,
                                    const char *object_path)
 {
+        GError *error = NULL;
+
         g_return_if_fail (ACT_IS_USER (user));
         g_return_if_fail (object_path != NULL);
         g_return_if_fail (user->object_path == NULL);
 
         user->object_path = g_strdup (object_path);
 
-        user->accounts_proxy = dbus_g_proxy_new_for_name (user->connection,
-                                                          ACCOUNTS_NAME,
-                                                          user->object_path,
-                                                          ACCOUNTS_USER_INTERFACE);
-        dbus_g_proxy_set_default_timeout (user->accounts_proxy, INT_MAX);
-        dbus_g_proxy_add_signal (user->accounts_proxy, "Changed", G_TYPE_INVALID);
+        user->accounts_proxy = accounts_user_proxy_new_sync (user->connection,
+                                                             G_DBUS_PROXY_FLAGS_NONE,
+                                                             ACCOUNTS_NAME,
+                                                             user->object_path,
+                                                             NULL,
+                                                             &error);
+        if (!user->accounts_proxy) {
+                g_warning ("Couldn't create accounts proxy: %s", error->message);
+                g_error_free (error);
+                return;
+        }
+        g_dbus_proxy_set_default_timeout (G_DBUS_PROXY (user->accounts_proxy), INT_MAX);
 
-        dbus_g_proxy_connect_signal (user->accounts_proxy, "Changed",
-                                     G_CALLBACK (changed_handler), user, NULL);
+        g_signal_connect (user->accounts_proxy, "changed", G_CALLBACK (changed_handler), user);
 
-        user->object_proxy = dbus_g_proxy_new_for_name (user->connection,
-                                                        ACCOUNTS_NAME,
-                                                        user->object_path,
-                                                        DBUS_INTERFACE_PROPERTIES);
+        user->object_proxy = g_dbus_proxy_new_sync (user->connection,
+                                                    G_DBUS_PROXY_FLAGS_NONE,
+                                                    0,
+                                                    ACCOUNTS_NAME,
+                                                    user->object_path,
+                                                    "org.freedesktop.DBus.Properties",
+                                                    NULL,
+                                                    &error);
+        if (!user->object_proxy) {
+                g_warning ("Couldn't create accounts property proxy: %s", error->message);
+                g_error_free (error);
+                return;
+        }
 
         if (!update_info (user)) {
                 g_warning ("Couldn't update info for user with object path %s", object_path);
@@ -1212,14 +1227,12 @@ act_user_set_email (ActUser    *user,
 
         g_return_if_fail (ACT_IS_USER (user));
         g_return_if_fail (email != NULL);
-        g_return_if_fail (DBUS_IS_G_PROXY (user->accounts_proxy));
+        g_return_if_fail (ACCOUNTS_IS_USER (user->accounts_proxy));
 
-        if (!dbus_g_proxy_call (user->accounts_proxy,
-                                "SetEmail",
-                                &error,
-                                G_TYPE_STRING, email,
-                                G_TYPE_INVALID,
-                                G_TYPE_INVALID)) {
+        if (!accounts_user_call_set_email_sync (user->accounts_proxy,
+                                                email,
+                                                NULL,
+                                                &error)) {
                 g_warning ("SetEmail call failed: %s", error->message);
                 g_error_free (error);
                 return;
@@ -1243,14 +1256,12 @@ act_user_set_language (ActUser    *user,
 
         g_return_if_fail (ACT_IS_USER (user));
         g_return_if_fail (language != NULL);
-        g_return_if_fail (DBUS_IS_G_PROXY (user->accounts_proxy));
+        g_return_if_fail (ACCOUNTS_IS_USER (user->accounts_proxy));
 
-        if (!dbus_g_proxy_call (user->accounts_proxy,
-                                "SetLanguage",
-                                &error,
-                                G_TYPE_STRING, language,
-                                G_TYPE_INVALID,
-                                G_TYPE_INVALID)) {
+        if (!accounts_user_call_set_language_sync (user->accounts_proxy,
+                                                   language,
+                                                   NULL,
+                                                   &error)) {
                 g_warning ("SetLanguage call failed: %s", error->message);
                 g_error_free (error);
                 return;
@@ -1274,14 +1285,12 @@ act_user_set_x_session (ActUser    *user,
 
         g_return_if_fail (ACT_IS_USER (user));
         g_return_if_fail (x_session != NULL);
-        g_return_if_fail (DBUS_IS_G_PROXY (user->accounts_proxy));
+        g_return_if_fail (ACCOUNTS_IS_USER (user->accounts_proxy));
 
-        if (!dbus_g_proxy_call (user->accounts_proxy,
-                                "SetXSession",
-                                &error,
-                                G_TYPE_STRING, x_session,
-                                G_TYPE_INVALID,
-                                G_TYPE_INVALID)) {
+        if (!accounts_user_call_set_xsession_sync (user->accounts_proxy,
+                                                   x_session,
+                                                   NULL,
+                                                   &error)) {
                 g_warning ("SetXSession call failed: %s", error->message);
                 g_error_free (error);
                 return;
@@ -1306,14 +1315,12 @@ act_user_set_location (ActUser    *user,
 
         g_return_if_fail (ACT_IS_USER (user));
         g_return_if_fail (location != NULL);
-        g_return_if_fail (DBUS_IS_G_PROXY (user->accounts_proxy));
+        g_return_if_fail (ACCOUNTS_IS_USER (user->accounts_proxy));
 
-        if (!dbus_g_proxy_call (user->accounts_proxy,
-                                "SetLocation",
-                                &error,
-                                G_TYPE_STRING, location,
-                                G_TYPE_INVALID,
-                                G_TYPE_INVALID)) {
+        if (!accounts_user_call_set_location_sync (user->accounts_proxy,
+                                                   location,
+                                                   NULL,
+                                                   &error)) {
                 g_warning ("SetLocation call failed: %s", error->message);
                 g_error_free (error);
                 return;
@@ -1337,14 +1344,12 @@ act_user_set_user_name (ActUser    *user,
 
         g_return_if_fail (ACT_IS_USER (user));
         g_return_if_fail (user_name != NULL);
-        g_return_if_fail (DBUS_IS_G_PROXY (user->accounts_proxy));
+        g_return_if_fail (ACCOUNTS_IS_USER (user->accounts_proxy));
 
-        if (!dbus_g_proxy_call (user->accounts_proxy,
-                                "SetUserName",
-                                &error,
-                                G_TYPE_STRING, user_name,
-                                G_TYPE_INVALID,
-                                G_TYPE_INVALID)) {
+        if (!accounts_user_call_set_user_name_sync (user->accounts_proxy,
+                                                    user_name,
+                                                    NULL,
+                                                    &error)) {
                 g_warning ("SetUserName call failed: %s", error->message);
                 g_error_free (error);
                 return;
@@ -1368,14 +1373,12 @@ act_user_set_real_name (ActUser    *user,
 
         g_return_if_fail (ACT_IS_USER (user));
         g_return_if_fail (real_name != NULL);
-        g_return_if_fail (DBUS_IS_G_PROXY (user->accounts_proxy));
+        g_return_if_fail (ACCOUNTS_IS_USER (user->accounts_proxy));
 
-        if (!dbus_g_proxy_call (user->accounts_proxy,
-                                "SetRealName",
-                                &error,
-                                G_TYPE_STRING, real_name,
-                                G_TYPE_INVALID,
-                                G_TYPE_INVALID)) {
+        if (!accounts_user_call_set_real_name_sync (user->accounts_proxy,
+                                                    real_name,
+                                                    NULL,
+                                                    &error)) {
                 g_warning ("SetRealName call failed: %s", error->message);
                 g_error_free (error);
                 return;
@@ -1399,14 +1402,12 @@ act_user_set_icon_file (ActUser    *user,
 
         g_return_if_fail (ACT_IS_USER (user));
         g_return_if_fail (icon_file != NULL);
-        g_return_if_fail (DBUS_IS_G_PROXY (user->accounts_proxy));
+        g_return_if_fail (ACCOUNTS_IS_USER (user->accounts_proxy));
 
-        if (!dbus_g_proxy_call (user->accounts_proxy,
-                                "SetIconFile",
-                                &error,
-                                G_TYPE_STRING, icon_file,
-                                G_TYPE_INVALID,
-                                G_TYPE_INVALID)) {
+        if (!accounts_user_call_set_icon_file_sync (user->accounts_proxy,
+                                                    icon_file,
+                                                    NULL,
+                                                    &error)) {
                 g_warning ("SetIconFile call failed: %s", error->message);
                 g_error_free (error);
                 return;
@@ -1429,14 +1430,12 @@ act_user_set_account_type (ActUser            *user,
         GError *error = NULL;
 
         g_return_if_fail (ACT_IS_USER (user));
-        g_return_if_fail (DBUS_IS_G_PROXY (user->accounts_proxy));
+        g_return_if_fail (ACCOUNTS_IS_USER (user->accounts_proxy));
 
-        if (!dbus_g_proxy_call (user->accounts_proxy,
-                                "SetAccountType",
-                                &error,
-                                G_TYPE_INT, account_type,
-                                G_TYPE_INVALID,
-                                G_TYPE_INVALID)) {
+        if (!accounts_user_call_set_account_type_sync (user->accounts_proxy,
+                                                    account_type,
+                                                    NULL,
+                                                    &error)) {
                 g_warning ("SetAccountType call failed: %s", error->message);
                 g_error_free (error);
                 return;
@@ -1500,16 +1499,14 @@ act_user_set_password (ActUser             *user,
 
         g_return_if_fail (ACT_IS_USER (user));
         g_return_if_fail (password != NULL);
-        g_return_if_fail (DBUS_IS_G_PROXY (user->accounts_proxy));
+        g_return_if_fail (ACCOUNTS_IS_USER (user->accounts_proxy));
 
         crypted = make_crypted (password);
-        if (!dbus_g_proxy_call (user->accounts_proxy,
-                                "SetPassword",
-                                &error,
-                                G_TYPE_STRING, crypted,
-                                G_TYPE_STRING, hint,
-                                G_TYPE_INVALID,
-                                G_TYPE_INVALID)) {
+        if (!accounts_user_call_set_password_sync (user->accounts_proxy,
+                                                   crypted,
+                                                   hint,
+                                                   NULL,
+                                                   &error)) {
                 g_warning ("SetPassword call failed: %s", error->message);
                 g_error_free (error);
         }
@@ -1537,14 +1534,12 @@ act_user_set_password_mode (ActUser             *user,
         GError *error = NULL;
 
         g_return_if_fail (ACT_IS_USER (user));
-        g_return_if_fail (DBUS_IS_G_PROXY (user->accounts_proxy));
+        g_return_if_fail (ACCOUNTS_IS_USER (user->accounts_proxy));
 
-        if (!dbus_g_proxy_call (user->accounts_proxy,
-                                "SetPasswordMode",
-                                &error,
-                                G_TYPE_INT, (int) password_mode,
-                                G_TYPE_INVALID,
-                                G_TYPE_INVALID)) {
+        if (!accounts_user_call_set_password_mode_sync (user->accounts_proxy,
+                                                        (gint) password_mode,
+                                                        NULL,
+                                                        &error)) {
                 g_warning ("SetPasswordMode call failed: %s", error->message);
                 g_error_free (error);
         }
@@ -1564,14 +1559,12 @@ act_user_set_locked (ActUser  *user,
         GError *error = NULL;
 
         g_return_if_fail (ACT_IS_USER (user));
-        g_return_if_fail (DBUS_IS_G_PROXY (user->accounts_proxy));
+        g_return_if_fail (ACCOUNTS_IS_USER (user->accounts_proxy));
 
-        if (!dbus_g_proxy_call (user->accounts_proxy,
-                                "SetLocked",
-                                &error,
-                                G_TYPE_BOOLEAN, locked,
-                                G_TYPE_INVALID,
-                                G_TYPE_INVALID)) {
+        if (!accounts_user_call_set_locked_sync (user->accounts_proxy,
+                                                 locked,
+                                                 NULL,
+                                                 &error)) {
                 g_warning ("SetLocked call failed: %s", error->message);
                 g_error_free (error);
         }
@@ -1595,14 +1588,12 @@ act_user_set_automatic_login (ActUser   *user,
         GError *error = NULL;
 
         g_return_if_fail (ACT_IS_USER (user));
-        g_return_if_fail (DBUS_IS_G_PROXY (user->accounts_proxy));
+        g_return_if_fail (ACCOUNTS_IS_USER (user->accounts_proxy));
 
-        if (!dbus_g_proxy_call (user->accounts_proxy,
-                                "SetAutomaticLogin",
-                                &error,
-                                G_TYPE_BOOLEAN, enabled,
-                                G_TYPE_INVALID,
-                                G_TYPE_INVALID)) {
+        if (!accounts_user_call_set_automatic_login_sync (user->accounts_proxy,
+                                                          enabled,
+                                                          NULL,
+                                                          &error)) {
                 g_warning ("SetAutomaticLogin call failed: %s", error->message);
                 g_error_free (error);
         }

@@ -40,12 +40,12 @@
 #include <glib-object.h>
 #include <gio/gio.h>
 
-#include <dbus/dbus.h>
-#include <dbus/dbus-glib.h>
-#include <dbus/dbus-glib-lowlevel.h>
-
 #include "act-user-manager.h"
 #include "act-user-private.h"
+#include "accounts-generated.h"
+#include "ck-manager-generated.h"
+#include "ck-seat-generated.h"
+#include "ck-session-generated.h"
 
 #define ACT_USER_MANAGER_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), ACT_TYPE_USER_MANAGER, ActUserManagerPrivate))
 
@@ -56,8 +56,6 @@
 #define CK_SEAT_INTERFACE    "org.freedesktop.ConsoleKit.Seat"
 #define CK_SESSION_INTERFACE "org.freedesktop.ConsoleKit.Session"
 
-#define ACT_DBUS_TYPE_G_OBJECT_PATH_ARRAY (dbus_g_type_get_collection ("GPtrArray", DBUS_TYPE_G_OBJECT_PATH))
-
 #define ACCOUNTS_NAME      "org.freedesktop.Accounts"
 #define ACCOUNTS_PATH      "/org/freedesktop/Accounts"
 #define ACCOUNTS_INTERFACE "org.freedesktop.Accounts"
@@ -65,8 +63,9 @@
 typedef enum {
         ACT_USER_MANAGER_SEAT_STATE_UNLOADED = 0,
         ACT_USER_MANAGER_SEAT_STATE_GET_SESSION_ID,
+        ACT_USER_MANAGER_SEAT_STATE_GET_SESSION_PROXY,
         ACT_USER_MANAGER_SEAT_STATE_GET_ID,
-        ACT_USER_MANAGER_SEAT_STATE_GET_PROXY,
+        ACT_USER_MANAGER_SEAT_STATE_GET_SEAT_PROXY,
         ACT_USER_MANAGER_SEAT_STATE_LOADED,
 } ActUserManagerSeatState;
 
@@ -75,12 +74,8 @@ typedef struct
         ActUserManagerSeatState      state;
         char                        *id;
         char                        *session_id;
-        union {
-                DBusGProxyCall      *get_current_session_call;
-                DBusGProxyCall      *get_seat_id_call;
-        };
-
-        DBusGProxy                  *proxy;
+        ConsoleKitSeat              *seat_proxy;
+        ConsoleKitSession           *session_proxy;
 } ActUserManagerSeat;
 
 typedef enum {
@@ -97,14 +92,7 @@ typedef struct
         ActUserManager                  *manager;
         ActUserManagerNewSessionState    state;
         char                            *id;
-
-        union {
-                DBusGProxyCall          *get_unix_user_call;
-                DBusGProxyCall          *get_x11_display_call;
-        };
-
-        DBusGProxy                      *proxy;
-
+        ConsoleKitSession               *proxy;
         uid_t                            uid;
         char                            *x11_display;
 } ActUserManagerNewSession;
@@ -123,8 +111,6 @@ typedef struct
         ActUser                    *user;
         char                       *username;
         char                       *object_path;
-
-        DBusGProxyCall             *call;
 } ActUserManagerFetchUserRequest;
 
 struct ActUserManagerPrivate
@@ -132,9 +118,9 @@ struct ActUserManagerPrivate
         GHashTable            *users_by_name;
         GHashTable            *users_by_object_path;
         GHashTable            *sessions;
-        DBusGConnection       *connection;
-        DBusGProxyCall        *get_sessions_call;
-        DBusGProxy            *accounts_proxy;
+        GDBusConnection       *connection;
+        AccountsAccounts      *accounts_proxy;
+        ConsoleKitManager     *ck_manager_proxy;
 
         ActUserManagerSeat     seat;
 
@@ -150,6 +136,7 @@ struct ActUserManagerPrivate
 
         gboolean               is_loaded;
         gboolean               has_multiple_users;
+        gboolean               getting_sessions;
         gboolean               listing_cached_users;
 };
 
@@ -231,104 +218,64 @@ activate_session_id (ActUserManager *manager,
                      const char     *seat_id,
                      const char     *session_id)
 {
-        DBusError    local_error;
-        DBusMessage *message;
-        DBusMessage *reply;
-        gboolean     ret;
+        ConsoleKitSeat *proxy;
+        GError         *error = NULL;
+        gboolean        res = FALSE;
+  
+        proxy = console_kit_seat_proxy_new_sync (manager->priv->connection,
+                                                 G_DBUS_PROXY_FLAGS_NONE,
+                                                 CK_NAME,
+                                                 seat_id,
+                                                 NULL,
+                                                 &error);
+        if (proxy)
+                res = console_kit_seat_call_activate_session_sync (proxy,
+                                                                   session_id,
+                                                                   NULL,
+                                                                   &error);
 
-        ret = FALSE;
-        reply = NULL;
-
-        dbus_error_init (&local_error);
-        message = dbus_message_new_method_call ("org.freedesktop.ConsoleKit",
-                                                seat_id,
-                                                "org.freedesktop.ConsoleKit.Seat",
-                                                "ActivateSession");
-        if (message == NULL) {
-                goto out;
+        if (!res) {
+                g_warning ("Unable to activate session: %s", error->message);
+                g_error_free (error);
+                return FALSE;
         }
 
-        if (! dbus_message_append_args (message,
-                                        DBUS_TYPE_OBJECT_PATH, &session_id,
-                                        DBUS_TYPE_INVALID)) {
-                goto out;
-        }
-
-
-        dbus_error_init (&local_error);
-        reply = dbus_connection_send_with_reply_and_block (dbus_g_connection_get_connection (manager->priv->connection),
-                                                           message,
-                                                           -1,
-                                                           &local_error);
-        if (reply == NULL) {
-                if (dbus_error_is_set (&local_error)) {
-                        g_warning ("Unable to activate session: %s", local_error.message);
-                        dbus_error_free (&local_error);
-                        goto out;
-                }
-        }
-
-        ret = TRUE;
- out:
-        if (message != NULL) {
-                dbus_message_unref (message);
-        }
-        if (reply != NULL) {
-                dbus_message_unref (reply);
-        }
-
-        return ret;
+        return TRUE;
 }
 
 static gboolean
 session_is_login_window (ActUserManager *manager,
                          const char     *session_id)
 {
-        DBusGProxy      *proxy;
-        GError          *error;
-        gboolean         res;
-        gboolean         ret;
-        char            *session_type;
+        ConsoleKitSession *proxy;
+        GError            *error = NULL;
+        char              *session_type;
+        gboolean           res = FALSE;
+        gboolean           ret;
 
-        ret = FALSE;
+        proxy = console_kit_session_proxy_new_sync (manager->priv->connection,
+                                                    G_DBUS_PROXY_FLAGS_NONE,
+                                                    CK_NAME,
+                                                    session_id,
+                                                    NULL,
+                                                    &error);
+        if (proxy)
+                res = console_kit_session_call_get_session_type_sync (proxy, &session_type, NULL, &error);
 
-        proxy = dbus_g_proxy_new_for_name (manager->priv->connection,
-                                           CK_NAME,
-                                           session_id,
-                                           CK_SESSION_INTERFACE);
-        if (proxy == NULL) {
-                g_warning ("Failed to connect to the ConsoleKit seat object");
-                goto out;
-        }
-
-        session_type = NULL;
-        error = NULL;
-        res = dbus_g_proxy_call (proxy,
-                                 "GetSessionType",
-                                 &error,
-                                 G_TYPE_INVALID,
-                                 G_TYPE_STRING, &session_type,
-                                 G_TYPE_INVALID);
-        if (! res) {
+        if (!res) {
                 if (error != NULL) {
                         g_debug ("ActUserManager: Failed to identify the session type: %s", error->message);
                         g_error_free (error);
                 } else {
                         g_debug ("ActUserManager: Failed to identify the session type");
                 }
-                goto out;
+                return FALSE;
         }
-
-        if (session_type == NULL || session_type[0] == '\0' || strcmp (session_type, "LoginWindow") != 0) {
-                goto out;
-        }
-
-        ret = TRUE;
-
- out:
-        if (proxy != NULL) {
+        if (proxy)
                 g_object_unref (proxy);
-        }
+
+        ret = strcmp (session_type, "LoginWindow") == 0;
+        g_free (session_type);
 
         return ret;
 }
@@ -336,36 +283,24 @@ session_is_login_window (ActUserManager *manager,
 static char *
 _get_login_window_session_id (ActUserManager *manager)
 {
-        gboolean    res;
         gboolean    can_activate_sessions;
-        GError     *error;
-        GPtrArray  *sessions;
+        GError     *error = NULL;
+        gchar     **sessions, **i;
         char       *primary_ssid;
-        int         i;
 
         if (manager->priv->seat.id == NULL || manager->priv->seat.id[0] == '\0') {
                 g_debug ("ActUserManager: display seat ID is not set; can't switch sessions");
                 return NULL;
         }
 
-        primary_ssid = NULL;
-        sessions = NULL;
-
         can_activate_sessions = act_user_manager_can_switch (manager);
 
         if (! can_activate_sessions) {
                 g_debug ("ActUserManager: seat is unable to activate sessions");
-                goto out;
+                return NULL;
         }
 
-        error = NULL;
-        res = dbus_g_proxy_call (manager->priv->seat.proxy,
-                                 "GetSessions",
-                                 &error,
-                                 G_TYPE_INVALID,
-                                 dbus_g_type_get_collection ("GPtrArray", DBUS_TYPE_G_OBJECT_PATH), &sessions,
-                                 G_TYPE_INVALID);
-        if (! res) {
+        if (!console_kit_seat_call_get_sessions_sync (manager->priv->seat.seat_proxy, &sessions, NULL, &error)) {
                 if (error != NULL) {
                         g_warning ("unable to determine sessions for user: %s",
                                    error->message);
@@ -373,23 +308,17 @@ _get_login_window_session_id (ActUserManager *manager)
                 } else {
                         g_warning ("unable to determine sessions for user");
                 }
-                goto out;
+                return NULL;
         }
 
-        for (i = 0; i < sessions->len; i++) {
-                char *ssid;
-
-                ssid = g_ptr_array_index (sessions, i);
-
-                if (session_is_login_window (manager, ssid)) {
-                        primary_ssid = g_strdup (ssid);
+        primary_ssid = NULL;
+        for (i = sessions; i; i++) {
+                if (session_is_login_window (manager, *i)) {
+                        primary_ssid = g_strdup (*i);
                         break;
                 }
         }
-        g_ptr_array_foreach (sessions, (GFunc)g_free, NULL);
-        g_ptr_array_free (sessions, TRUE);
-
- out:
+        g_strfreev (sessions);
 
         return primary_ssid;
 }
@@ -430,9 +359,8 @@ act_user_manager_goto_login_session (ActUserManager *manager)
 gboolean
 act_user_manager_can_switch (ActUserManager *manager)
 {
-        gboolean    res;
-        gboolean    can_activate_sessions;
-        GError     *error;
+        gboolean  can_activate_sessions;
+        GError   *error = NULL;
 
         if (!manager->priv->is_loaded) {
                 g_debug ("ActUserManager: Unable to switch sessions until fully loaded");
@@ -446,14 +374,7 @@ act_user_manager_can_switch (ActUserManager *manager)
 
         g_debug ("ActUserManager: checking if seat can activate sessions");
 
-        error = NULL;
-        res = dbus_g_proxy_call (manager->priv->seat.proxy,
-                                 "CanActivateSessions",
-                                 &error,
-                                 G_TYPE_INVALID,
-                                 G_TYPE_BOOLEAN, &can_activate_sessions,
-                                 G_TYPE_INVALID);
-        if (! res) {
+        if (!console_kit_seat_call_can_activate_sessions_sync (manager->priv->seat.seat_proxy, &can_activate_sessions, NULL, &error)) {
                 if (error != NULL) {
                         g_warning ("unable to determine if seat can activate sessions: %s",
                                    error->message);
@@ -541,28 +462,16 @@ on_user_changed (ActUser        *user,
 }
 
 static void
-on_get_seat_id_finished (DBusGProxy     *proxy,
-                         DBusGProxyCall *call,
-                         ActUserManager *manager)
+on_get_seat_id_finished (GObject        *object,
+                         GAsyncResult   *result,
+                         gpointer        data)
 {
-        GError         *error;
-        char           *seat_id;
-        gboolean        res;
+        ConsoleKitSession *proxy = CONSOLE_KIT_SESSION (object);
+        ActUserManager    *manager = data;
+        GError            *error = NULL;
+        char              *seat_id;
 
-        g_assert (manager->priv->seat.get_seat_id_call == call);
-
-        error = NULL;
-        seat_id = NULL;
-        res = dbus_g_proxy_end_call (proxy,
-                                     call,
-                                     &error,
-                                     DBUS_TYPE_G_OBJECT_PATH,
-                                     &seat_id,
-                                     G_TYPE_INVALID);
-        manager->priv->seat.get_seat_id_call = NULL;
-        g_object_unref (proxy);
-
-        if (! res) {
+        if (!console_kit_session_call_get_seat_id_finish (proxy, &seat_id, result, &error)) {
                 if (error != NULL) {
                         g_debug ("Failed to identify the seat of the "
                                  "current session: %s",
@@ -589,40 +498,10 @@ on_get_seat_id_finished (DBusGProxy     *proxy,
 static void
 get_seat_id_for_current_session (ActUserManager *manager)
 {
-        DBusGProxy      *proxy;
-        DBusGProxyCall  *call;
-
-        proxy = dbus_g_proxy_new_for_name (manager->priv->connection,
-                                           CK_NAME,
-                                           manager->priv->seat.session_id,
-                                           CK_SESSION_INTERFACE);
-        if (proxy == NULL) {
-                g_warning ("Failed to connect to the ConsoleKit session object");
-                goto failed;
-        }
-
-        call = dbus_g_proxy_begin_call (proxy,
-                                        "GetSeatId",
-                                        (DBusGProxyCallNotify)
-                                        on_get_seat_id_finished,
-                                        manager,
-                                        NULL,
-                                        G_TYPE_INVALID);
-        if (call == NULL) {
-                g_warning ("ActUserManager: failed to make GetSeatId call");
-                goto failed;
-        }
-
-        manager->priv->seat.get_seat_id_call = call;
-
-        return;
-
-failed:
-        if (proxy != NULL) {
-                g_object_unref (proxy);
-        }
-
-        unload_seat (manager);
+        console_kit_session_call_get_seat_id (manager->priv->seat.session_proxy,
+                                              NULL,
+                                              on_get_seat_id_finished,
+                                              manager);
 }
 
 static gint
@@ -854,7 +733,7 @@ add_new_user_for_object_path (const char     *object_path,
 }
 
 static void
-on_new_user_in_accounts_service (DBusGProxy *proxy,
+on_new_user_in_accounts_service (GDBusProxy *proxy,
                                  const char *object_path,
                                  gpointer    user_data)
 {
@@ -870,7 +749,7 @@ on_new_user_in_accounts_service (DBusGProxy *proxy,
 }
 
 static void
-on_user_removed_in_accounts_service (DBusGProxy *proxy,
+on_user_removed_in_accounts_service (GDBusProxy *proxy,
                                      const char *object_path,
                                      gpointer    user_data)
 {
@@ -892,29 +771,18 @@ on_user_removed_in_accounts_service (DBusGProxy *proxy,
 }
 
 static void
-on_get_current_session_finished (DBusGProxy     *proxy,
-                                 DBusGProxyCall *call,
-                                 ActUserManager *manager)
+on_get_current_session_finished (GObject        *object,
+                                 GAsyncResult   *result,
+                                 gpointer        data)
 {
-        GError         *error;
-        char           *session_id;
-        gboolean        res;
+        ConsoleKitManager *proxy = CONSOLE_KIT_MANAGER (object);
+        ActUserManager    *manager = data;
+        GError            *error = NULL;
+        char              *session_id;
 
-        g_assert (manager->priv->seat.get_current_session_call == call);
         g_assert (manager->priv->seat.state == ACT_USER_MANAGER_SEAT_STATE_GET_SESSION_ID);
 
-        error = NULL;
-        session_id = NULL;
-        res = dbus_g_proxy_end_call (proxy,
-                                     call,
-                                     &error,
-                                     DBUS_TYPE_G_OBJECT_PATH,
-                                     &session_id,
-                                     G_TYPE_INVALID);
-        manager->priv->seat.get_current_session_call = NULL;
-        g_object_unref (proxy);
-
-        if (! res) {
+        if (!console_kit_manager_call_get_current_session_finish (proxy, &session_id, result, &error)) {
                 if (error != NULL) {
                         g_debug ("Failed to identify the current session: %s",
                                  error->message);
@@ -935,40 +803,7 @@ on_get_current_session_finished (DBusGProxy     *proxy,
 static void
 get_current_session_id (ActUserManager *manager)
 {
-        DBusGProxy      *proxy;
-        DBusGProxyCall  *call;
-
-        proxy = dbus_g_proxy_new_for_name (manager->priv->connection,
-                                           CK_NAME,
-                                           CK_MANAGER_PATH,
-                                           CK_MANAGER_INTERFACE);
-        if (proxy == NULL) {
-                g_warning ("Failed to connect to the ConsoleKit manager object");
-                goto failed;
-        }
-
-        call = dbus_g_proxy_begin_call (proxy,
-                                        "GetCurrentSession",
-                                        (DBusGProxyCallNotify)
-                                        on_get_current_session_finished,
-                                        manager,
-                                        NULL,
-                                        G_TYPE_INVALID);
-        if (call == NULL) {
-                g_warning ("ActUserManager: failed to make GetCurrentSession call");
-                goto failed;
-        }
-
-        manager->priv->seat.get_current_session_call = call;
-
-        return;
-
-failed:
-        if (proxy != NULL) {
-                g_object_unref (proxy);
-        }
-
-        unload_seat (manager);
+        console_kit_manager_call_get_current_session (manager->priv->ck_manager_proxy, NULL, on_get_current_session_finished, manager);
 }
 
 static void
@@ -994,50 +829,38 @@ unload_new_session (ActUserManagerNewSession *new_session)
 static void
 get_proxy_for_new_session (ActUserManagerNewSession *new_session)
 {
-        ActUserManager *manager;
-        DBusGProxy     *proxy;
+        GError            *error = NULL;
 
-        manager = new_session->manager;
-
-        proxy = dbus_g_proxy_new_for_name (manager->priv->connection,
-                                           CK_NAME,
-                                           new_session->id,
-                                           CK_SESSION_INTERFACE);
-        if (proxy == NULL) {
-                g_warning ("Failed to connect to the ConsoleKit '%s' object",
-                           new_session->id);
+        new_session->proxy = console_kit_session_proxy_new_sync (new_session->manager->priv->connection,
+                                                                 G_DBUS_PROXY_FLAGS_NONE,
+                                                                 CK_NAME,
+                                                                 new_session->id,
+                                                                 NULL,
+                                                                 &error);
+        if (new_session->proxy == NULL) {
+                g_warning ("Failed to connect to the ConsoleKit '%s' object: %s",
+                           new_session->id, error->message);
+                g_error_free (error);
                 unload_new_session (new_session);
                 return;
         }
 
-        new_session->proxy = proxy;
         new_session->state++;
 
         load_new_session_incrementally (new_session);
 }
 
 static void
-on_get_unix_user_finished (DBusGProxy               *proxy,
-                           DBusGProxyCall           *call,
-                           ActUserManagerNewSession *new_session)
+on_get_unix_user_finished (GObject      *object,
+                           GAsyncResult *result,
+                           gpointer      data)
 {
-        GError         *error;
-        guint           uid;
-        gboolean        res;
+        ConsoleKitSession *proxy = CONSOLE_KIT_SESSION (object);
+        ActUserManagerNewSession *new_session = data;
+        GError            *error = NULL;
+        guint              uid;
 
-        g_assert (new_session->get_unix_user_call == call);
-
-        error = NULL;
-
-        uid = (guint) -1;
-        res = dbus_g_proxy_end_call (proxy,
-                                     call,
-                                     &error,
-                                     G_TYPE_UINT, &uid,
-                                     G_TYPE_INVALID);
-        new_session->get_unix_user_call = NULL;
-
-        if (! res) {
+        if (!console_kit_session_call_get_unix_user_finish (proxy, &uid, result, &error)) {
                 if (error != NULL) {
                         g_debug ("Failed to get uid of session '%s': %s",
                                  new_session->id, error->message);
@@ -1062,51 +885,25 @@ on_get_unix_user_finished (DBusGProxy               *proxy,
 static void
 get_uid_for_new_session (ActUserManagerNewSession *new_session)
 {
-        DBusGProxyCall *call;
-
         g_assert (new_session->proxy != NULL);
 
-        call = dbus_g_proxy_begin_call (new_session->proxy,
-                                        "GetUnixUser",
-                                        (DBusGProxyCallNotify)
-                                        on_get_unix_user_finished,
-                                        new_session,
-                                        NULL,
-                                        G_TYPE_INVALID);
-        if (call == NULL) {
-                g_warning ("ActUserManager: failed to make GetUnixUser call");
-                goto failed;
-        }
-
-        new_session->get_unix_user_call = call;
-        return;
-
-failed:
-        unload_new_session (new_session);
+        console_kit_session_call_get_unix_user (new_session->proxy,
+                                                NULL,
+                                                on_get_unix_user_finished,
+                                                new_session);
 }
 
 static void
-on_find_user_by_name_finished (DBusGProxy                     *proxy,
-                               DBusGProxyCall                 *call,
-                               ActUserManagerFetchUserRequest *request)
+on_find_user_by_name_finished (GObject       *object,
+                               GAsyncResult  *result,
+                               gpointer       data)
 {
-        ActUserManager  *manager;
-        GError          *error;
-        char            *object_path;
-        gboolean         res;
+        AccountsAccounts *proxy = ACCOUNTS_ACCOUNTS (object);
+        ActUserManagerFetchUserRequest *request = data;
+        GError          *error = NULL;
+        char            *user;
 
-        g_assert (request->call == call);
-
-        error = NULL;
-        object_path = NULL;
-        manager = request->manager;
-        res = dbus_g_proxy_end_call (manager->priv->accounts_proxy,
-                                     call,
-                                     &error,
-                                     DBUS_TYPE_G_OBJECT_PATH,
-                                     &object_path,
-                                     G_TYPE_INVALID);
-        if (! res) {
+        if (!accounts_accounts_call_find_user_by_name_finish (proxy, &user, result, &error)) {
                 if (error != NULL) {
                         g_debug ("ActUserManager: Failed to find user %s: %s",
                                  request->username, error->message);
@@ -1115,13 +912,13 @@ on_find_user_by_name_finished (DBusGProxy                     *proxy,
                         g_debug ("ActUserManager: Failed to find user %s",
                                  request->username);
                 }
-                give_up (manager, request);
+                give_up (request->manager, request);
                 return;
         }
 
         g_debug ("ActUserManager: Found object path of user '%s': %s",
-                 request->username, object_path);
-        request->object_path = object_path;
+                 request->username, user);
+        request->object_path = user;
         request->state++;
 
         fetch_user_incrementally (request);
@@ -1131,34 +928,16 @@ static void
 find_user_in_accounts_service (ActUserManager                 *manager,
                                ActUserManagerFetchUserRequest *request)
 {
-        DBusGProxyCall  *call;
-
         g_debug ("ActUserManager: Looking for user %s in accounts service",
                  request->username);
 
         g_assert (manager->priv->accounts_proxy != NULL);
 
-        call = dbus_g_proxy_begin_call (manager->priv->accounts_proxy,
-                                        "FindUserByName",
-                                        (DBusGProxyCallNotify)
-                                        on_find_user_by_name_finished,
-                                        request,
-                                        NULL,
-                                        G_TYPE_STRING,
-                                        request->username,
-                                        G_TYPE_INVALID);
-
-        if (call == NULL) {
-                g_warning ("ActUserManager: failed to make FindUserByName('%s') call",
-                           request->username);
-                goto failed;
-        }
-
-        request->call = call;
-        return;
-
-failed:
-        give_up (manager, request);
+        accounts_accounts_call_find_user_by_name (manager->priv->accounts_proxy,
+                                                  request->username,
+                                                  NULL,
+                                                  on_find_user_by_name_finished,
+                                                  request);
 }
 
 static void
@@ -1172,33 +951,17 @@ set_is_loaded (ActUserManager *manager,
 }
 
 static void
-add_new_inhibiting_user_for_object_path (const char     *object_path,
-                                         ActUserManager *manager)
+on_list_cached_users_finished (GObject      *object,
+                               GAsyncResult *result,
+                               gpointer      data)
 {
-        ActUser *user;
-
-        user = add_new_user_for_object_path (object_path, manager);
-
-        if (!manager->priv->is_loaded) {
-                manager->priv->new_users_inhibiting_load = g_slist_prepend (manager->priv->new_users_inhibiting_load, user);
-        }
-}
-
-static void
-on_list_cached_users_finished (DBusGProxy     *proxy,
-                               DBusGProxyCall *call_id,
-                               gpointer        data)
-{
-        ActUserManager *manager = data;
-        GError *error = NULL;
-        GPtrArray *paths;
+        AccountsAccounts *proxy = ACCOUNTS_ACCOUNTS (object);
+        ActUserManager   *manager = data;
+        gchar           **users;
+        GError           *error = NULL;
 
         manager->priv->listing_cached_users = FALSE;
-        if (!dbus_g_proxy_end_call (proxy,
-                                    call_id,
-                                    &error,
-                                    dbus_g_type_get_collection ("GPtrArray", DBUS_TYPE_G_OBJECT_PATH), &paths,
-                                    G_TYPE_INVALID)) {
+        if (!accounts_accounts_call_list_cached_users_finish (proxy, &users, result, &error)) {
                 g_debug ("ActUserManager: ListCachedUsers failed: %s", error->message);
                 g_error_free (error);
 
@@ -1213,16 +976,24 @@ on_list_cached_users_finished (DBusGProxy     *proxy,
          *
          * (see on_new_user_loaded)
          */
-        if (paths->len > 0) {
+        if (g_strv_length (users) > 0) {
+                gchar **i;
+
                 g_debug ("ActUserManager: ListCachedUsers finished, will set loaded property after list is fully loaded");
-                g_ptr_array_foreach (paths, (GFunc)add_new_inhibiting_user_for_object_path, manager);
+                for (i = users; i; i++) {
+                        ActUser *user;
+
+                        user = add_new_user_for_object_path (*i, manager);
+                        if (!manager->priv->is_loaded) {
+                                manager->priv->new_users_inhibiting_load = g_slist_prepend (manager->priv->new_users_inhibiting_load, user);
+                        }
+                }
         } else {
                 g_debug ("ActUserManager: ListCachedUsers finished with empty list, maybe setting loaded property now");
                 maybe_set_is_loaded (manager);
         }
 
-        g_ptr_array_foreach (paths, (GFunc)g_free, NULL);
-        g_ptr_array_free (paths, TRUE);
+        g_strfreev (users);
 
         /* Add users who are specifically included */
         if (manager->priv->include_usernames != NULL) {
@@ -1245,27 +1016,16 @@ on_list_cached_users_finished (DBusGProxy     *proxy,
 }
 
 static void
-on_get_x11_display_finished (DBusGProxy               *proxy,
-                             DBusGProxyCall           *call,
-                             ActUserManagerNewSession *new_session)
+on_get_x11_display_finished (GObject      *object,
+                             GAsyncResult *result,
+                             gpointer      data)
 {
-        GError   *error;
-        char     *x11_display;
-        gboolean  res;
+        ConsoleKitSession *proxy = CONSOLE_KIT_SESSION (object);
+        ActUserManagerNewSession *new_session = data;
+        GError            *error = NULL;
+        char              *x11_display;
 
-        g_assert (new_session->get_x11_display_call == call);
-
-        error = NULL;
-        x11_display = NULL;
-        res = dbus_g_proxy_end_call (proxy,
-                                     call,
-                                     &error,
-                                     G_TYPE_STRING,
-                                     &x11_display,
-                                     G_TYPE_INVALID);
-        new_session->get_x11_display_call = NULL;
-
-        if (! res) {
+        if (!console_kit_session_call_get_x11_display_finish (proxy, &x11_display, result, &error)) {
                 if (error != NULL) {
                         g_debug ("Failed to get the x11 display of session '%s': %s",
                                  new_session->id, error->message);
@@ -1277,7 +1037,7 @@ on_get_x11_display_finished (DBusGProxy               *proxy,
                 unload_new_session (new_session);
                 return;
         }
-
+  
         g_debug ("ActUserManager: Found x11 display of session '%s': %s",
                  new_session->id, x11_display);
 
@@ -1290,27 +1050,12 @@ on_get_x11_display_finished (DBusGProxy               *proxy,
 static void
 get_x11_display_for_new_session (ActUserManagerNewSession *new_session)
 {
-        DBusGProxyCall *call;
-
         g_assert (new_session->proxy != NULL);
 
-        call = dbus_g_proxy_begin_call (new_session->proxy,
-                                        "GetX11Display",
-                                        (DBusGProxyCallNotify)
-                                        on_get_x11_display_finished,
-                                        new_session,
-                                        NULL,
-                                        G_TYPE_INVALID);
-        if (call == NULL) {
-                g_warning ("ActUserManager: failed to make GetX11Display call");
-                goto failed;
-        }
-
-        new_session->get_x11_display_call = call;
-        return;
-
-failed:
-        unload_new_session (new_session);
+        console_kit_session_call_get_x11_display (new_session->proxy,
+                                                  NULL,
+                                                  on_get_x11_display_finished,
+                                                  new_session);
 }
 
 static gboolean
@@ -1404,7 +1149,7 @@ load_new_session (ActUserManager *manager,
 }
 
 static void
-seat_session_added (DBusGProxy     *seat_proxy,
+seat_session_added (GDBusProxy     *seat_proxy,
                     const char     *session_id,
                     ActUserManager *manager)
 {
@@ -1427,7 +1172,7 @@ match_new_session_cmpfunc (gconstpointer a,
 }
 
 static void
-seat_session_removed (DBusGProxy     *seat_proxy,
+seat_session_removed (GDBusProxy     *seat_proxy,
                       const char     *session_id,
                       ActUserManager *manager)
 {
@@ -1481,30 +1226,19 @@ seat_session_removed (DBusGProxy     *seat_proxy,
 }
 
 static void
-on_seat_proxy_destroy (DBusGProxy     *proxy,
-                       ActUserManager *manager)
-{
-        g_debug ("ActUserManager: seat proxy destroyed");
-
-        manager->priv->seat.proxy = NULL;
-}
-
-static void
 get_seat_proxy (ActUserManager *manager)
 {
-        DBusGProxy      *proxy;
-        GError          *error;
+        GError *error = NULL;
 
-        g_assert (manager->priv->seat.proxy == NULL);
+        g_assert (manager->priv->seat.seat_proxy == NULL);
 
-        error = NULL;
-        proxy = dbus_g_proxy_new_for_name_owner (manager->priv->connection,
-                                                 CK_NAME,
-                                                 manager->priv->seat.id,
-                                                 CK_SEAT_INTERFACE,
-                                                 &error);
-
-        if (proxy == NULL) {
+        manager->priv->seat.seat_proxy = console_kit_seat_proxy_new_sync (manager->priv->connection,
+                                                                          G_DBUS_PROXY_FLAGS_NONE,
+                                                                          CK_NAME,
+                                                                          manager->priv->seat.id,
+                                                                          NULL,
+                                                                          &error);
+        if (manager->priv->seat.seat_proxy == NULL) {
                 if (error != NULL) {
                         g_warning ("Failed to connect to the ConsoleKit seat object: %s",
                                    error->message);
@@ -1516,28 +1250,43 @@ get_seat_proxy (ActUserManager *manager)
                 return;
         }
 
-        g_signal_connect (proxy, "destroy", G_CALLBACK (on_seat_proxy_destroy), manager);
+        g_signal_connect (manager->priv->seat.seat_proxy,
+                          "session-added",
+                          G_CALLBACK (seat_session_added),
+                          manager);
+        g_signal_connect (manager->priv->seat.seat_proxy,
+                          "session-removed",
+                          G_CALLBACK (seat_session_removed),
+                          manager);
+        manager->priv->seat.state++;
+}
 
-        dbus_g_proxy_add_signal (proxy,
-                                 "SessionAdded",
-                                 DBUS_TYPE_G_OBJECT_PATH,
-                                 G_TYPE_INVALID);
-        dbus_g_proxy_add_signal (proxy,
-                                 "SessionRemoved",
-                                 DBUS_TYPE_G_OBJECT_PATH,
-                                 G_TYPE_INVALID);
-        dbus_g_proxy_connect_signal (proxy,
-                                     "SessionAdded",
-                                     G_CALLBACK (seat_session_added),
-                                     manager,
-                                     NULL);
-        dbus_g_proxy_connect_signal (proxy,
-                                     "SessionRemoved",
-                                     G_CALLBACK (seat_session_removed),
-                                     manager,
-                                     NULL);
-        manager->priv->seat.proxy = proxy;
-        manager->priv->seat.state = ACT_USER_MANAGER_SEAT_STATE_LOADED;
+static void
+get_session_proxy (ActUserManager *manager)
+{
+        GError *error = NULL;
+
+        g_assert (manager->priv->seat.session_proxy == NULL);
+
+        manager->priv->seat.session_proxy = console_kit_session_proxy_new_sync (manager->priv->connection,
+                                                                                G_DBUS_PROXY_FLAGS_NONE,
+                                                                                CK_NAME,
+                                                                                manager->priv->seat.session_id,
+                                                                                NULL,
+                                                                                &error);
+        if (manager->priv->seat.session_proxy == NULL) {
+                if (error != NULL) {
+                        g_warning ("Failed to connect to the ConsoleKit session object: %s",
+                                   error->message);
+                        g_error_free (error);
+                } else {
+                        g_warning ("Failed to connect to the ConsoleKit session object");
+                }
+                unload_seat (manager);
+                return;
+        }
+
+        manager->priv->seat.state++;
 }
 
 static void
@@ -1545,9 +1294,14 @@ unload_seat (ActUserManager *manager)
 {
         manager->priv->seat.state = ACT_USER_MANAGER_SEAT_STATE_UNLOADED;
 
-        if (manager->priv->seat.proxy != NULL) {
-                g_object_unref (manager->priv->seat.proxy);
-                manager->priv->seat.proxy = NULL;
+        if (manager->priv->seat.seat_proxy != NULL) {
+                g_object_unref (manager->priv->seat.seat_proxy);
+                manager->priv->seat.seat_proxy = NULL;
+        }
+
+        if (manager->priv->seat.session_proxy != NULL) {
+                g_object_unref (manager->priv->seat.session_proxy);
+                manager->priv->seat.session_proxy = NULL;
         }
 
         g_free (manager->priv->seat.id);
@@ -1558,40 +1312,6 @@ unload_seat (ActUserManager *manager)
 
         g_debug ("ActUserManager: seat unloaded, so trying to set loaded property");
         maybe_set_is_loaded (manager);
-}
-
-static void
-get_accounts_proxy (ActUserManager *manager)
-{
-        DBusGProxy      *proxy;
-
-        g_assert (manager->priv->accounts_proxy == NULL);
-
-        proxy = dbus_g_proxy_new_for_name (manager->priv->connection,
-                                           ACCOUNTS_NAME,
-                                           ACCOUNTS_PATH,
-                                           ACCOUNTS_INTERFACE);
-        manager->priv->accounts_proxy = proxy;
-
-        dbus_g_proxy_add_signal (proxy,
-                                 "UserAdded",
-                                 DBUS_TYPE_G_OBJECT_PATH,
-                                 G_TYPE_INVALID);
-        dbus_g_proxy_add_signal (proxy,
-                                 "UserDeleted",
-                                 DBUS_TYPE_G_OBJECT_PATH,
-                                 G_TYPE_INVALID);
-
-        dbus_g_proxy_connect_signal (proxy,
-                                     "UserAdded",
-                                     G_CALLBACK (on_new_user_in_accounts_service),
-                                     manager,
-                                     NULL);
-        dbus_g_proxy_connect_signal (proxy,
-                                     "UserDeleted",
-                                     G_CALLBACK (on_user_removed_in_accounts_service),
-                                     manager,
-                                     NULL);
 }
 
 static void
@@ -1800,7 +1520,7 @@ maybe_set_is_loaded (ActUserManager *manager)
                 return;
         }
 
-        if (manager->priv->get_sessions_call != NULL) {
+        if (manager->priv->getting_sessions) {
                 g_debug ("ActUserManager: GetSessions call pending, so not setting loaded property");
                 return;
         }
@@ -1849,38 +1569,16 @@ slist_deep_copy (const GSList *list)
 }
 
 static void
-load_sessions_from_array (ActUserManager     *manager,
-                          const char * const *session_ids,
-                          int                 number_of_sessions)
+on_get_sessions_finished (GObject      *object,
+                          GAsyncResult *result,
+                          gpointer      data)
 {
-        int i;
+        ConsoleKitSeat *proxy = CONSOLE_KIT_SEAT (object);
+        ActUserManager *manager = data;
+        GError         *error = NULL;
+        gchar         **sessions, **i;
 
-        for (i = 0; i < number_of_sessions; i++) {
-                load_new_session (manager, session_ids[i]);
-        }
-}
-
-static void
-on_get_sessions_finished (DBusGProxy     *proxy,
-                          DBusGProxyCall *call,
-                          ActUserManager *manager)
-{
-        GError         *error;
-        gboolean        res;
-        GPtrArray      *sessions;
-
-        g_assert (manager->priv->get_sessions_call == call);
-
-        error = NULL;
-        sessions = NULL;
-        res = dbus_g_proxy_end_call (proxy,
-                                     call,
-                                     &error,
-                                     ACT_DBUS_TYPE_G_OBJECT_PATH_ARRAY,
-                                     &sessions,
-                                     G_TYPE_INVALID);
-
-        if (! res) {
+        if (!console_kit_seat_call_get_sessions_finish (proxy, &sessions, result, &error)) {
                 if (error != NULL) {
                         g_warning ("unable to determine sessions for seat: %s",
                                    error->message);
@@ -1891,13 +1589,11 @@ on_get_sessions_finished (DBusGProxy     *proxy,
                 return;
         }
 
-        manager->priv->get_sessions_call = NULL;
-        g_assert (sessions->len <= G_MAXINT);
-        load_sessions_from_array (manager,
-                                  (const char * const *) sessions->pdata,
-                                  (int) sessions->len);
-        g_ptr_array_foreach (sessions, (GFunc) g_free, NULL);
-        g_ptr_array_free (sessions, TRUE);
+        manager->priv->getting_sessions = FALSE;
+        for (i = sessions; i; i++) {
+                load_new_session (manager, *i);                
+        }
+        g_strfreev (sessions);
 
         g_debug ("ActUserManager: GetSessions call finished, so trying to set loaded property");
         maybe_set_is_loaded (manager);
@@ -1906,27 +1602,16 @@ on_get_sessions_finished (DBusGProxy     *proxy,
 static void
 load_sessions (ActUserManager *manager)
 {
-        DBusGProxyCall *call;
-
-        if (manager->priv->seat.proxy == NULL) {
+        if (manager->priv->seat.seat_proxy == NULL) {
                 g_debug ("ActUserManager: no seat proxy; can't load sessions");
                 return;
         }
 
-        call = dbus_g_proxy_begin_call (manager->priv->seat.proxy,
-                                        "GetSessions",
-                                        (DBusGProxyCallNotify)
-                                        on_get_sessions_finished,
-                                        manager,
-                                        NULL,
-                                        G_TYPE_INVALID);
-
-        if (call == NULL) {
-                g_warning ("ActUserManager: failed to make GetSessions call");
-                return;
-        }
-
-        manager->priv->get_sessions_call = call;
+        console_kit_seat_call_get_sessions (manager->priv->seat.seat_proxy,
+                                            NULL,
+                                            on_get_sessions_finished,
+                                            manager);
+        manager->priv->getting_sessions = TRUE;
 }
 
 static void
@@ -1935,28 +1620,27 @@ load_users (ActUserManager *manager)
         g_assert (manager->priv->accounts_proxy != NULL);
         g_debug ("ActUserManager: calling 'ListCachedUsers'");
 
-        dbus_g_proxy_begin_call (manager->priv->accounts_proxy,
-                                 "ListCachedUsers",
-                                 on_list_cached_users_finished,
-                                 manager,
-                                 NULL,
-                                 G_TYPE_INVALID);
+        accounts_accounts_call_list_cached_users (manager->priv->accounts_proxy,
+                                                  NULL, 
+                                                  on_list_cached_users_finished,
+                                                  manager);
         manager->priv->listing_cached_users = TRUE;
 }
 
 static void
 load_seat_incrementally (ActUserManager *manager)
 {
-        g_assert (manager->priv->seat.proxy == NULL);
-
         switch (manager->priv->seat.state) {
         case ACT_USER_MANAGER_SEAT_STATE_GET_SESSION_ID:
                 get_current_session_id (manager);
                 break;
+        case ACT_USER_MANAGER_SEAT_STATE_GET_SESSION_PROXY:
+                get_session_proxy (manager);
+                break;
         case ACT_USER_MANAGER_SEAT_STATE_GET_ID:
                 get_seat_id_for_current_session (manager);
                 break;
-        case ACT_USER_MANAGER_SEAT_STATE_GET_PROXY:
+        case ACT_USER_MANAGER_SEAT_STATE_GET_SEAT_PROXY:
                 get_seat_proxy (manager);
                 break;
         case ACT_USER_MANAGER_SEAT_STATE_LOADED:
@@ -2183,10 +1867,8 @@ act_user_manager_init (ActUserManager *manager)
                                                                      NULL,
                                                                      g_object_unref);
 
-        g_assert (manager->priv->seat.proxy == NULL);
-
         error = NULL;
-        manager->priv->connection = dbus_g_bus_get (DBUS_BUS_SYSTEM, &error);
+        manager->priv->connection = g_bus_get_sync (G_BUS_TYPE_SYSTEM, NULL, &error);
         if (manager->priv->connection == NULL) {
                 if (error != NULL) {
                         g_warning ("Failed to connect to the D-Bus daemon: %s", error->message);
@@ -2197,7 +1879,46 @@ act_user_manager_init (ActUserManager *manager)
                 return;
         }
 
-        get_accounts_proxy (manager);
+        manager->priv->accounts_proxy = accounts_accounts_proxy_new_sync (manager->priv->connection,
+                                                                          G_DBUS_PROXY_FLAGS_NONE,
+                                                                          ACCOUNTS_NAME,
+                                                                          ACCOUNTS_PATH,
+                                                                          NULL,
+                                                                          &error);
+        if (manager->priv->accounts_proxy == NULL) {
+                if (error != NULL) {
+                        g_warning ("Failed to create accounts proxy: %s", error->message);
+                        g_error_free (error);
+                } else {
+                        g_warning ("Failed to create_accounts_proxy");
+                }
+                return;
+        }
+
+        g_signal_connect (manager->priv->accounts_proxy,
+                          "user-added",
+                          G_CALLBACK (on_new_user_in_accounts_service),
+                          manager);
+        g_signal_connect (manager->priv->accounts_proxy,
+                          "user-deleted",
+                          G_CALLBACK (on_user_removed_in_accounts_service),
+                          manager);
+
+        manager->priv->ck_manager_proxy = console_kit_manager_proxy_new_sync (manager->priv->connection,
+                                                                              G_DBUS_PROXY_FLAGS_NONE,
+                                                                              CK_NAME,
+                                                                              CK_MANAGER_PATH,
+                                                                              NULL,
+                                                                              &error);
+        if (manager->priv->ck_manager_proxy == NULL) {
+                if (error != NULL) {
+                        g_warning ("Failed to create ConsoleKit proxy: %s", error->message);
+                        g_error_free (error);
+                } else {
+                        g_warning ("Failed to create_ConsoleKit_proxy");
+                }
+                return;
+        }
 
         manager->priv->seat.state = ACT_USER_MANAGER_SEAT_STATE_UNLOADED;
 }
@@ -2251,8 +1972,12 @@ act_user_manager_finalize (GObject *object)
                 g_slist_free (manager->priv->include_usernames);
         }
 
-        if (manager->priv->seat.proxy != NULL) {
-                g_object_unref (manager->priv->seat.proxy);
+        if (manager->priv->seat.seat_proxy != NULL) {
+                g_object_unref (manager->priv->seat.seat_proxy);
+        }
+
+        if (manager->priv->seat.session_proxy != NULL) {
+                g_object_unref (manager->priv->seat.session_proxy);
         }
 
         if (manager->priv->accounts_proxy != NULL) {
@@ -2315,7 +2040,7 @@ act_user_manager_create_user (ActUserManager      *manager,
                               ActUserAccountType   accounttype,
                               GError             **error)
 {
-        GError *local_error;
+        GError *local_error = NULL;
         gboolean res;
         gchar *path;
         ActUser *user;
@@ -2326,15 +2051,13 @@ act_user_manager_create_user (ActUserManager      *manager,
         g_assert (manager->priv->accounts_proxy != NULL);
 
         local_error = NULL;
-        res = dbus_g_proxy_call (manager->priv->accounts_proxy,
-                                 "CreateUser",
-                                 &local_error,
-                                 G_TYPE_STRING, username,
-                                 G_TYPE_STRING, fullname,
-                                 G_TYPE_INT, accounttype,
-                                 G_TYPE_INVALID,
-                                 DBUS_TYPE_G_OBJECT_PATH, &path,
-                                 G_TYPE_INVALID);
+        res = accounts_accounts_call_create_user_sync (manager->priv->accounts_proxy,
+                                                       username,
+                                                       fullname,
+                                                       accounttype,
+                                                       &path,
+                                                       NULL,
+                                                       &local_error);
         if (! res) {
                 g_propagate_error (error, local_error);
                 return NULL;
@@ -2361,15 +2084,11 @@ act_user_manager_delete_user (ActUserManager  *manager,
         g_assert (manager->priv->accounts_proxy != NULL);
 
         local_error = NULL;
-        res = dbus_g_proxy_call (manager->priv->accounts_proxy,
-                                 "DeleteUser",
-                                 &local_error,
-                                 G_TYPE_INT64, act_user_get_uid (user),
-                                 G_TYPE_BOOLEAN, remove_files,
-                                 G_TYPE_INVALID,
-                                 G_TYPE_INVALID);
-
-        if (! res) {
+        if (!accounts_accounts_call_delete_user_sync (manager->priv->accounts_proxy,
+                                                      act_user_get_uid (user),
+                                                      remove_files,
+                                                      NULL,
+                                                      &local_error)) {
                 g_propagate_error (error, local_error);
         }
 

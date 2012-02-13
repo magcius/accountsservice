@@ -34,7 +34,35 @@ act-user-enum-types.c: act-user.h act-user-enum-types.h
 	          --vtail "      { 0, NULL, NULL }\n    };\n    etype = g_@type@_register_static (\"@EnumName@\", values);\n  }\n  return etype;\n}\n" \
 	         act-user.h) > $@
 
-BUILT_SOURCES += act-user-enum-types.c act-user-enum-types.h
+accounts-generated.c accounts-generated.h: $(top_srcdir)/data/org.freedesktop.Accounts.xml Makefile
+	gdbus-codegen --generate-c-code accounts-generated --c-namespace Accounts --interface-prefix=org.freedesktop. $(top_srcdir)/data/org.freedesktop.Accounts.xml
+
+accounts-user-generated.c accounts-user-generated.h: $(top_srcdir)/data/org.freedesktop.Accounts.User.xml Makefile
+	gdbus-codegen --generate-c-code accounts-user-generated --c-namespace Accounts --interface-prefix=org.freedesktop.Accounts. $(top_srcdir)/data/org.freedesktop.Accounts.User.xml
+
+ck-manager-generated.c ck-manager-generated.h: org.freedesktop.ConsoleKit.Manager.xml Makefile
+	gdbus-codegen --generate-c-code ck-manager-generated --c-namespace ConsoleKit --interface-prefix=org.freedesktop.ConsoleKit org.freedesktop.ConsoleKit.Manager.xml
+
+ck-seat-generated.c ck-seat-generated.h: org.freedesktop.ConsoleKit.Seat.xml Makefile
+	gdbus-codegen --generate-c-code ck-seat-generated --c-namespace ConsoleKit --interface-prefix=org.freedesktop.ConsoleKit org.freedesktop.ConsoleKit.Seat.xml
+
+ck-session-generated.c ck-session-generated.h: org.freedesktop.ConsoleKit.Session.xml Makefile
+	gdbus-codegen --generate-c-code ck-session-generated --c-namespace ConsoleKit --interface-prefix=org.freedesktop.ConsoleKit org.freedesktop.ConsoleKit.Session.xml
+
+BUILT_SOURCES += \
+	accounts-generated.c			\
+	accounts-generated.h			\
+	accounts-user-generated.c	\
+	accounts-user-generated.h	\
+	act-user-enum-types.c	\
+	act-user-enum-types.h	\
+	ck-manager-generated.c		\
+	ck-manager-generated.h		\
+	ck-seat-generated.c			\
+	ck-seat-generated.h			\
+	ck-session-generated.c		\
+	ck-session-generated.h
+
 CLEANFILES += $(BUILT_SOURCES)
 
 libaccountsservicedir = $(includedir)/accountsservice-1.0/act
