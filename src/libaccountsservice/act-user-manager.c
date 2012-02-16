@@ -957,11 +957,11 @@ on_list_cached_users_finished (GObject      *object,
 {
         AccountsAccounts *proxy = ACCOUNTS_ACCOUNTS (object);
         ActUserManager   *manager = data;
-        gchar           **users;
+        gchar           **user_paths;
         GError           *error = NULL;
 
         manager->priv->listing_cached_users = FALSE;
-        if (!accounts_accounts_call_list_cached_users_finish (proxy, &users, result, &error)) {
+        if (!accounts_accounts_call_list_cached_users_finish (proxy, &user_paths, result, &error)) {
                 g_debug ("ActUserManager: ListCachedUsers failed: %s", error->message);
                 g_error_free (error);
 
@@ -976,14 +976,14 @@ on_list_cached_users_finished (GObject      *object,
          *
          * (see on_new_user_loaded)
          */
-        if (g_strv_length (users) > 0) {
-                gchar **i;
+        if (g_strv_length (user_paths) > 0) {
+                int i;
 
                 g_debug ("ActUserManager: ListCachedUsers finished, will set loaded property after list is fully loaded");
-                for (i = users; i; i++) {
+                for (i = 0; user_paths[i] != NULL; i++) {
                         ActUser *user;
 
-                        user = add_new_user_for_object_path (*i, manager);
+                        user = add_new_user_for_object_path (user_paths[i], manager);
                         if (!manager->priv->is_loaded) {
                                 manager->priv->new_users_inhibiting_load = g_slist_prepend (manager->priv->new_users_inhibiting_load, user);
                         }
@@ -993,7 +993,7 @@ on_list_cached_users_finished (GObject      *object,
                 maybe_set_is_loaded (manager);
         }
 
-        g_strfreev (users);
+        g_strfreev (user_paths);
 
         /* Add users who are specifically included */
         if (manager->priv->include_usernames != NULL) {
@@ -1576,9 +1576,10 @@ on_get_sessions_finished (GObject      *object,
         ConsoleKitSeat *proxy = CONSOLE_KIT_SEAT (object);
         ActUserManager *manager = data;
         GError         *error = NULL;
-        gchar         **sessions, **i;
+        gchar         **session_ids;
+        int             i;
 
-        if (!console_kit_seat_call_get_sessions_finish (proxy, &sessions, result, &error)) {
+        if (!console_kit_seat_call_get_sessions_finish (proxy, &session_ids, result, &error)) {
                 if (error != NULL) {
                         g_warning ("unable to determine sessions for seat: %s",
                                    error->message);
@@ -1590,10 +1591,10 @@ on_get_sessions_finished (GObject      *object,
         }
 
         manager->priv->getting_sessions = FALSE;
-        for (i = sessions; i; i++) {
-                load_new_session (manager, *i);                
+        for (i = 0; session_ids[i] != NULL; i++) {
+                load_new_session (manager, session_ids[i]);
         }
-        g_strfreev (sessions);
+        g_strfreev (session_ids);
 
         g_debug ("ActUserManager: GetSessions call finished, so trying to set loaded property");
         maybe_set_is_loaded (manager);
