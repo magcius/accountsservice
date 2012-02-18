@@ -136,3 +136,21 @@ CLEANFILES += $(gir_DATA) $(typelibs_DATA)
 endif
 
 MAINTAINERCLEANFILES = Makefile.in
+EXTRA_DIST =
+
+if ENABLE_VAPIGEN
+-include $(VAPIGEN_MAKEFILE)
+
+accountsservice.vapi: AccountsService-1.0.gir accountsservice.deps
+
+VAPIGEN_VAPIS = accountsservice.vapi
+
+accountsservice_vapi_METADATADIRS = $(srcdir)
+accountsservice_vapi_FILES = AccountsService-1.0.gir
+
+vapidir = $(VAPIGEN_VAPIDIR)
+vapi_DATA = $(VAPIGEN_VAPIS) $(VAPIGEN_VAPIS:.vapi=.deps)
+
+EXTRA_DIST += AccountsService-1.0.metadata accountsservice.deps
+
+endif
