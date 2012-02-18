@@ -66,11 +66,17 @@ BUILT_SOURCES += \
 CLEANFILES += $(BUILT_SOURCES)
 
 libaccountsservicedir = $(includedir)/accountsservice-1.0/act
-libaccountsservice_HEADERS =                                                  \
+libaccountsservice_headers =                                                  \
         act-user.h                                                            \
         act-user-manager.h                                                    \
         act-user-enum-types.h                                                 \
         $(END_OF_LIST)
+
+libaccountsservice_HEADERS =                                                  \
+        act.h                                                                 \
+        $(libaccountsservice_headers)                                         \
+        $(END_OF_LIST)
+
 
 libaccountsservice_la_CFLAGS = $(LIBACCOUNTSSERVICE_CFLAGS)
 libaccountsservice_la_LDFLAGS =                                               \
@@ -85,7 +91,7 @@ libaccountsservice_la_LIBADD =                                                \
         $(END_OF_LIST)
 
 libaccountsservice_la_SOURCES =                                               \
-        $(libaccountsservice_HEADERS)                                         \
+        $(libaccountsservice_headers)                                         \
         act-user-private.h                                                    \
         act-user.c                                                            \
         act-user-manager.c                                                    \
@@ -114,6 +120,7 @@ AccountsService_1_0_gir_SCANNERFLAGS =                                        \
         --warn-all                                                            \
         --namespace=AccountsService                                           \
         --identifier-prefix Act                                               \
+        --c-include=act/act.h                                                 \
         $(libaccountsservice_la_CFLAGS)                                       \
         $(END_OF_LIST)
 
