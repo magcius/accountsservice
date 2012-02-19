@@ -37,7 +37,6 @@ G_BEGIN_DECLS
 typedef struct ActUserManagerPrivate ActUserManagerPrivate;
 typedef struct ActUserManager ActUserManager;
 typedef struct ActUserManagerClass ActUserManagerClass;
-typedef enum ActUserManagerError ActUserManagerError;
 
 struct ActUserManager
 {
@@ -59,11 +58,11 @@ struct ActUserManagerClass
                                                      ActUser        *user);
 };
 
-enum ActUserManagerError
+typedef enum ActUserManagerError
 {
         ACT_USER_MANAGER_ERROR_GENERAL,
         ACT_USER_MANAGER_ERROR_KEY_NOT_FOUND
-};
+} ActUserManagerError;
 
 #define ACT_USER_MANAGER_ERROR act_user_manager_error_quark ()
 
