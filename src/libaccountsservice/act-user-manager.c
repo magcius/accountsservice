@@ -1262,18 +1262,15 @@ get_seat_proxy (ActUserManager *manager)
 }
 
 static void
-get_session_proxy (ActUserManager *manager)
+on_console_kit_session_proxy_gotten (GObject *object, GAsyncResult *result, gpointer user_data)
 {
+        ActUserManager *manager = user_data;
         GError *error = NULL;
 
-        g_assert (manager->priv->seat.session_proxy == NULL);
+        g_debug ("on_console_kit_session_proxy_gotten");
 
-        manager->priv->seat.session_proxy = console_kit_session_proxy_new_sync (manager->priv->connection,
-                                                                                G_DBUS_PROXY_FLAGS_NONE,
-                                                                                CK_NAME,
-                                                                                manager->priv->seat.session_id,
-                                                                                NULL,
-                                                                                &error);
+        manager->priv->seat.session_proxy = console_kit_session_proxy_new_finish (result, &error);
+
         if (manager->priv->seat.session_proxy == NULL) {
                 if (error != NULL) {
                         g_warning ("Failed to connect to the ConsoleKit session object: %s",
@@ -1287,6 +1284,23 @@ get_session_proxy (ActUserManager *manager)
         }
 
         manager->priv->seat.state++;
+        load_seat_incrementally (manager);
+}
+
+static void
+get_session_proxy (ActUserManager *manager)
+{
+        g_debug ("get_session_proxy");
+
+        g_assert (manager->priv->seat.session_proxy == NULL);
+
+        console_kit_session_proxy_new (manager->priv->connection,
+                                       G_DBUS_PROXY_FLAGS_NONE,
+                                       CK_NAME,
+                                       manager->priv->seat.session_id,
+                                       NULL,
+                                       on_console_kit_session_proxy_gotten,
+                                       manager);
 }
 
 static void
