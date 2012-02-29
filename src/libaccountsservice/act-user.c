@@ -1115,7 +1115,7 @@ update_info (ActUser *user)
                            "GetAll",
                            g_variant_new ("(s)", ACCOUNTS_USER_INTERFACE),
                            G_DBUS_CALL_FLAGS_NONE,
-                           0,
+                           -1,
                            user->get_all_call,
                            on_get_all_finished,
                            user);
