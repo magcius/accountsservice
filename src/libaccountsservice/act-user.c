@@ -1079,6 +1079,10 @@ on_get_all_finished (GObject        *object,
                 g_debug ("Error calling GetAll() when retrieving properties for %s: %s",
                          user->object_path, error->message);
                 g_error_free (error);
+
+                if (!user->is_loaded) {
+                        set_is_loaded (user, TRUE);
+                }
                 return;
         }
 
