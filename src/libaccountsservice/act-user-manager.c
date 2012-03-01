@@ -484,7 +484,8 @@ on_get_seat_id_finished (GObject        *object,
 
                 g_debug ("ActUserManager: GetSeatId call failed, so unloading seat");
                 unload_seat (manager);
-                return;
+
+                goto out;
         }
 
         g_debug ("ActUserManager: Found current seat: %s", seat_id);
@@ -493,6 +494,9 @@ on_get_seat_id_finished (GObject        *object,
         manager->priv->seat.state++;
 
         load_seat_incrementally (manager);
+
+ out:
+        g_object_unref (manager);
 }
 
 static void
@@ -501,7 +505,7 @@ get_seat_id_for_current_session (ActUserManager *manager)
         console_kit_session_call_get_seat_id (manager->priv->seat.session_proxy,
                                               NULL,
                                               on_get_seat_id_finished,
-                                              manager);
+                                              g_object_ref (manager));
 }
 
 static gint
@@ -563,7 +567,7 @@ create_new_user (ActUserManager *manager)
 
         manager->priv->new_users = g_slist_prepend (manager->priv->new_users, user);
 
-        g_signal_connect (user, "notify::is-loaded", G_CALLBACK (on_new_user_loaded), manager);
+        g_signal_connect_object (user, "notify::is-loaded", G_CALLBACK (on_new_user_loaded), manager, 0);
 
         return g_object_ref (user);
 }
@@ -586,14 +590,14 @@ add_user (ActUserManager *manager,
                                      g_object_ref (user));
         }
 
-        g_signal_connect (user,
-                          "sessions-changed",
-                          G_CALLBACK (on_user_sessions_changed),
-                          manager);
-        g_signal_connect (user,
-                          "changed",
-                          G_CALLBACK (on_user_changed),
-                          manager);
+        g_signal_connect_object (user,
+                                 "sessions-changed",
+                                 G_CALLBACK (on_user_sessions_changed),
+                                 manager, 0);
+        g_signal_connect_object (user,
+                                 "changed",
+                                 G_CALLBACK (on_user_changed),
+                                 manager, 0);
 
         if (manager->priv->is_loaded) {
                 g_debug ("ActUserManager: loaded, so emitting user-added signal");
@@ -791,19 +795,25 @@ on_get_current_session_finished (GObject        *object,
                         g_debug ("Failed to identify the current session");
                 }
                 unload_seat (manager);
-                return;
+
+                goto out;
         }
 
         manager->priv->seat.session_id = session_id;
         manager->priv->seat.state++;
 
         load_seat_incrementally (manager);
+
+ out:
+        g_object_unref (manager);
 }
 
 static void
 get_current_session_id (ActUserManager *manager)
 {
-        console_kit_manager_call_get_current_session (manager->priv->ck_manager_proxy, NULL, on_get_current_session_finished, manager);
+        console_kit_manager_call_get_current_session (manager->priv->ck_manager_proxy, NULL,
+                                                      on_get_current_session_finished,
+                                                      g_object_ref (manager));
 }
 
 static void
@@ -822,6 +832,7 @@ unload_new_session (ActUserManagerNewSession *new_session)
 
         g_free (new_session->x11_display);
         g_free (new_session->id);
+        g_object_unref (manager);
 
         g_slice_free (ActUserManagerNewSession, new_session);
 }
@@ -968,6 +979,7 @@ on_list_cached_users_finished (GObject      *object,
                 g_object_unref (manager->priv->accounts_proxy);
                 manager->priv->accounts_proxy = NULL;
 
+                g_object_unref (manager);
                 return;
         }
 
@@ -1013,6 +1025,8 @@ on_list_cached_users_finished (GObject      *object,
                         }
                 }
         }
+
+        g_object_unref (manager);
 }
 
 static void
@@ -1139,7 +1153,7 @@ load_new_session (ActUserManager *manager,
 
         new_session = g_slice_new0 (ActUserManagerNewSession);
 
-        new_session->manager = manager;
+        new_session->manager = g_object_ref (manager);
         new_session->id = g_strdup (session_id);
         new_session->state = ACT_USER_MANAGER_NEW_SESSION_STATE_UNLOADED + 1;
 
@@ -1280,11 +1294,15 @@ on_console_kit_session_proxy_gotten (GObject *object, GAsyncResult *result, gpoi
                         g_warning ("Failed to connect to the ConsoleKit session object");
                 }
                 unload_seat (manager);
-                return;
+
+                goto out;
         }
 
         manager->priv->seat.state++;
         load_seat_incrementally (manager);
+
+ out:
+        g_object_unref (manager);
 }
 
 static void
@@ -1300,7 +1318,7 @@ get_session_proxy (ActUserManager *manager)
                                        manager->priv->seat.session_id,
                                        NULL,
                                        on_console_kit_session_proxy_gotten,
-                                       manager);
+                                       g_object_ref (manager));
 }
 
 static void
@@ -1361,6 +1379,8 @@ free_fetch_user_request (ActUserManagerFetchUserRequest *request)
         manager->priv->fetch_user_requests = g_slist_remove (manager->priv->fetch_user_requests, request);
         g_free (request->username);
         g_free (request->object_path);
+        g_object_unref (manager);
+
         g_slice_free (ActUserManagerFetchUserRequest, request);
 }
 
@@ -1449,7 +1469,7 @@ fetch_user_from_accounts_service (ActUserManager *manager,
 
         request = g_slice_new0 (ActUserManagerFetchUserRequest);
 
-        request->manager = manager;
+        request->manager = g_object_ref (manager);
         request->username = g_strdup (username);
         request->user = user;
         request->state = ACT_USER_MANAGER_GET_USER_STATE_UNFETCHED + 1;
@@ -1601,7 +1621,8 @@ on_get_sessions_finished (GObject      *object,
                 } else {
                         g_warning ("unable to determine sessions for seat");
                 }
-                return;
+
+                goto out;
         }
 
         manager->priv->getting_sessions = FALSE;
@@ -1612,6 +1633,9 @@ on_get_sessions_finished (GObject      *object,
 
         g_debug ("ActUserManager: GetSessions call finished, so trying to set loaded property");
         maybe_set_is_loaded (manager);
+
+ out:
+        g_object_unref (manager);
 }
 
 static void
@@ -1625,7 +1649,7 @@ load_sessions (ActUserManager *manager)
         console_kit_seat_call_get_sessions (manager->priv->seat.seat_proxy,
                                             NULL,
                                             on_get_sessions_finished,
-                                            manager);
+                                            g_object_ref (manager));
         manager->priv->getting_sessions = TRUE;
 }
 
@@ -1638,7 +1662,7 @@ load_users (ActUserManager *manager)
         accounts_accounts_call_list_cached_users (manager->priv->accounts_proxy,
                                                   NULL, 
                                                   on_list_cached_users_finished,
-                                                  manager);
+                                                  g_object_ref (manager));
         manager->priv->listing_cached_users = TRUE;
 }
 
