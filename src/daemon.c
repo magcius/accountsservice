@@ -48,12 +48,7 @@
 
 #define PATH_PASSWD "/etc/passwd"
 #define PATH_SHADOW "/etc/shadow"
-#define PATH_LOGIN_DEFS "/etc/login.defs"
 #define PATH_GDM_CUSTOM "/etc/gdm/custom.conf"
-
-#ifndef FALLBACK_MINIMAL_UID
-#define FALLBACK_MINIMAL_UID 500
-#endif
 
 #define USERDIR LOCALSTATEDIR "/lib/AccountsService/users"
 
@@ -92,7 +87,6 @@ struct DaemonPrivate {
 
         GHashTable *users;
         GHashTable *exclusions;
-        uid_t minimal_uid;
 
         User *autologin;
 
@@ -160,9 +154,6 @@ error_get_type (void)
 gboolean
 daemon_local_user_is_excluded (Daemon *daemon, const gchar *username, uid_t uid)
 {
-        if (uid < daemon->priv->minimal_uid) {
-                return TRUE;
-        }
         if (g_hash_table_lookup (daemon->priv->exclusions, username)) {
                 return TRUE;
         }
@@ -508,59 +499,6 @@ on_gdm_monitor_changed (GFileMonitor      *monitor,
         queue_reload_autologin (daemon);
 }
 
-static uid_t
-get_minimal_uid (void)
-{
-        GError *error;
-        char *contents;
-        gboolean contents_loaded;
-        const char *uid_min_string, *start_of_uid_string;
-        char *end;
-        uid_t uid = FALLBACK_MINIMAL_UID;
-        gint64 uid_as_number;
-
-        error = NULL;
-        contents = NULL;
-        contents_loaded = g_file_get_contents (PATH_LOGIN_DEFS, &contents, NULL, &error);
-        if (!contents_loaded) {
-                g_debug ("unable to read " PATH_LOGIN_DEFS ": %s", error->message);
-                g_error_free (error);
-                goto out;
-        }
-
-        uid_min_string = strstr (contents, "UID_MIN");
-
-        if (uid_min_string == NULL ||
-            (uid_min_string != contents && uid_min_string[-1] != '\n')) {
-                g_debug (PATH_LOGIN_DEFS " does not have a UID_MIN field");
-                goto out;
-        }
-
-        start_of_uid_string = uid_min_string + strlen ("UID_MIN");
-
-        if (start_of_uid_string == '\0') {
-                g_debug (PATH_LOGIN_DEFS " contains UID_MIN key with no value");
-                goto out;
-        }
-
-
-        uid_as_number = g_ascii_strtoll (start_of_uid_string, &end, 10);
-        if (!g_ascii_isspace (*end) && *end != '\0') {
-                g_debug (PATH_LOGIN_DEFS " contains non-numerical value for UID_MIN");
-                goto out;
-        }
-
-        if (uid_as_number < 0 || ((uid_t) uid_as_number) != uid_as_number) {
-                g_debug (PATH_LOGIN_DEFS " contains out-of-range value for UID_MIN");
-                goto out;
-        }
-
-        uid = (uid_t) uid_as_number;
-out:
-        g_free (contents);
-        return uid;
-}
-
 static void
 daemon_init (Daemon *daemon)
 {
@@ -570,7 +508,6 @@ daemon_init (Daemon *daemon)
 
         daemon->priv = DAEMON_GET_PRIVATE (daemon);
 
-        daemon->priv->minimal_uid = get_minimal_uid ();
         daemon->priv->exclusions = g_hash_table_new_full (g_str_hash,
                                                           g_str_equal,
                                                           g_free,
