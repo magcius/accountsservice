@@ -48,6 +48,7 @@
 
 #define PATH_PASSWD "/etc/passwd"
 #define PATH_SHADOW "/etc/shadow"
+#define PATH_NOLOGIN "/sbin/nologin"
 #define PATH_GDM_CUSTOM "/etc/gdm/custom.conf"
 
 #define USERDIR LOCALSTATEDIR "/lib/AccountsService/users"
@@ -152,8 +153,11 @@ error_get_type (void)
 }
 
 gboolean
-daemon_local_user_is_excluded (Daemon *daemon, const gchar *username, uid_t uid)
+daemon_local_user_is_excluded (Daemon *daemon, const gchar *username, const gchar *shell)
 {
+        if (g_strcmp0 (shell, PATH_NOLOGIN) == 0) {
+                return TRUE;
+        }
         if (g_hash_table_lookup (daemon->priv->exclusions, username)) {
                 return TRUE;
         }
@@ -189,7 +193,7 @@ reload_wtmp_history (Daemon *daemon)
 
                 if (daemon_local_user_is_excluded (daemon,
                                                    wtmp_entry->ut_user,
-                                                   daemon->priv->minimal_uid)) {
+                                                   NULL)) {
                         g_debug ("excluding user '%s'", wtmp_entry->ut_user);
                         continue;
                 }
@@ -285,8 +289,8 @@ reload_passwd (Daemon *daemon)
 #else
         while ((pwent = getpwent ()) != NULL) {
 #endif
-                /* Skip users below MINIMAL_UID... */
-                if (daemon_local_user_is_excluded (daemon, pwent->pw_name, pwent->pw_uid)) {
+                /* Skip system users... */
+                if (daemon_local_user_is_excluded (daemon, pwent->pw_name, pwent->pw_shell)) {
                         g_debug ("skipping user: %s", pwent->pw_name);
                         continue;
                 }
@@ -814,7 +818,7 @@ finish_list_cached_users (gpointer user_data)
         g_hash_table_iter_init (&iter, data->daemon->priv->users);
         while (g_hash_table_iter_next (&iter, (gpointer *)&name, (gpointer *)&user)) {
                 uid = user_local_get_uid (user);
-                if (!daemon_local_user_is_excluded (data->daemon, name, uid)) {
+                if (!daemon_local_user_is_excluded (data->daemon, name, NULL)) {
                         g_debug ("user %s %ld not excluded\n", name, (long) uid);
                         g_ptr_array_add (object_paths, (gpointer) user_local_get_object_path (user));
                 }
