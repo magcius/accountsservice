@@ -1933,6 +1933,7 @@ act_user_manager_init (ActUserManager *manager)
                 }
                 return;
         }
+        g_dbus_proxy_set_default_timeout (G_DBUS_PROXY (manager->priv->accounts_proxy), G_MAXINT);
 
         g_signal_connect (manager->priv->accounts_proxy,
                           "user-added",
