@@ -2116,7 +2116,7 @@ act_user_manager_delete_user (ActUserManager  *manager,
                               GError         **error)
 {
         GError *local_error;
-        gboolean res;
+        gboolean res = TRUE;
 
         g_debug ("ActUserManager: Deleting user '%s' (uid %ld)", act_user_get_user_name (user), (long) act_user_get_uid (user));
 
@@ -2129,6 +2129,7 @@ act_user_manager_delete_user (ActUserManager  *manager,
                                                       NULL,
                                                       &local_error)) {
                 g_propagate_error (error, local_error);
+                res = FALSE;
         }
 
         return res;
