@@ -39,6 +39,12 @@
 #include <glib/gstdio.h>
 #include <glib-object.h>
 #include <gio/gio.h>
+#include <gio/gunixinputstream.h>
+
+#ifdef WITH_SYSTEMD
+#include <systemd/sd-daemon.h>
+#include <systemd/sd-login.h>
+#endif
 
 #include "act-user-manager.h"
 #include "act-user-private.h"
@@ -76,6 +82,11 @@ typedef struct
         char                        *session_id;
         ConsoleKitSeat              *seat_proxy;
         ConsoleKitSession           *session_proxy;
+        guint                        load_idle_id;
+#ifdef WITH_SYSTEMD
+        sd_login_monitor            *session_monitor;
+        GInputStream                *session_monitor_stream;
+#endif
 } ActUserManagerSeat;
 
 typedef enum {
@@ -162,7 +173,7 @@ static void     act_user_manager_class_init (ActUserManagerClass *klass);
 static void     act_user_manager_init       (ActUserManager      *user_manager);
 static void     act_user_manager_finalize   (GObject             *object);
 
-static void     load_seat_incrementally     (ActUserManager *manager);
+static gboolean load_seat_incrementally     (ActUserManager *manager);
 static void     unload_seat                 (ActUserManager *manager);
 static void     load_users                  (ActUserManager *manager);
 static void     act_user_manager_queue_load (ActUserManager *manager);
@@ -195,33 +206,14 @@ act_user_manager_error_quark (void)
 }
 
 static gboolean
-start_new_login_session (ActUserManager *manager)
-{
-        GError  *error;
-        gboolean res;
-
-        res = g_spawn_command_line_async ("gdmflexiserver -s", &error);
-        if (! res) {
-                if (error != NULL) {
-                        g_warning ("Unable to start new login: %s", error->message);
-                        g_error_free (error);
-                } else {
-                        g_warning ("Unable to start new login");
-                }
-        }
-
-        return res;
-}
-
-static gboolean
-activate_session_id (ActUserManager *manager,
-                     const char     *seat_id,
-                     const char     *session_id)
+activate_console_kit_session_id (ActUserManager *manager,
+                                 const char     *seat_id,
+                                 const char     *session_id)
 {
         ConsoleKitSeat *proxy;
         GError         *error = NULL;
         gboolean        res = FALSE;
-  
+
         proxy = console_kit_seat_proxy_new_sync (manager->priv->connection,
                                                  G_DBUS_PROXY_FLAGS_NONE,
                                                  CK_NAME,
@@ -243,9 +235,57 @@ activate_session_id (ActUserManager *manager,
         return TRUE;
 }
 
+#ifdef WITH_SYSTEMD
 static gboolean
-session_is_login_window (ActUserManager *manager,
-                         const char     *session_id)
+activate_systemd_session_id (ActUserManager *manager,
+                             const char     *seat_id,
+                             const char     *session_id)
+{
+        GDBusConnection *connection;
+        GVariant *reply;
+        GError *error;
+
+        error = NULL;
+        connection = g_bus_get_sync (G_BUS_TYPE_SYSTEM, NULL, &error);
+
+
+        if (connection == NULL) {
+                goto failed;
+        }
+
+        reply = g_dbus_connection_call_sync (connection,
+                                             "org.freedesktop.login1",
+                                             "/org/freedesktop/login1",
+                                             "org.freedesktop.login1.Manager",
+                                             "ActivateSessionOnSeat",
+                                             g_variant_new ("(ss)",
+                                                            seat_id,
+                                                            session_id),
+                                             NULL,
+                                             G_DBUS_CALL_FLAGS_NONE,
+                                             -1,
+                                             NULL,
+                                             &error);
+        g_object_unref (connection);
+
+        if (reply == NULL) {
+                goto failed;
+        }
+
+        g_object_unref (reply);
+
+        return TRUE;
+
+failed:
+        g_warning ("Unable to activate session: %s", error->message);
+        g_error_free (error);
+        return FALSE;
+}
+#endif
+
+static gboolean
+_ck_session_is_login_window (ActUserManager *manager,
+                             const char     *session_id)
 {
         ConsoleKitSession *proxy;
         GError            *error = NULL;
@@ -280,99 +320,94 @@ session_is_login_window (ActUserManager *manager,
         return ret;
 }
 
-static char *
-_get_login_window_session_id (ActUserManager *manager)
+#ifdef WITH_SYSTEMD
+static gboolean
+_systemd_session_is_login_window (ActUserManager *manager,
+                                  const char     *session_id)
 {
-        gboolean    can_activate_sessions;
-        GError     *error = NULL;
-        gchar     **sessions, **i;
-        char       *primary_ssid;
+        int   res;
+        int   ret;
+        char *session_class;
 
-        if (manager->priv->seat.id == NULL || manager->priv->seat.id[0] == '\0') {
-                g_debug ("ActUserManager: display seat ID is not set; can't switch sessions");
-                return NULL;
+        ret = FALSE;
+        res = sd_session_get_class (session_id, &session_class);
+
+        if (res < 0) {
+            g_debug ("failed to determine class of session %s: %s",
+                     session_id,
+                     strerror (-res));
+            goto out;
         }
 
-        can_activate_sessions = act_user_manager_can_switch (manager);
-
-        if (! can_activate_sessions) {
-                g_debug ("ActUserManager: seat is unable to activate sessions");
-                return NULL;
+        if (g_strcmp0 (session_class, "greeter") == 0) {
+            ret = TRUE;
         }
 
-        if (!console_kit_seat_call_get_sessions_sync (manager->priv->seat.seat_proxy, &sessions, NULL, &error)) {
-                if (error != NULL) {
-                        g_warning ("unable to determine sessions for user: %s",
-                                   error->message);
-                        g_error_free (error);
-                } else {
-                        g_warning ("unable to determine sessions for user");
-                }
-                return NULL;
-        }
+        free (session_class);
 
-        primary_ssid = NULL;
-        for (i = sessions; i; i++) {
-                if (session_is_login_window (manager, *i)) {
-                        primary_ssid = g_strdup (*i);
-                        break;
-                }
-        }
-        g_strfreev (sessions);
+out:
+        return ret;
+}
+#endif
 
-        return primary_ssid;
+static gboolean
+session_is_login_window (ActUserManager *manager,
+                         const char     *session_id)
+{
+#ifdef WITH_SYSTEMD
+        if (sd_booted () > 0) {
+                return _systemd_session_is_login_window (manager, session_id);
+        }
+#endif
+
+        return _ck_session_is_login_window (manager, session_id);
 }
 
 gboolean
 act_user_manager_goto_login_session (ActUserManager *manager)
 {
-        gboolean ret;
         gboolean res;
-        char    *ssid;
+        GError  *error;
 
         g_return_val_if_fail (ACT_IS_USER_MANAGER (manager), FALSE);
         g_return_val_if_fail (manager->priv->is_loaded, FALSE);
 
-        ret = FALSE;
-
-        /* First look for any existing LoginWindow sessions on the seat.
-           If none are found, create a new one. */
-
-        ssid = _get_login_window_session_id (manager);
-        if (ssid != NULL) {
-                res = activate_session_id (manager, manager->priv->seat.id, ssid);
-                if (res) {
-                        ret = TRUE;
+        res = g_spawn_command_line_async ("gdmflexiserver", &error);
+        if (! res) {
+                if (error != NULL) {
+                        g_warning ("Unable to start new login: %s", error->message);
+                        g_error_free (error);
+                } else {
+                        g_warning ("Unable to start new login");
                 }
         }
 
-        if (! ret) {
-                res = start_new_login_session (manager);
-                if (res) {
-                        ret = TRUE;
-                }
-        }
+        return res;
 
-        return ret;
 }
 
+#ifdef WITH_SYSTEMD
 gboolean
-act_user_manager_can_switch (ActUserManager *manager)
+_can_activate_systemd_sessions (ActUserManager *manager)
 {
-        gboolean  can_activate_sessions;
+        int res;
+
+        res = sd_seat_can_multi_session (manager->priv->seat.id);
+        if (res < 0) {
+                g_warning ("unable to determine if seat can activate sessions: %s",
+                           strerror (-res));
+                return FALSE;
+        }
+
+        return res > 0;
+}
+#endif
+
+gboolean
+_can_activate_console_kit_sessions (ActUserManager *manager)
+{
         GError   *error = NULL;
-
-        if (!manager->priv->is_loaded) {
-                g_debug ("ActUserManager: Unable to switch sessions until fully loaded");
-                return FALSE;
-        }
-
-        if (manager->priv->seat.id == NULL || manager->priv->seat.id[0] == '\0') {
-                g_debug ("ActUserManager: display seat ID is not set; can't switch sessions");
-                return FALSE;
-        }
-
-        g_debug ("ActUserManager: checking if seat can activate sessions");
+        gboolean  can_activate_sessions = FALSE;
 
         if (!console_kit_seat_call_can_activate_sessions_sync (manager->priv->seat.seat_proxy, &can_activate_sessions, NULL, &error)) {
                 if (error != NULL) {
@@ -386,6 +421,31 @@ act_user_manager_can_switch (ActUserManager *manager)
         }
 
         return can_activate_sessions;
+}
+
+gboolean
+act_user_manager_can_switch (ActUserManager *manager)
+{
+        if (!manager->priv->is_loaded) {
+                g_debug ("ActUserManager: Unable to switch sessions until fully loaded");
+                return FALSE;
+        }
+
+        if (manager->priv->seat.id == NULL || manager->priv->seat.id[0] == '\0') {
+                g_debug ("ActUserManager: display seat ID is not set; can't switch sessions");
+                return FALSE;
+        }
+
+        g_debug ("ActUserManager: checking if seat can activate sessions");
+
+
+#ifdef WITH_SYSTEMD
+        if (sd_booted () > 0) {
+                return _can_activate_systemd_sessions (manager);
+        }
+#endif
+
+        return _can_activate_console_kit_sessions (manager);
 }
 
 gboolean
@@ -415,7 +475,13 @@ act_user_manager_activate_user_session (ActUserManager *manager,
                 goto out;
         }
 
-        res = activate_session_id (manager, manager->priv->seat.id, ssid);
+#ifdef WITH_SYSTEMD
+        if (sd_booted () > 0) {
+                return activate_systemd_session_id (manager, manager->priv->seat.id, ssid);
+        }
+#endif
+
+        res = activate_console_kit_session_id (manager, manager->priv->seat.id, ssid);
         if (! res) {
                 g_debug ("ActUserManager: unable to activate session: %s", ssid);
                 goto out;
@@ -462,6 +528,14 @@ on_user_changed (ActUser        *user,
 }
 
 static void
+queue_load_seat_incrementally (ActUserManager *manager)
+{
+        if (manager->priv->seat.load_idle_id == 0) {
+            manager->priv->seat.load_idle_id = g_idle_add ((GSourceFunc) load_seat_incrementally, manager);
+        }
+}
+
+static void
 on_get_seat_id_finished (GObject        *object,
                          GAsyncResult   *result,
                          gpointer        data)
@@ -499,9 +573,42 @@ on_get_seat_id_finished (GObject        *object,
         g_object_unref (manager);
 }
 
+#ifdef WITH_SYSTEMD
+static void
+_get_systemd_seat_id (ActUserManager *manager)
+{
+        int   res;
+        char *seat_id;
+
+        res = sd_session_get_seat (manager->priv->seat.session_id,
+                                   &seat_id);
+
+        if (res < 0) {
+                g_warning ("Could not get seat of session '%s': %s",
+                           manager->priv->seat.session_id,
+                           strerror (-res));
+                unload_seat (manager);
+                return;
+        }
+
+        manager->priv->seat.id = g_strdup (seat_id);
+        free (seat_id);
+
+        manager->priv->seat.state++;
+
+        queue_load_seat_incrementally (manager);
+}
+#endif
+
 static void
 get_seat_id_for_current_session (ActUserManager *manager)
 {
+#ifdef WITH_SYSTEMD
+        if (sd_booted () > 0) {
+                _get_systemd_seat_id (manager);
+                return;
+        }
+#endif
         console_kit_session_call_get_seat_id (manager->priv->seat.session_proxy,
                                               NULL,
                                               on_get_seat_id_finished,
@@ -802,15 +909,47 @@ on_get_current_session_finished (GObject        *object,
         manager->priv->seat.session_id = session_id;
         manager->priv->seat.state++;
 
-        load_seat_incrementally (manager);
+        queue_load_seat_incrementally (manager);
 
  out:
         g_object_unref (manager);
 }
 
+#ifdef WITH_SYSTEMD
+static void
+_get_current_systemd_session_id (ActUserManager *manager)
+{
+        char *session_id;
+        int   res;
+
+        res = sd_seat_get_active ("seat0", &session_id, NULL);
+
+        if (res < 0) {
+                g_debug ("Failed to identify the current session: %s",
+                         strerror (-res));
+                unload_seat (manager);
+                return;
+        }
+
+        manager->priv->seat.session_id = g_strdup (session_id);
+        free (session_id);
+
+        manager->priv->seat.state++;
+
+        queue_load_seat_incrementally (manager);
+
+}
+#endif
+
 static void
 get_current_session_id (ActUserManager *manager)
 {
+#ifdef WITH_SYSTEMD
+        if (sd_booted () > 0) {
+                _get_current_systemd_session_id (manager);
+                return;
+        }
+#endif
         console_kit_manager_call_get_current_session (manager->priv->ck_manager_proxy, NULL,
                                                       on_get_current_session_finished,
                                                       g_object_ref (manager));
@@ -841,6 +980,13 @@ static void
 get_proxy_for_new_session (ActUserManagerNewSession *new_session)
 {
         GError            *error = NULL;
+#ifdef WITH_SYSTEMD
+        if (sd_booted () > 0) {
+                new_session->state++;
+                load_new_session_incrementally (new_session);
+                return;
+        }
+#endif
 
         new_session->proxy = console_kit_session_proxy_new_sync (new_session->manager->priv->connection,
                                                                  G_DBUS_PROXY_FLAGS_NONE,
@@ -893,9 +1039,40 @@ on_get_unix_user_finished (GObject      *object,
         load_new_session_incrementally (new_session);
 }
 
+#ifdef WITH_SYSTEMD
+static void
+_get_uid_for_new_systemd_session (ActUserManagerNewSession *new_session)
+{
+        uid_t uid;
+        int   res;
+
+        res = sd_session_get_uid (new_session->id, &uid);
+
+        if (res < 0) {
+                g_debug ("Failed to get uid of session '%s': %s",
+                         new_session->id,
+                         strerror (-res));
+                unload_new_session (new_session);
+                return;
+        }
+
+        new_session->uid = uid;
+        new_session->state++;
+
+        load_new_session_incrementally (new_session);
+}
+#endif
+
 static void
 get_uid_for_new_session (ActUserManagerNewSession *new_session)
 {
+#ifdef WITH_SYSTEMD
+        if (sd_booted () > 0) {
+                _get_uid_for_new_systemd_session (new_session);
+                return;
+        }
+#endif
+
         g_assert (new_session->proxy != NULL);
 
         console_kit_session_call_get_unix_user (new_session->proxy,
@@ -1061,9 +1238,45 @@ on_get_x11_display_finished (GObject      *object,
         load_new_session_incrementally (new_session);
 }
 
+#ifdef WITH_SYSTEMD
+static void
+_get_x11_display_for_new_systemd_session (ActUserManagerNewSession *new_session)
+{
+        char *x11_display;
+        int   res;
+
+        res = sd_session_get_display (new_session->id,
+                                      &x11_display);
+
+        if (res < 0) {
+                g_debug ("ActUserManager: Failed to get the x11 display of session '%s': %s",
+                         new_session->id,
+                         strerror (-res));
+                unload_new_session (new_session);
+                return;
+        }
+
+        g_debug ("ActUserManager: Found x11 display of session '%s': %s",
+                 new_session->id, x11_display);
+
+        new_session->x11_display = g_strdup (x11_display);
+        free (x11_display);
+        new_session->state++;
+
+        load_new_session_incrementally (new_session);
+}
+#endif
+
 static void
 get_x11_display_for_new_session (ActUserManagerNewSession *new_session)
 {
+#ifdef WITH_SYSTEMD
+        if (sd_booted () > 0) {
+                _get_x11_display_for_new_systemd_session (new_session);
+                return;
+        }
+#endif
+
         g_assert (new_session->proxy != NULL);
 
         console_kit_session_call_get_x11_display (new_session->proxy,
@@ -1186,9 +1399,8 @@ match_new_session_cmpfunc (gconstpointer a,
 }
 
 static void
-seat_session_removed (GDBusProxy     *seat_proxy,
-                      const char     *session_id,
-                      ActUserManager *manager)
+_remove_session (ActUserManager *manager,
+                 const char     *session_id)
 {
         ActUser       *user;
         GSList        *found;
@@ -1240,9 +1452,207 @@ seat_session_removed (GDBusProxy     *seat_proxy,
 }
 
 static void
+seat_session_removed (GDBusProxy     *seat_proxy,
+                      const char     *session_id,
+                      ActUserManager *manager)
+{
+        _remove_session (manager, session_id);
+}
+
+#ifdef WITH_SYSTEMD
+
+static gboolean
+_session_recognized (ActUserManager *manager,
+                     const char     *session_id)
+{
+        GSList *node;
+
+        if (g_hash_table_contains (manager->priv->sessions,
+                                   session_id)) {
+                return TRUE;
+        }
+
+        node = manager->priv->new_sessions;
+        while (node != NULL) {
+                ActUserManagerNewSession *new_session = node->data;
+
+                if (g_strcmp0 (new_session->id, session_id) == 0) {
+                        return TRUE;
+                }
+
+                node = node->next;
+        }
+        return FALSE;
+}
+
+static void
+_add_systemd_session (ActUserManager *manager,
+                      const char     *session_id)
+{
+        load_new_session (manager, session_id);
+}
+
+static void
+_add_new_systemd_sessions (ActUserManager *manager,
+                           GHashTable     *systemd_sessions)
+{
+        GHashTableIter iter;
+        gpointer key, value;
+
+        g_hash_table_iter_init (&iter, systemd_sessions);
+        while (g_hash_table_iter_next (&iter, &key, &value)) {
+                char *session_id = key;
+
+                if (!_session_recognized (manager, session_id)) {
+                        _add_systemd_session (manager, session_id);
+                }
+        }
+}
+
+static void
+_remove_systemd_session (ActUserManager *manager,
+                         const char     *session_id)
+{
+        _remove_session (manager, session_id);
+}
+
+static void
+_remove_stale_systemd_sessions (ActUserManager *manager,
+                                GHashTable     *systemd_sessions)
+{
+        GHashTableIter iter;
+        gpointer key, value;
+        GSList *node, *sessions_to_remove;
+
+        sessions_to_remove = NULL;
+        g_hash_table_iter_init (&iter, manager->priv->sessions);
+        while (g_hash_table_iter_next (&iter, &key, &value)) {
+                char *session_id = key;
+
+                if (g_hash_table_contains (systemd_sessions, session_id)) {
+                        continue;
+                }
+
+                sessions_to_remove = g_slist_prepend (sessions_to_remove, session_id);
+        }
+
+        node = manager->priv->new_sessions;
+        while (node != NULL) {
+                ActUserManagerNewSession *new_session = node->data;
+                GSList *next_node = node->next;
+
+                if (g_hash_table_contains (systemd_sessions, new_session->id)) {
+                        continue;
+                }
+
+                sessions_to_remove = g_slist_prepend (sessions_to_remove, new_session->id);
+                node = next_node;
+        }
+
+        node = sessions_to_remove;
+        while (node != NULL) {
+                char *session_id = node->data;
+                GSList *next_node = node->next;
+
+                _remove_systemd_session (manager, session_id);
+
+                node = next_node;
+        }
+
+        g_slist_free (sessions_to_remove);
+}
+
+#ifdef WITH_SYSTEMD
+static void
+reload_systemd_sessions (ActUserManager *manager)
+{
+        int         res;
+        int         i;
+        char       **sessions;
+        GHashTable  *systemd_sessions;
+
+
+        res = sd_get_sessions (&sessions);
+
+        if (res < 0) {
+                g_debug ("Failed to determine sessions: %s", strerror (-res));
+                return;
+        }
+
+        systemd_sessions = g_hash_table_new (g_str_hash,
+                                             g_str_equal);
+
+        if (sessions != NULL) {
+                for (i = 0; sessions[i] != NULL; i ++) {
+                        g_hash_table_insert (systemd_sessions,
+                                             sessions[i], NULL);
+                }
+
+        }
+
+        _add_new_systemd_sessions (manager, systemd_sessions);
+        _remove_stale_systemd_sessions (manager, systemd_sessions);
+        g_hash_table_unref (systemd_sessions);
+
+        for (i = 0; sessions[i]; i ++) {
+                free (sessions[i]);
+        }
+
+        free (sessions);
+}
+
+#endif
+static void
+on_session_monitor_event (GPollableInputStream *stream,
+                          ActUserManager       *manager)
+{
+        sd_login_monitor_flush (manager->priv->seat.session_monitor);
+        reload_systemd_sessions (manager);
+}
+
+static void
+_monitor_for_systemd_session_changes (ActUserManager *manager)
+{
+        int res;
+        int fd;
+        GSource *source;
+
+        res = sd_login_monitor_new ("session", &manager->priv->seat.session_monitor);
+
+        if (res < 0) {
+                g_warning ("Failed to connect to the ConsoleKit seat object: %s",
+                           strerror (-res));
+                unload_seat (manager);
+                return;
+        }
+
+        fd = sd_login_monitor_get_fd (manager->priv->seat.session_monitor);
+
+        manager->priv->seat.session_monitor_stream = g_unix_input_stream_new (fd, FALSE);
+        source = g_pollable_input_stream_create_source (G_POLLABLE_INPUT_STREAM (manager->priv->seat.session_monitor_stream),
+                                                        NULL);
+        g_source_set_callback (source,
+                               (GSourceFunc)
+                               on_session_monitor_event,
+                               manager,
+                               NULL);
+        g_source_attach (source, NULL);
+        g_source_unref (source);
+}
+#endif
+
+static void
 get_seat_proxy (ActUserManager *manager)
 {
         GError *error = NULL;
+
+#ifdef WITH_SYSTEMD
+        if (sd_booted () > 0) {
+                _monitor_for_systemd_session_changes (manager);
+                manager->priv->seat.state++;
+                return;
+        }
+#endif
 
         g_assert (manager->priv->seat.seat_proxy == NULL);
 
@@ -1309,6 +1719,14 @@ static void
 get_session_proxy (ActUserManager *manager)
 {
         g_debug ("get_session_proxy");
+
+#ifdef WITH_SYSTEMD
+        if (sd_booted () > 0) {
+                manager->priv->seat.state++;
+                queue_load_seat_incrementally (manager);
+                return;
+        }
+#endif
 
         g_assert (manager->priv->seat.session_proxy == NULL);
 
@@ -1639,18 +2057,31 @@ on_get_sessions_finished (GObject      *object,
 }
 
 static void
-load_sessions (ActUserManager *manager)
+load_console_kit_sessions (ActUserManager *manager)
 {
         if (manager->priv->seat.seat_proxy == NULL) {
                 g_debug ("ActUserManager: no seat proxy; can't load sessions");
                 return;
         }
 
+        manager->priv->getting_sessions = TRUE;
         console_kit_seat_call_get_sessions (manager->priv->seat.seat_proxy,
                                             NULL,
                                             on_get_sessions_finished,
                                             g_object_ref (manager));
-        manager->priv->getting_sessions = TRUE;
+}
+
+static void
+load_sessions (ActUserManager *manager)
+{
+#ifdef WITH_SYSTEMD
+        if (sd_booted () > 0) {
+                reload_systemd_sessions (manager);
+                maybe_set_is_loaded (manager);
+                return;
+        }
+#endif
+        load_console_kit_sessions (manager);
 }
 
 static void
@@ -1666,9 +2097,11 @@ load_users (ActUserManager *manager)
         manager->priv->listing_cached_users = TRUE;
 }
 
-static void
+static gboolean
 load_seat_incrementally (ActUserManager *manager)
 {
+        manager->priv->seat.load_idle_id = 0;
+
         switch (manager->priv->seat.state) {
         case ACT_USER_MANAGER_SEAT_STATE_GET_SESSION_ID:
                 get_current_session_id (manager);
@@ -1694,6 +2127,8 @@ load_seat_incrementally (ActUserManager *manager)
 
         g_debug ("ActUserManager: Seat loading sequence complete, so trying to set loaded property");
         maybe_set_is_loaded (manager);
+
+        return FALSE;
 }
 
 static gboolean
@@ -2019,6 +2454,20 @@ act_user_manager_finalize (GObject *object)
         if (manager->priv->seat.session_proxy != NULL) {
                 g_object_unref (manager->priv->seat.session_proxy);
         }
+
+        if (manager->priv->seat.load_idle_id != 0) {
+                g_source_remove (manager->priv->seat.load_idle_id);
+        }
+
+#ifdef WITH_SYSTEMD
+        if (manager->priv->seat.session_monitor != NULL) {
+                g_object_unref (manager->priv->seat.session_monitor);
+        }
+
+        if (manager->priv->seat.session_monitor_stream != NULL) {
+                g_object_unref (manager->priv->seat.session_monitor_stream);
+        }
+#endif
 
         if (manager->priv->accounts_proxy != NULL) {
                 g_object_unref (manager->priv->accounts_proxy);

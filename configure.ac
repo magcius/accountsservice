@@ -161,10 +161,22 @@ AC_PATH_PROG([XSLTPROC], [xsltproc])
 
 # systemd
 
+PKG_CHECK_MODULES(SYSTEMD, [libsystemd-login libsystemd-daemon],
+                  [have_systemd=yes], [have_systemd=no])
+AC_SUBST(SYSTEMD_CFLAGS)
+AC_SUBST(SYSTEMD_LIBS)
+
+LIBACCOUNTSSERVICE_LIBS="$LIBACCOUNTSSERVICE_LIBS $SYSTEMD_LIBS"
+LIBACCOUNTSSERVICE_CFLAGS="$LIBACCOUNTSSERVICE_CFLAGS $SYSTEMD_CFLAGS"
+
+if test "x$have_systemd" != "no" ; then
+        AC_DEFINE(WITH_SYSTEMD, 1, [Define to enable systemd support])
+fi
+
 AC_ARG_WITH([systemdsystemunitdir],
         AS_HELP_STRING([--with-systemdsystemunitdir=DIR], [Directory for systemd service files]),
         [],
-        [with_systemdsystemunitdir=yes])
+        [with_systemdsystemunitdir=$have_systemd])
 if test "x$with_systemdsystemunitdir" = "xyes"; then
     with_systemdsystemunitdir=$($PKG_CONFIG --variable=systemdsystemunitdir systemd)
 fi
