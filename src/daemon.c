@@ -49,6 +49,7 @@
 #define PATH_PASSWD "/etc/passwd"
 #define PATH_SHADOW "/etc/shadow"
 #define PATH_NOLOGIN "/sbin/nologin"
+#define PATH_FALSE "/bin/false"
 #define PATH_GDM_CUSTOM "/etc/gdm/custom.conf"
 
 #define USERDIR LOCALSTATEDIR "/lib/AccountsService/users"
@@ -155,14 +156,31 @@ error_get_type (void)
 gboolean
 daemon_local_user_is_excluded (Daemon *daemon, const gchar *username, const gchar *shell)
 {
-        if (g_strcmp0 (shell, PATH_NOLOGIN) == 0) {
-                return TRUE;
-        }
-        if (g_hash_table_lookup (daemon->priv->exclusions, username)) {
-                return TRUE;
+        char *basename, *nologin_basename, *false_basename;
+        int ret;
+
+        if (shell == NULL) {
+                return FALSE;
         }
 
-        return FALSE;
+        ret = FALSE;
+        basename = g_path_get_basename (shell);
+        nologin_basename = g_path_get_basename (PATH_NOLOGIN);
+        false_basename = g_path_get_basename (PATH_FALSE);
+
+        if (g_strcmp0 (basename, nologin_basename) == 0) {
+                ret = TRUE;
+        } else if (g_strcmp0 (basename, false_basename)) {
+                ret = TRUE;
+        } else if (g_hash_table_lookup (daemon->priv->exclusions, username)) {
+                ret = TRUE;
+        }
+
+        g_free (basename);
+        g_free (nologin_basename);
+        g_free (false_basename);
+
+        return ret;
 }
 
 static void
