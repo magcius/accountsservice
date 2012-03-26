@@ -136,7 +136,7 @@ CLEANFILES += $(gir_DATA) $(typelibs_DATA)
 endif
 
 MAINTAINERCLEANFILES = Makefile.in
-EXTRA_DIST =
+EXTRA_DIST = org.freedesktop.ConsoleKit.Manager.xml org.freedesktop.ConsoleKit.Seat.xml org.freedesktop.ConsoleKit.Session.xml
 
 if ENABLE_VAPIGEN
 -include $(VAPIGEN_MAKEFILE)
