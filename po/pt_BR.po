@@ -3,58 +3,59 @@
 # This file is distributed under the same license as the PACKAGE package.
 # 
 # Translators:
+# Rafael Ferreira <rafael.f.f1@gmail.com>, 2012.
 msgid ""
 msgstr ""
 "Project-Id-Version: accounts service\n"
 "Report-Msgid-Bugs-To: http://bugs.freedesktop.org/\n"
 "POT-Creation-Date: 2011-03-17 14:45-0400\n"
-"PO-Revision-Date: 2011-03-17 18:52+0000\n"
-"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
-"Language-Team: Serbian (http://www.transifex.net/projects/p/freedesktop/language/sr/)\n"
+"PO-Revision-Date: 2012-03-24 23:25+0000\n"
+"Last-Translator: Rafael Ferreira <rafael.f.f1@gmail.com>\n"
+"Language-Team: Portuguese (Brazil) (http://www.transifex.net/projects/p/freedesktop/language/pt_BR/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Language: sr\n"
-"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2)\n"
+"Language: pt_BR\n"
+"Plural-Forms: nplurals=2; plural=(n > 1)\n"
 
 #: ../data/org.freedesktop.accounts.policy.in.h:1
 msgid "Authentication is required to change the login screen configuration"
-msgstr ""
+msgstr "Autenticação é necessária para alterar configurações da tela de login"
 
 #: ../data/org.freedesktop.accounts.policy.in.h:2
 msgid "Authentication is required to change user data"
-msgstr ""
+msgstr "Autenticação é necessária para alteração de dados de usuário"
 
 #: ../data/org.freedesktop.accounts.policy.in.h:3
 msgid "Authentication is required to change your own user data"
-msgstr ""
+msgstr "Autenticação é necessária para alterar dados do próprio usuário"
 
 #: ../data/org.freedesktop.accounts.policy.in.h:4
 msgid "Change the login screen configuration"
-msgstr ""
+msgstr "Alterar configurações da tela de login"
 
 #: ../data/org.freedesktop.accounts.policy.in.h:5
 msgid "Change your own user data"
-msgstr ""
+msgstr "Alterar dados do próprio usuário"
 
 #: ../data/org.freedesktop.accounts.policy.in.h:6
 msgid "Manage user accounts"
-msgstr ""
+msgstr "Gerenciar contas de usuários"
 
 #: ../src/main.c:141
 msgid "Output version information and exit"
-msgstr ""
+msgstr "Exibir informação da versão e sair"
 
 #: ../src/main.c:142
 msgid "Replace existing instance"
-msgstr ""
+msgstr "Substitui instância existente"
 
 #: ../src/main.c:143
 msgid "Enable debugging code"
-msgstr ""
+msgstr "Habilitar depuração de código"
 
 #: ../src/main.c:163
 msgid ""
 "Provides D-Bus interfaces for querying and manipulating\n"
 "user account information."
-msgstr ""
+msgstr "Fornece interfaces de D-Bus para consultar e manipular\ninformações de conta de usuário."

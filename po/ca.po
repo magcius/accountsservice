@@ -2,14 +2,16 @@
 # Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
 # This file is distributed under the same license as the PACKAGE package.
 # 
+# Translators:
+# Laura Balbastre <laura.balbastre.soler@gmail.com>, 2011.
 msgid ""
 msgstr ""
 "Project-Id-Version: accounts service\n"
 "Report-Msgid-Bugs-To: http://bugs.freedesktop.org/\n"
 "POT-Creation-Date: 2011-03-17 14:45-0400\n"
-"PO-Revision-Date: 2011-08-17 18:54+0000\n"
-"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
-"Language-Team: Catalan (http://www.transifex.net/projects/p/freedesktop/team/ca/)\n"
+"PO-Revision-Date: 2012-02-14 08:39+0000\n"
+"Last-Translator: Gil Forcada <gforcada@gnome.org>\n"
+"Language-Team: Catalan (http://www.transifex.net/projects/p/freedesktop/language/ca/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -18,44 +20,42 @@ msgstr ""
 
 #: ../data/org.freedesktop.accounts.policy.in.h:1
 msgid "Authentication is required to change the login screen configuration"
-msgstr ""
+msgstr "Cal autenticació per canviar la configuració de la pantalla d'entrada"
 
 #: ../data/org.freedesktop.accounts.policy.in.h:2
 msgid "Authentication is required to change user data"
-msgstr ""
+msgstr "Cal autenticació per canviar les dades d'usuari"
 
 #: ../data/org.freedesktop.accounts.policy.in.h:3
 msgid "Authentication is required to change your own user data"
-msgstr ""
+msgstr "Cal autenticació per canviar les dades d'usuari pròpies"
 
 #: ../data/org.freedesktop.accounts.policy.in.h:4
 msgid "Change the login screen configuration"
-msgstr ""
+msgstr "Canvieu la configuració de la pantalla d'entrada"
 
 #: ../data/org.freedesktop.accounts.policy.in.h:5
 msgid "Change your own user data"
-msgstr ""
+msgstr "Canvieu les dades d'usuari pròpies"
 
 #: ../data/org.freedesktop.accounts.policy.in.h:6
 msgid "Manage user accounts"
-msgstr ""
+msgstr "Gestioneu els comptes d'usuari"
 
 #: ../src/main.c:141
 msgid "Output version information and exit"
-msgstr ""
+msgstr "Mostra la informació sobre la versió i surt"
 
 #: ../src/main.c:142
 msgid "Replace existing instance"
-msgstr ""
+msgstr "Reemplaça una instància existent"
 
 #: ../src/main.c:143
 msgid "Enable debugging code"
-msgstr ""
+msgstr "Habilita el codi de depuració"
 
 #: ../src/main.c:163
 msgid ""
 "Provides D-Bus interfaces for querying and manipulating\n"
 "user account information."
-msgstr ""
-
-
+msgstr "Ofereix interfícies de D-Bus per realitzar consultes i manipular\nla informació del compte de l'usuari."

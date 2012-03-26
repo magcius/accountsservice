@@ -2,15 +2,16 @@
 # Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
 # This file is distributed under the same license as the PACKAGE package.
 # 
+# Translators:
 # A S Alam <apreet.alam@gmail.com>, 2011.
 msgid ""
 msgstr ""
 "Project-Id-Version: accounts service\n"
 "Report-Msgid-Bugs-To: http://bugs.freedesktop.org/\n"
 "POT-Creation-Date: 2011-03-17 14:45-0400\n"
-"PO-Revision-Date: 2011-03-27 04:59+0000\n"
-"Last-Translator: aalam <apreet.alam@gmail.com>\n"
-"Language-Team: Panjabi (Punjabi) (http://www.transifex.net/projects/p/freedesktop/team/pa/)\n"
+"PO-Revision-Date: 2012-02-14 08:39+0000\n"
+"Last-Translator: A S Alam <apreet.alam@gmail.com>\n"
+"Language-Team: Panjabi (Punjabi) (http://www.transifex.net/projects/p/freedesktop/language/pa/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -58,5 +59,3 @@ msgid ""
 "Provides D-Bus interfaces for querying and manipulating\n"
 "user account information."
 msgstr "ਯੂਜ਼ਰ ਅਕਾਊਂਟ ਜਾਣਕਾਰੀ ਲੈਣ ਅਤੇ ਬਦਲਣ ਲਈ ਡੀ-ਬੱਸ ਇੰਟਰਫੇਸ ਦਿੰਦਾ ਹੈ"
-
-

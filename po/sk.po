@@ -2,15 +2,16 @@
 # Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
 # This file is distributed under the same license as the PACKAGE package.
 # 
+# Translators:
 # Pavol Šimo <palo.simo@gmail.com>, 2011.
 msgid ""
 msgstr ""
 "Project-Id-Version: accounts service\n"
 "Report-Msgid-Bugs-To: http://bugs.freedesktop.org/\n"
 "POT-Creation-Date: 2011-03-17 14:45-0400\n"
-"PO-Revision-Date: 2011-04-26 10:08+0000\n"
-"Last-Translator: palos <palo.simo@gmail.com>\n"
-"Language-Team: Slovak (http://www.transifex.net/projects/p/freedesktop/team/sk/)\n"
+"PO-Revision-Date: 2012-02-14 08:39+0000\n"
+"Last-Translator: Pavol Šimo <palo.simo@gmail.com>\n"
+"Language-Team: Slovak (http://www.transifex.net/projects/p/freedesktop/language/sk/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -19,8 +20,7 @@ msgstr ""
 
 #: ../data/org.freedesktop.accounts.policy.in.h:1
 msgid "Authentication is required to change the login screen configuration"
-msgstr ""
-"Na zmenu nastavení prihlasovacej obrazovky je potrebné overenie totožnosti"
+msgstr "Na zmenu nastavení prihlasovacej obrazovky je potrebné overenie totožnosti"
 
 #: ../data/org.freedesktop.accounts.policy.in.h:2
 msgid "Authentication is required to change user data"
@@ -28,8 +28,7 @@ msgstr "Na zmenu používateľských údajov je potrebné overenie totožnosti"
 
 #: ../data/org.freedesktop.accounts.policy.in.h:3
 msgid "Authentication is required to change your own user data"
-msgstr ""
-"Na zmenu vlastných používateľských údajov je potrebné overenie totožnosti"
+msgstr "Na zmenu vlastných používateľských údajov je potrebné overenie totožnosti"
 
 #: ../data/org.freedesktop.accounts.policy.in.h:4
 msgid "Change the login screen configuration"
@@ -59,8 +58,4 @@ msgstr "Povoliť ladiaci kód"
 msgid ""
 "Provides D-Bus interfaces for querying and manipulating\n"
 "user account information."
-msgstr ""
-"Poskytuje rozhrania systému D-Bus na dotazovanie\n"
-"a manipulovanie s používateľskými účtami."
-
-
+msgstr "Poskytuje rozhrania systému D-Bus na dotazovanie\na manipulovanie s používateľskými účtami."

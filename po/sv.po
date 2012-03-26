@@ -2,15 +2,16 @@
 # Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
 # This file is distributed under the same license as the PACKAGE package.
 # 
+# Translators:
 # Daniel Nylander <po@danielnylander.se>, 2011.
 msgid ""
 msgstr ""
 "Project-Id-Version: accounts service\n"
 "Report-Msgid-Bugs-To: http://bugs.freedesktop.org/\n"
 "POT-Creation-Date: 2011-03-17 14:45-0400\n"
-"PO-Revision-Date: 2011-07-17 06:34+0000\n"
-"Last-Translator: yeager <po@danielnylander.se>\n"
-"Language-Team: Swedish (http://www.transifex.net/projects/p/freedesktop/team/sv/)\n"
+"PO-Revision-Date: 2012-02-14 08:39+0000\n"
+"Last-Translator: Daniel Nylander <po@danielnylander.se>\n"
+"Language-Team: Swedish (http://www.transifex.net/projects/p/freedesktop/language/sv/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -19,8 +20,7 @@ msgstr ""
 
 #: ../data/org.freedesktop.accounts.policy.in.h:1
 msgid "Authentication is required to change the login screen configuration"
-msgstr ""
-"Autentisering krävs för att ändra konfigurationen för inloggningsskärmen"
+msgstr "Autentisering krävs för att ändra konfigurationen för inloggningsskärmen"
 
 #: ../data/org.freedesktop.accounts.policy.in.h:2
 msgid "Authentication is required to change user data"
@@ -58,8 +58,4 @@ msgstr "Aktivera felsökningskod"
 msgid ""
 "Provides D-Bus interfaces for querying and manipulating\n"
 "user account information."
-msgstr ""
-"Tillhandahåller D-Bus-gränssnitt för frågor och ändra information för "
-"användarkonton."
-
-
+msgstr "Tillhandahåller D-Bus-gränssnitt för frågor och ändra information för användarkonton."

@@ -2,13 +2,14 @@
 # Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
 # This file is distributed under the same license as the PACKAGE package.
 # 
+# Translators:
 # kelemeng <kelemeng@gnome.hu>, 2011.
 msgid ""
 msgstr ""
 "Project-Id-Version: accounts service\n"
 "Report-Msgid-Bugs-To: http://bugs.freedesktop.org/\n"
 "POT-Creation-Date: 2011-03-17 14:45-0400\n"
-"PO-Revision-Date: 2011-04-11 13:11+0000\n"
+"PO-Revision-Date: 2012-02-14 08:39+0000\n"
 "Last-Translator: kelemeng <kelemeng@gnome.hu>\n"
 "Language-Team: Hungarian <openscope@googlegroups.com>\n"
 "MIME-Version: 1.0\n"
@@ -19,8 +20,7 @@ msgstr ""
 
 #: ../data/org.freedesktop.accounts.policy.in.h:1
 msgid "Authentication is required to change the login screen configuration"
-msgstr ""
-"Hitelesítés szükséges a bejelentkező képernyő beállításainak módosításához"
+msgstr "Hitelesítés szükséges a bejelentkező képernyő beállításainak módosításához"
 
 #: ../data/org.freedesktop.accounts.policy.in.h:2
 msgid "Authentication is required to change user data"
@@ -58,8 +58,4 @@ msgstr "Hibakereső kód engedélyezése"
 msgid ""
 "Provides D-Bus interfaces for querying and manipulating\n"
 "user account information."
-msgstr ""
-"D-Bus felületeket biztosít felhasználói fiókok információinak\\n "
-"lekérdezéséhez és kezeléséhez."
-
-
+msgstr "D-Bus felületeket biztosít felhasználói fiókok információinak\\n lekérdezéséhez és kezeléséhez."

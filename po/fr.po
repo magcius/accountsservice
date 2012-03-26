@@ -2,13 +2,14 @@
 # Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
 # This file is distributed under the same license as the PACKAGE package.
 # 
+# Translators:
 # claudep <claude@2xlibre.net>, 2011.
 msgid ""
 msgstr ""
 "Project-Id-Version: accounts service\n"
 "Report-Msgid-Bugs-To: http://bugs.freedesktop.org/\n"
 "POT-Creation-Date: 2011-03-17 14:45-0400\n"
-"PO-Revision-Date: 2011-03-22 15:12+0000\n"
+"PO-Revision-Date: 2012-02-14 08:39+0000\n"
 "Last-Translator: claudep <claude@2xlibre.net>\n"
 "Language-Team: French <traduc@traduc.org>\n"
 "MIME-Version: 1.0\n"
@@ -19,19 +20,15 @@ msgstr ""
 
 #: ../data/org.freedesktop.accounts.policy.in.h:1
 msgid "Authentication is required to change the login screen configuration"
-msgstr ""
-"Il est nécessaire de s'authentifier pour modifier la configuration de "
-"l'écran de connexion"
+msgstr "Il est nécessaire de s'authentifier pour modifier la configuration de l'écran de connexion"
 
 #: ../data/org.freedesktop.accounts.policy.in.h:2
 msgid "Authentication is required to change user data"
-msgstr ""
-"Il est nécessaire de s'authentifier pour modifier des données utilisateur"
+msgstr "Il est nécessaire de s'authentifier pour modifier des données utilisateur"
 
 #: ../data/org.freedesktop.accounts.policy.in.h:3
 msgid "Authentication is required to change your own user data"
-msgstr ""
-"Vous devez vous authentifier pour modifier vos propres données utilisateur"
+msgstr "Vous devez vous authentifier pour modifier vos propres données utilisateur"
 
 #: ../data/org.freedesktop.accounts.policy.in.h:4
 msgid "Change the login screen configuration"
@@ -61,8 +58,4 @@ msgstr "Active le code de débogage"
 msgid ""
 "Provides D-Bus interfaces for querying and manipulating\n"
 "user account information."
-msgstr ""
-"Fournit des interfaces D-Bus pour interroger et manipuler\n"
-"des informations sur les comptes des utilisateurs."
-
-
+msgstr "Fournit des interfaces D-Bus pour interroger et manipuler\ndes informations sur les comptes des utilisateurs."
