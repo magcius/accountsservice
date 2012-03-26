@@ -1,3 +1,22 @@
+Changes in 0.6.16
+=================
+
+* Don't filter out users below UID_MIN in login.defs
+
+* Filter out users with invalid shells
+
+* build fixes for srcdir != builddir
+
+* Port to GDBus
+
+* Add systemd support
+
+* vala support and introspection fixes
+
+* ppc32 fixes
+
+* use infinite timeout for ListCachedUsers calls
+
 Changes in 0.6.15
 =================
 
