@@ -151,6 +151,8 @@ accountsservice_vapi_FILES = AccountsService-1.0.gir
 vapidir = $(VAPIGEN_VAPIDIR)
 vapi_DATA = $(VAPIGEN_VAPIS) $(VAPIGEN_VAPIS:.vapi=.deps)
 
-EXTRA_DIST += accountsservice.deps
+EXTRA_DIST += accountsservice.deps accountsservice.vapi
+CLEANFILES += accountsservice.vapi
+
 
 endif
