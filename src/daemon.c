@@ -170,7 +170,7 @@ daemon_local_user_is_excluded (Daemon *daemon, const gchar *username, const gcha
 
         if (g_strcmp0 (basename, nologin_basename) == 0) {
                 ret = TRUE;
-        } else if (g_strcmp0 (basename, false_basename)) {
+        } else if (g_strcmp0 (basename, false_basename) == 0) {
                 ret = TRUE;
         } else if (g_hash_table_lookup (daemon->priv->exclusions, username)) {
                 ret = TRUE;
