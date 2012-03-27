@@ -1,3 +1,10 @@
+Changes in 0.6.17
+=================
+
+* Fix user filtering which was broken in 0.6.16
+
+* Fix double free in user code
+
 Changes in 0.6.16
 =================
 
