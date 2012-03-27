@@ -459,7 +459,6 @@ act_user_finalize (GObject *object)
         g_free (user->shell);
         g_free (user->email);
         g_free (user->location);
-        g_free (user->language);
 
         if (user->accounts_proxy != NULL) {
                 g_object_unref (user->accounts_proxy);
