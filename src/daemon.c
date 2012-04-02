@@ -75,6 +75,10 @@ static const char *default_excludes[] = {
         "rpm",
         "nfsnobody",
         "pcap",
+        "mysql",
+        "ftp",
+        "games",
+        "man",
         NULL
 };
 
