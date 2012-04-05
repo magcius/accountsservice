@@ -2118,6 +2118,7 @@ load_seat_incrementally (ActUserManager *manager)
                 get_seat_proxy (manager);
                 break;
         case ACT_USER_MANAGER_SEAT_STATE_LOADED:
+                g_debug ("ActUserManager: Seat loading sequence complete");
                 break;
         default:
                 g_assert_not_reached ();
@@ -2127,7 +2128,6 @@ load_seat_incrementally (ActUserManager *manager)
                 load_sessions (manager);
         }
 
-        g_debug ("ActUserManager: Seat loading sequence complete, so trying to set loaded property");
         maybe_set_is_loaded (manager);
 
         return FALSE;
