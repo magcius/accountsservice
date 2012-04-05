@@ -1594,11 +1594,13 @@ reload_systemd_sessions (ActUserManager *manager)
         _remove_stale_systemd_sessions (manager, systemd_sessions);
         g_hash_table_unref (systemd_sessions);
 
-        for (i = 0; sessions[i]; i ++) {
-                free (sessions[i]);
-        }
+        if (sessions != NULL) {
+                for (i = 0; sessions[i]; i ++) {
+                        free (sessions[i]);
+                }
 
-        free (sessions);
+                free (sessions);
+        }
 }
 
 #endif
