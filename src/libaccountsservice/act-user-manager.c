@@ -1264,6 +1264,7 @@ _get_x11_display_for_new_systemd_session (ActUserManagerNewSession *new_session)
                          strerror (-res));
                 free (session_type);
                 unload_new_session (new_session);
+                return;
         }
         free (session_type);
 
