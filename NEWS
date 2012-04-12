@@ -1,3 +1,12 @@
+Changes in 0.6.18
+=================
+
+* Fix systemd configure check
+
+* Add a few more common system accounts to the blacklist
+
+* Fix some issues in systemd session handling
+
 Changes in 0.6.17
 =================
 
