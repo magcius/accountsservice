@@ -163,8 +163,8 @@ daemon_local_user_is_excluded (Daemon *daemon, const gchar *username, const gcha
         char *basename, *nologin_basename, *false_basename;
         int ret;
 
-        if (shell == NULL) {
-                return FALSE;
+        if (shell == NULL || shell[0] == '\0') {
+                return TRUE;
         }
 
         ret = FALSE;
