@@ -79,6 +79,7 @@ static const char *default_excludes[] = {
         "ftp",
         "games",
         "man",
+        "at",
         NULL
 };
 
