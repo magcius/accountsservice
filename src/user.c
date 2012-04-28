@@ -772,7 +772,7 @@ user_change_x_session_authorized_cb (Daemon                *daemon,
 
                 accounts_user_emit_changed (ACCOUNTS_USER (user));
 
-                g_object_notify (G_OBJECT (user), "x-session");
+                g_object_notify (G_OBJECT (user), "xsession");
         }
 
         accounts_user_complete_set_xsession (ACCOUNTS_USER (user), context);
