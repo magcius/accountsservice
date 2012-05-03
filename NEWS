@@ -1,3 +1,14 @@
+Changes in 0.6.19
+=================
+
+* Fix spurious warnings in logs
+
+* Make userdel succeed even if user is already logged in
+
+* Exclude users with no shell
+
+* Exclude "at" user
+
 Changes in 0.6.18
 =================
 
