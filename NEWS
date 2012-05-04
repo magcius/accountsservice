@@ -1,3 +1,8 @@
+Changes in 0.6.20
+=================
+
+* Fix user listing which broke in previous release
+
 Changes in 0.6.19
 =================
 
