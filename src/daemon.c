@@ -161,29 +161,33 @@ error_get_type (void)
 gboolean
 daemon_local_user_is_excluded (Daemon *daemon, const gchar *username, const gchar *shell)
 {
-        char *basename, *nologin_basename, *false_basename;
         int ret;
 
-        if (shell != NULL && shell[0] == '\0') {
+        if (g_hash_table_lookup (daemon->priv->exclusions, username)) {
                 return TRUE;
         }
 
         ret = FALSE;
-        basename = g_path_get_basename (shell);
-        nologin_basename = g_path_get_basename (PATH_NOLOGIN);
-        false_basename = g_path_get_basename (PATH_FALSE);
 
-        if (g_strcmp0 (basename, nologin_basename) == 0) {
-                ret = TRUE;
-        } else if (g_strcmp0 (basename, false_basename) == 0) {
-                ret = TRUE;
-        } else if (g_hash_table_lookup (daemon->priv->exclusions, username)) {
-                ret = TRUE;
+        if (shell != NULL) {
+                char *basename, *nologin_basename, *false_basename;
+
+                basename = g_path_get_basename (shell);
+                nologin_basename = g_path_get_basename (PATH_NOLOGIN);
+                false_basename = g_path_get_basename (PATH_FALSE);
+
+                if (shell[0] == '\0') {
+                        ret = TRUE;
+                } else if (g_strcmp0 (basename, nologin_basename) == 0) {
+                        ret = TRUE;
+                } else if (g_strcmp0 (basename, false_basename) == 0) {
+                        ret = TRUE;
+                }
+
+                g_free (basename);
+                g_free (nologin_basename);
+                g_free (false_basename);
         }
-
-        g_free (basename);
-        g_free (nologin_basename);
-        g_free (false_basename);
 
         return ret;
 }
