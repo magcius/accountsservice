@@ -30,7 +30,6 @@
 #include <pwd.h>
 #include <unistd.h>
 #include <errno.h>
-#include <unistd.h>
 #include <sys/types.h>
 #ifdef HAVE_UTMPX_H
 #include <utmpx.h>
@@ -171,6 +170,19 @@ daemon_local_user_is_excluded (Daemon *daemon, const gchar *username, const gcha
 
         if (shell != NULL) {
                 char *basename, *nologin_basename, *false_basename;
+
+#ifdef HAVE_GETUSERSHELL
+                char *valid_shell;
+
+                ret = TRUE;
+                setusershell ();
+                while ((valid_shell = getusershell ()) != NULL) {
+                        if (g_strcmp0 (shell, valid_shell) != 0)
+                                continue;
+                        ret = FALSE;
+                }
+                endusershell ();
+#endif
 
                 basename = g_path_get_basename (shell);
                 nologin_basename = g_path_get_basename (PATH_NOLOGIN);
@@ -839,13 +851,15 @@ finish_list_cached_users (gpointer user_data)
         const gchar *name;
         User *user;
         uid_t uid;
+        const gchar *shell;
 
         object_paths = g_ptr_array_new ();
 
         g_hash_table_iter_init (&iter, data->daemon->priv->users);
         while (g_hash_table_iter_next (&iter, (gpointer *)&name, (gpointer *)&user)) {
                 uid = user_local_get_uid (user);
-                if (!daemon_local_user_is_excluded (data->daemon, name, NULL)) {
+                shell = user_local_get_shell (user);
+                if (!daemon_local_user_is_excluded (data->daemon, name, shell)) {
                         g_debug ("user %s %ld not excluded\n", name, (long) uid);
                         g_ptr_array_add (object_paths, (gpointer) user_local_get_object_path (user));
                 }

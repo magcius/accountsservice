@@ -483,6 +483,12 @@ user_local_get_uid (User *user)
         return user->uid;
 }
 
+const gchar *
+user_local_get_shell(User *user)
+{
+	return user->shell;
+}
+
 static void
 throw_error (GDBusMethodInvocation *context,
              gint                   error_code,

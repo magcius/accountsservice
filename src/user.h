@@ -65,6 +65,7 @@ const gchar *user_local_get_user_name       (User          *user);
 const gchar *user_local_get_user_name       (User          *user);
 const gchar *user_local_get_object_path     (User          *user);
 uid_t        user_local_get_uid             (User          *user);
+const gchar *user_local_get_shell           (User          *user);
 
 G_END_DECLS
 
