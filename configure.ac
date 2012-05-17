@@ -161,8 +161,36 @@ AC_PATH_PROG([XSLTPROC], [xsltproc])
 
 # systemd
 
-PKG_CHECK_MODULES(SYSTEMD, [libsystemd-login libsystemd-daemon],
-                  [have_systemd=yes], [have_systemd=no])
+AC_ARG_ENABLE([systemd],
+              AS_HELP_STRING([--enable-systemd], [Use systemd]),
+              [enable_systemd=$enableval],
+              [enable_systemd=auto])
+
+if test x$enable_systemd != xno; then
+   PKG_CHECK_MODULES(SYSTEMD, [libsystemd-login libsystemd-daemon],
+			                     [have_systemd=yes], [have_systemd=no])
+else
+   have_systemd=no
+fi
+
+AC_MSG_CHECKING([whether to use systemd])
+
+if test x$enable_systemd = xauto ; then
+        if test x$have_systemd = xno ; then
+                enable_systemd=no
+        else
+                enable_systemd=yes
+        fi
+fi
+
+AC_MSG_RESULT($enable_systemd)
+
+if test x$enable_systemd = xyes; then
+        if test x$have_systemd = xno; then
+                AC_MSG_ERROR([Systemd support explicitly required, but systemd not found])
+        fi
+        AC_DEFINE(HAVE_SYSTEMD, 1, [Define if systemd is used])
+fi
 AC_SUBST(SYSTEMD_CFLAGS)
 AC_SUBST(SYSTEMD_LIBS)
 
