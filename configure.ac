@@ -167,7 +167,7 @@ AC_ARG_ENABLE([systemd],
               [enable_systemd=auto])
 
 if test x$enable_systemd != xno; then
-   PKG_CHECK_MODULES(SYSTEMD, [libsystemd-login libsystemd-daemon],
+   PKG_CHECK_MODULES(SYSTEMD > 43, [libsystemd-login libsystemd-daemon],
 			                     [have_systemd=yes], [have_systemd=no])
 else
    have_systemd=no
