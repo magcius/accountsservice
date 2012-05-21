@@ -104,6 +104,7 @@ typedef struct
         ActUserManagerNewSessionState    state;
         char                            *id;
         ConsoleKitSession               *proxy;
+        GCancellable                    *cancellable;
         uid_t                            uid;
         char                            *x11_display;
 } ActUserManagerNewSession;
@@ -985,6 +986,13 @@ unload_new_session (ActUserManagerNewSession *new_session)
 
         manager = new_session->manager;
 
+        if (new_session->cancellable != NULL &&
+            !g_cancellable_is_cancelled (new_session->cancellable)) {
+                g_cancellable_cancel (new_session->cancellable);
+                g_object_unref (new_session->cancellable);
+                new_session->cancellable = NULL;
+        }
+
         manager->priv->new_sessions = g_slist_remove (manager->priv->new_sessions,
                                                       new_session);
 
@@ -1039,6 +1047,10 @@ on_get_unix_user_finished (GObject      *object,
         ActUserManagerNewSession *new_session = data;
         GError            *error = NULL;
         guint              uid;
+
+        if (new_session->cancellable == NULL || g_cancellable_is_cancelled (new_session->cancellable)) {
+                return;
+        }
 
         if (!console_kit_session_call_get_unix_user_finish (proxy, &uid, result, &error)) {
                 if (error != NULL) {
@@ -1099,7 +1111,7 @@ get_uid_for_new_session (ActUserManagerNewSession *new_session)
         g_assert (new_session->proxy != NULL);
 
         console_kit_session_call_get_unix_user (new_session->proxy,
-                                                NULL,
+                                                new_session->cancellable,
                                                 on_get_unix_user_finished,
                                                 new_session);
 }
@@ -1239,6 +1251,10 @@ on_get_x11_display_finished (GObject      *object,
         GError            *error = NULL;
         char              *x11_display;
 
+        if (new_session->cancellable == NULL || g_cancellable_is_cancelled (new_session->cancellable)) {
+                return;
+        }
+
         if (!console_kit_session_call_get_x11_display_finish (proxy, &x11_display, result, &error)) {
                 if (error != NULL) {
                         g_debug ("Failed to get the x11 display of session '%s': %s",
@@ -1326,7 +1342,7 @@ get_x11_display_for_new_session (ActUserManagerNewSession *new_session)
         g_assert (new_session->proxy != NULL);
 
         console_kit_session_call_get_x11_display (new_session->proxy,
-                                                  NULL,
+                                                  new_session->cancellable,
                                                   on_get_x11_display_finished,
                                                   new_session);
 }
@@ -1415,6 +1431,7 @@ load_new_session (ActUserManager *manager,
         new_session->manager = g_object_ref (manager);
         new_session->id = g_strdup (session_id);
         new_session->state = ACT_USER_MANAGER_NEW_SESSION_STATE_UNLOADED + 1;
+        new_session->cancellable = g_cancellable_new ();
 
         manager->priv->new_sessions = g_slist_prepend (manager->priv->new_sessions,
                                                        new_session);
