@@ -126,7 +126,8 @@ typedef struct
 
 struct ActUserManagerPrivate
 {
-        GHashTable            *users_by_name;
+        GHashTable            *normal_users_by_name;
+        GHashTable            *system_users_by_name;
         GHashTable            *users_by_object_path;
         GHashTable            *sessions;
         GDBusConnection       *connection;
@@ -686,9 +687,15 @@ add_user (ActUserManager *manager,
         const char *object_path;
 
         g_debug ("ActUserManager: tracking user '%s'", act_user_get_user_name (user));
-        g_hash_table_insert (manager->priv->users_by_name,
-                             g_strdup (act_user_get_user_name (user)),
-                             g_object_ref (user));
+        if (act_user_is_system_account (user)) {
+                g_hash_table_insert (manager->priv->system_users_by_name,
+                                     g_strdup (act_user_get_user_name (user)),
+                                     g_object_ref (user));
+        } else {
+                g_hash_table_insert (manager->priv->normal_users_by_name,
+                                     g_strdup (act_user_get_user_name (user)),
+                                     g_object_ref (user));
+        }
 
         object_path = act_user_get_object_path (user);
         if (object_path != NULL) {
@@ -713,7 +720,7 @@ add_user (ActUserManager *manager,
                 g_debug ("ActUserManager: not yet loaded, so not emitting user-added signal");
         }
 
-        if (g_hash_table_size (manager->priv->users_by_name) > 1) {
+        if (g_hash_table_size (manager->priv->normal_users_by_name) > 1) {
                 set_has_multiple_users (manager, TRUE);
         }
 }
@@ -734,7 +741,8 @@ remove_user (ActUserManager *manager,
                 g_hash_table_remove (manager->priv->users_by_object_path, act_user_get_object_path (user));
         }
         if (act_user_get_user_name (user) != NULL) {
-                g_hash_table_remove (manager->priv->users_by_name, act_user_get_user_name (user));
+                g_hash_table_remove (manager->priv->normal_users_by_name, act_user_get_user_name (user));
+                g_hash_table_remove (manager->priv->system_users_by_name, act_user_get_user_name (user));
 
         }
 
@@ -747,9 +755,24 @@ remove_user (ActUserManager *manager,
 
         g_object_unref (user);
 
-        if (g_hash_table_size (manager->priv->users_by_name) > 1) {
+        if (g_hash_table_size (manager->priv->normal_users_by_name) > 1) {
                 set_has_multiple_users (manager, FALSE);
         }
+}
+
+static ActUser *
+lookup_user_by_name (ActUserManager *manager,
+                     const char     *username)
+{
+        ActUser *user;
+
+        user = g_hash_table_lookup (manager->priv->normal_users_by_name, username);
+
+        if (user == NULL) {
+                user = g_hash_table_lookup (manager->priv->system_users_by_name, username);
+        }
+
+        return user;
 }
 
 static void
@@ -799,7 +822,7 @@ on_new_user_loaded (ActUser        *user,
                 goto out;
         }
 
-        old_user = g_hash_table_lookup (manager->priv->users_by_name, username);
+        old_user = lookup_user_by_name (manager, username);
 
         /* If username got added earlier by a different means, trump it now.
          */
@@ -1464,7 +1487,8 @@ _remove_session (ActUserManager *manager,
                 return;
         }
 
-        user = g_hash_table_lookup (manager->priv->users_by_name, username);
+        user = lookup_user_by_name (manager, username);
+
         if (user == NULL) {
                 /* nothing to do */
                 return;
@@ -1943,7 +1967,7 @@ act_user_manager_get_user (ActUserManager *manager,
         g_return_val_if_fail (ACT_IS_USER_MANAGER (manager), NULL);
         g_return_val_if_fail (username != NULL && username[0] != '\0', NULL);
 
-        user = g_hash_table_lookup (manager->priv->users_by_name, username);
+        user = lookup_user_by_name (manager, username);
 
         /* if we don't have it loaded try to load it now */
         if (user == NULL) {
@@ -1984,7 +2008,7 @@ act_user_manager_list_users (ActUserManager *manager)
         g_return_val_if_fail (ACT_IS_USER_MANAGER (manager), NULL);
 
         retval = NULL;
-        g_hash_table_foreach (manager->priv->users_by_name, listify_hash_values_hfunc, &retval);
+        g_hash_table_foreach (manager->priv->normal_users_by_name, listify_hash_values_hfunc, &retval);
 
         return g_slist_sort (retval, (GCompareFunc) act_user_collate);
 }
@@ -2356,11 +2380,14 @@ act_user_manager_init (ActUserManager *manager)
                                                          g_free);
 
         /* users */
-        manager->priv->users_by_name = g_hash_table_new_full (g_str_hash,
-                                                              g_str_equal,
-                                                              g_free,
-                                                              g_object_unref);
-
+        manager->priv->normal_users_by_name = g_hash_table_new_full (g_str_hash,
+                                                                     g_str_equal,
+                                                                     g_free,
+                                                                     g_object_unref);
+        manager->priv->system_users_by_name = g_hash_table_new_full (g_str_hash,
+                                                                     g_str_equal,
+                                                                     g_free,
+                                                                     g_object_unref);
         manager->priv->users_by_object_path = g_hash_table_new_full (g_str_hash,
                                                                      g_str_equal,
                                                                      NULL,
@@ -2505,7 +2532,8 @@ act_user_manager_finalize (GObject *object)
 
         g_hash_table_destroy (manager->priv->sessions);
 
-        g_hash_table_destroy (manager->priv->users_by_name);
+        g_hash_table_destroy (manager->priv->normal_users_by_name);
+        g_hash_table_destroy (manager->priv->system_users_by_name);
         g_hash_table_destroy (manager->priv->users_by_object_path);
 
         G_OBJECT_CLASS (act_user_manager_parent_class)->finalize (object);
