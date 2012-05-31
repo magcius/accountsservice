@@ -62,7 +62,7 @@ void         user_local_register            (User          *user);
 void         user_local_unregister          (User          *user);
 
 const gchar *user_local_get_user_name       (User          *user);
-const gchar *user_local_get_user_name       (User          *user);
+gboolean     user_local_get_system_account  (User          *user);
 const gchar *user_local_get_object_path     (User          *user);
 uid_t        user_local_get_uid             (User          *user);
 const gchar *user_local_get_shell           (User          *user);

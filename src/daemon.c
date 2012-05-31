@@ -858,7 +858,7 @@ finish_list_cached_users (gpointer user_data)
                 uid = user_local_get_uid (user);
                 shell = user_local_get_shell (user);
 
-                if (user_get_system_account (user)) {
+                if (user_local_get_system_account (user)) {
                         g_debug ("user %s %ld is system account, so excluded\n", name, (long) uid);
                         continue;
                 }

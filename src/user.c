@@ -469,6 +469,12 @@ user_local_get_user_name (User *user)
         return user->user_name;
 }
 
+gboolean
+user_local_get_system_account (User *user)
+{
+        return user->system_account;
+}
+
 const gchar *
 user_local_get_object_path (User *user)
 {
