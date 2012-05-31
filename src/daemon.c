@@ -1057,7 +1057,10 @@ daemon_delete_user_authorized_cb (Daemon                *daemon,
 
         filename = g_build_filename (USERDIR, pwent->pw_name, NULL);
         g_remove (filename);
+        g_free (filename);
 
+        filename = g_build_filename (ICONDIR, pwent->pw_name, NULL);
+        g_remove (filename);
         g_free (filename);
 
         accounts_accounts_complete_delete_user (NULL, context);
