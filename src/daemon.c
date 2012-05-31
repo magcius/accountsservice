@@ -859,10 +859,19 @@ finish_list_cached_users (gpointer user_data)
         while (g_hash_table_iter_next (&iter, (gpointer *)&name, (gpointer *)&user)) {
                 uid = user_local_get_uid (user);
                 shell = user_local_get_shell (user);
-                if (!daemon_local_user_is_excluded (data->daemon, name, shell)) {
-                        g_debug ("user %s %ld not excluded\n", name, (long) uid);
-                        g_ptr_array_add (object_paths, (gpointer) user_local_get_object_path (user));
+
+                if (user_get_system_account (user)) {
+                        g_debug ("user %s %ld is system account, so excluded\n", name, (long) uid);
+                        continue;
                 }
+
+                if (daemon_local_user_is_excluded (data->daemon, name, shell)) {
+                        g_debug ("user %s %ld excluded\n", name, (long) uid);
+                        continue;
+                }
+
+                g_debug ("user %s %ld not excluded\n", name, (long) uid);
+                g_ptr_array_add (object_paths, (gpointer) user_local_get_object_path (user));
         }
         g_ptr_array_add (object_paths, NULL);
 
