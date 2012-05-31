@@ -46,8 +46,6 @@
 #include "accounts-user-generated.h"
 #include "util.h"
 
-#define ICONDIR LOCALSTATEDIR "/lib/AccountsService/icons"
-
 enum {
         PROP_0,
         PROP_UID,

@@ -51,8 +51,6 @@
 #define PATH_FALSE "/bin/false"
 #define PATH_GDM_CUSTOM "/etc/gdm/custom.conf"
 
-#define USERDIR LOCALSTATEDIR "/lib/AccountsService/users"
-
 static const char *default_excludes[] = {
         "bin",
         "root",

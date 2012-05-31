@@ -2,6 +2,8 @@ SUBDIRS = . libaccountsservice
 INCLUDES = 			\
 	-DLOCALSTATEDIR=\""$(localstatedir)"\" \
 	-DDATADIR=\""$(datadir)"\" \
+	-DICONDIR=\"$(localstatedir)/lib/AccountsService/icons\" \
+	-DUSERDIR=\"$(localstatedir)/lib/AccountsService/users\" \
 	$(DBUS_GLIB_CFLAGS) 	\
 	$(GIO_CFLAGS)	 	\
 	$(GLIB_CFLAGS)		\
