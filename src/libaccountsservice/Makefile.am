@@ -91,11 +91,15 @@ libaccountsservice_la_LIBADD =                                                \
         -lcrypt                                                               \
         $(END_OF_LIST)
 
-libaccountsservice_la_SOURCES =                                               \
+libaccountsservice_la_sources =                                               \
         $(libaccountsservice_headers)                                         \
-        act-user-private.h                                                    \
         act-user.c                                                            \
         act-user-manager.c                                                    \
+        $(END_OF_LIST)
+
+libaccountsservice_la_SOURCES =                                               \
+        $(libaccountsservice_la_sources)                                      \
+        act-user-private.h                                                    \
         $(BUILT_SOURCES)                                                      \
         $(END_OF_LIST)
 
@@ -128,8 +132,7 @@ AccountsService_1_0_gir_SCANNERFLAGS =                                        \
 AccountsService_1_0_gir_INCLUDES = $(LIBACCOUNTSSERVICE_GIR_INCLUDES)
 AccountsService_1_0_gir_LIBS = libaccountsservice.la
 AccountsService_1_0_gir_FILES =                                               \
-        $(filter-out %-private.h, $(libaccountsservice_la_SOURCES))           \
-        $(BUILT_SOURCES)                                                      \
+        $(libaccountsservice_la_sources)                                      \
         $(END_OF_LIST)
 
 CLEANFILES += $(gir_DATA) $(typelibs_DATA)
