@@ -11,11 +11,11 @@ AC_DEFINE_UNQUOTED(GETTEXT_PACKAGE,"$GETTEXT_PACKAGE",
 # to make
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([no])])
 
+AC_USE_SYSTEM_EXTENSIONS
 AC_PROG_CC
 PKG_PROG_PKG_CONFIG
 AM_GLIB_GNU_GETTEXT
 IT_PROG_INTLTOOL([0.40.0])
-AC_USE_SYSTEM_EXTENSIONS
 
 LT_INIT
 LT_CURRENT=0
@@ -81,7 +81,9 @@ AC_DEFUN([ACCOUNTSSERVICE_CC_TRY_FLAG], [
   accountsservice_save_CFLAGS="$CFLAGS"
   CFLAGS="$CFLAGS $1"
 
-  AC_COMPILE_IFELSE([ ], [accountsservice_cc_flag=yes], [accountsservice_cc_flag=no])
+  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[]], [[]])],
+                    [accountsservice_cc_flag=yes],
+                    [accountsservice_cc_flag=no])
   CFLAGS="$accountsservice_save_CFLAGS"
 
   if test "x$accountsservice_cc_flag" = "xyes"; then
