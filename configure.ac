@@ -139,7 +139,6 @@ fi
 AC_SUBST(WARN_CFLAGS)
 
 AC_CHECK_HEADERS([shadow.h utmpx.h])
-AC_CHECK_FUNCS([fgetpwent])
 
 dnl ---------------------------------------------------------------------------
 dnl - DocBook Documentation

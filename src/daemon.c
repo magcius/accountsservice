@@ -300,32 +300,22 @@ reload_passwd (Daemon *daemon)
         GSList *old_users;
         GSList *new_users;
         GSList *list;
-#ifdef HAVE_FGETPWENT
         FILE *fp;
-#endif
         User *user = NULL;
 
         old_users = NULL;
         new_users = NULL;
 
-#ifdef HAVE_FGETPWENT
         errno = 0;
         fp = fopen (PATH_PASSWD, "r");
         if (fp == NULL) {
                 g_warning ("Unable to open %s: %s", PATH_PASSWD, g_strerror (errno));
                 goto out;
         }
-#else
-        setpwent();
-#endif
         g_hash_table_foreach (daemon->priv->users, listify_hash_values_hfunc, &old_users);
         g_slist_foreach (old_users, (GFunc) g_object_ref, NULL);
 
-#ifdef HAVE_FGETPWENT
         while ((pwent = fgetpwent (fp)) != NULL) {
-#else
-        while ((pwent = getpwent ()) != NULL) {
-#endif
                 /* Skip system users... */
                 if (daemon_local_user_is_excluded (daemon, pwent->pw_name, pwent->pw_shell)) {
                         g_debug ("skipping user: %s", pwent->pw_name);
@@ -375,12 +365,10 @@ reload_passwd (Daemon *daemon)
                 }
         }
 
-#ifdef HAVE_FGETPWENT
  out:
         /* Cleanup */
 
         fclose (fp);
-#endif
 
         g_slist_foreach (new_users, (GFunc) g_object_thaw_notify, NULL);
         g_slist_foreach (new_users, (GFunc) g_object_unref, NULL);
