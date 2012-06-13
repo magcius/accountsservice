@@ -1063,7 +1063,7 @@ on_get_all_finished (GObject        *object,
         GError      *error;
         GVariant    *res;
         GVariantIter *iter;
-        const gchar *key;
+        gchar       *key;
         GVariant    *value;
 
         g_assert (G_IS_DBUS_PROXY (user->object_proxy));
@@ -1089,6 +1089,8 @@ on_get_all_finished (GObject        *object,
         g_variant_get (res, "(a{sv})", &iter);
         while (g_variant_iter_next (iter, "{sv}", &key, &value)) {
                 collect_props (key, value, user);
+                g_free (key);
+                g_variant_unref (value);
         }
         g_variant_iter_free (iter);
         g_variant_unref (res);
