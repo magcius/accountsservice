@@ -2628,6 +2628,88 @@ act_user_manager_create_user (ActUserManager      *manager,
         return user;
 }
 
+/**
+ * act_user_manager_cache_user:
+ * @manager: a #ActUserManager
+ * @username: a user name
+ * @error: a #GError
+ *
+ * Caches a user account so it shows up via act_user_manager_list_users().
+ *
+ * Returns: (transfer full): user object
+ */
+ActUser *
+act_user_manager_cache_user (ActUserManager     *manager,
+                             const char         *username,
+                             GError            **error)
+{
+        GError *local_error = NULL;
+        gboolean res;
+        gchar *path;
+        ActUser *user;
+
+        g_debug ("ActUserManager: Caching user '%s'",
+                 username);
+
+        g_assert (manager->priv->accounts_proxy != NULL);
+
+        local_error = NULL;
+        res = accounts_accounts_call_cache_user_sync (manager->priv->accounts_proxy,
+                                                      username,
+                                                      &path,
+                                                      NULL,
+                                                      &local_error);
+        if (! res) {
+                g_propagate_error (error, local_error);
+                return NULL;
+        }
+
+        user = add_new_user_for_object_path (path, manager);
+
+        g_free (path);
+
+        return user;
+}
+
+/**
+ * act_user_manager_uncache_user:
+ * @manager: a #ActUserManager
+ * @username: a user name
+ * @error: a #GError
+ *
+ * Releases all metadata about a user account, including icon,
+ * language and session. If the user account is from a remote
+ * server and the user has never logged in before, then that
+ * account will no longer show up in ListCachedUsers() output.
+ *
+ * Returns: %TRUE if successful, otherwise %FALSE
+ */
+gboolean
+act_user_manager_uncache_user (ActUserManager     *manager,
+                               const char         *username,
+                               GError            **error)
+{
+        GError *local_error = NULL;
+        gboolean res;
+
+        g_debug ("ActUserManager: Uncaching user '%s'",
+                 username);
+
+        g_assert (manager->priv->accounts_proxy != NULL);
+
+        local_error = NULL;
+        res = accounts_accounts_call_uncache_user_sync (manager->priv->accounts_proxy,
+                                                        username,
+                                                        NULL,
+                                                        &local_error);
+        if (! res) {
+                g_propagate_error (error, local_error);
+                return FALSE;
+        }
+
+        return TRUE;
+}
+
 gboolean
 act_user_manager_delete_user (ActUserManager  *manager,
                               ActUser         *user,

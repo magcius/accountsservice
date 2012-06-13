@@ -88,6 +88,13 @@ ActUser *           act_user_manager_create_user           (ActUserManager     *
                                                             ActUserAccountType  accounttype,
                                                             GError             **error);
 
+ActUser *           act_user_manager_cache_user            (ActUserManager     *manager,
+                                                            const char         *username,
+                                                            GError            **error);
+gboolean            act_user_manager_uncache_user          (ActUserManager     *manager,
+                                                            const char         *username,
+                                                            GError            **error);
+
 gboolean            act_user_manager_delete_user           (ActUserManager     *manager,
                                                             ActUser            *user,
                                                             gboolean            remove_files,

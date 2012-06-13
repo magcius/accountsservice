@@ -112,6 +112,57 @@
       </doc:doc>
     </method>
 
+    <method name="CacheUser">
+      <annotation name="org.freedesktop.DBus.GLib.Async" value=""/>
+      <arg name="name" direction="in" type="s">
+        <doc:doc><doc:summary>The username for the user</doc:summary></doc:doc>
+      </arg>
+      <arg name="user" direction="out" type="o">
+        <doc:doc><doc:summary>Object path of user</doc:summary></doc:doc>
+      </arg>
+
+      <doc:doc>
+        <doc:description>
+          <doc:para>
+            Caches a user account, so that it shows up in ListCachedUsers() output.
+            The user name may be a remote user, but the system must be able to lookup
+            the user name and resolve the user information.
+          </doc:para>
+        </doc:description>
+        <doc:permission>
+          The caller needs the org.freedesktop.accounts.user-administration PolicyKit authorization.
+        </doc:permission>
+        <doc:errors>
+          <doc:error name="org.freedesktop.Accounts.Error.PermissionDenied">if the caller lacks the appropriate PolicyKit authorization</doc:error>
+          <doc:error name="org.freedesktop.Accounts.Error.UserDoesNotExist">if the user name cannot be resolved</doc:error>
+        </doc:errors>
+      </doc:doc>
+    </method>
+
+    <method name="UncacheUser">
+      <annotation name="org.freedesktop.DBus.GLib.Async" value=""/>
+      <arg name="name" direction="in" type="s">
+        <doc:doc><doc:summary>The username for the user</doc:summary></doc:doc>
+      </arg>
+
+      <doc:doc>
+        <doc:description>
+          <doc:para>
+            Releases all metadata about a user account, including icon, language and session. If the user account is
+            from a remote server and the user has never logged in before, then that account will no longer show up
+            in ListCachedUsers() output.
+          </doc:para>
+        </doc:description>
+        <doc:permission>
+          The caller needs the org.freedesktop.accounts.user-administration PolicyKit authorization.
+        </doc:permission>
+        <doc:errors>
+          <doc:error name="org.freedesktop.Accounts.Error.PermissionDenied">if the caller lacks the appropriate PolicyKit authorization</doc:error>
+          <doc:error name="org.freedesktop.Accounts.Error.UserDoesNotExist">if the user name cannot be resolved</doc:error>
+        </doc:errors>
+      </doc:doc>
+    </method>
+
     <method name="DeleteUser">
       <annotation name="org.freedesktop.DBus.GLib.Async" value=""/>
       <arg name="id" direction="in" type="x">

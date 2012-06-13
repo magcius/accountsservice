@@ -1070,6 +1070,129 @@ daemon_create_user (AccountsAccounts      *accounts,
         return TRUE;
 }
 
+static void
+daemon_cache_user_authorized_cb (Daemon                *daemon,
+                                 User                  *dummy,
+                                 GDBusMethodInvocation *context,
+                                 gpointer               data)
+{
+        const gchar *user_name = data;
+        GError      *error = NULL;
+        gchar       *filename;
+        gchar       *comment;
+        User        *user;
+
+        sys_log (context, "cache user '%s'", user_name);
+
+        user = daemon_local_find_user_by_name (daemon, user_name);
+        if (user == NULL) {
+                throw_error (context, ERROR_USER_DOES_NOT_EXIST,
+                             "No user with the name %s found", user_name);
+                return;
+        }
+
+        /* Always use the canonical user name looked up */
+        user_name = user_local_get_user_name (user);
+
+        filename = g_build_filename (USERDIR, user_name, NULL);
+        if (!g_file_test (filename, G_FILE_TEST_EXISTS)) {
+                comment = g_strdup_printf ("# Cached file for %s\n\n", user_name);
+                g_file_set_contents (filename, comment, -1, &error);
+                g_free (comment);
+
+                if (error != NULL) {
+                        g_warning ("Couldn't write user cache file: %s: %s",
+                                   filename, error->message);
+                        g_error_free (error);
+                }
+        }
+
+        g_free (filename);
+
+        accounts_accounts_complete_cache_user (NULL, context, user_local_get_object_path (user));
+}
+
+static gboolean
+daemon_cache_user (AccountsAccounts      *accounts,
+                   GDBusMethodInvocation *context,
+                   const gchar           *user_name)
+{
+        Daemon *daemon = (Daemon*)accounts;
+
+        /* Can't have a slash in the user name */
+        if (strchr (user_name, '/') != NULL) {
+                g_dbus_method_invocation_return_error (context, G_DBUS_ERROR,
+                                                       G_DBUS_ERROR_INVALID_ARGS,
+                                                       "Invalid user name: %s", user_name);
+                return TRUE;
+        }
+
+        daemon_local_check_auth (daemon,
+                                 NULL,
+                                 "org.freedesktop.accounts.user-administration",
+                                 TRUE,
+                                 daemon_cache_user_authorized_cb,
+                                 context,
+                                 g_strdup (user_name),
+                                 g_free);
+
+        return TRUE;
+}
+
+static void
+daemon_uncache_user_authorized_cb (Daemon                *daemon,
+                                   User                  *dummy,
+                                   GDBusMethodInvocation *context,
+                                   gpointer               data)
+{
+        const gchar *user_name = data;
+        gchar       *filename;
+        User        *user;
+
+        sys_log (context, "uncache user '%s'", user_name);
+
+        user = daemon_local_find_user_by_name (daemon, user_name);
+        if (user == NULL) {
+                throw_error (context, ERROR_USER_DOES_NOT_EXIST,
+                             "No user with the name %s found", user_name);
+                return;
+        }
+
+        /* Always use the canonical user name looked up */
+        user_name = user_local_get_user_name (user);
+
+        filename = g_build_filename (USERDIR, user_name, NULL);
+        g_remove (filename);
+        g_free (filename);
+
+        filename = g_build_filename (ICONDIR, user_name, NULL);
+        g_remove (filename);
+        g_free (filename);
+
+        accounts_accounts_complete_uncache_user (NULL, context);
+
+        queue_reload_users (daemon);
+}
+
+static gboolean
+daemon_uncache_user (AccountsAccounts      *accounts,
+                     GDBusMethodInvocation *context,
+                     const gchar           *user_name)
+{
+        Daemon *daemon = (Daemon*)accounts;
+
+        daemon_local_check_auth (daemon,
+                                 NULL,
+                                 "org.freedesktop.accounts.user-administration",
+                                 TRUE,
+                                 daemon_uncache_user_authorized_cb,
+                                 context,
+                                 g_strdup (user_name),
+                                 g_free);
+
+        return TRUE;
+}
+
 typedef struct {
         gint64 uid;
         gboolean remove_files;
@@ -1433,4 +1556,6 @@ daemon_accounts_accounts_iface_init (AccountsAccountsIface *iface)
         iface->handle_find_user_by_name = daemon_find_user_by_name;
         iface->handle_list_cached_users = daemon_list_cached_users;
         iface->get_daemon_version = daemon_get_daemon_version;
+        iface->handle_cache_user = daemon_cache_user;
+        iface->handle_uncache_user = daemon_uncache_user;
 }
