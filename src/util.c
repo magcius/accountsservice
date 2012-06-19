@@ -34,11 +34,9 @@
 
 #include "util.h"
 
-
 static gchar *
-_polkit_subject_get_cmdline (PolkitSubject *subject, gint *pid, gint *uid)
+get_cmdline_of_pid (GPid pid)
 {
-  PolkitSubject *process;
   gchar *ret;
   gchar *filename;
   gchar *contents;
@@ -46,43 +44,7 @@ _polkit_subject_get_cmdline (PolkitSubject *subject, gint *pid, gint *uid)
   GError *error;
   guint n;
 
-  g_return_val_if_fail (subject != NULL, NULL);
-
-  error = NULL;
-
-  ret = NULL;
-  process = NULL;
-  filename = NULL;
-  contents = NULL;
-
-  if (POLKIT_IS_UNIX_PROCESS (subject))
-   {
-      process = g_object_ref (subject);
-    }
-  else if (POLKIT_IS_SYSTEM_BUS_NAME (subject))
-    {
-      process = polkit_system_bus_name_get_process_sync (POLKIT_SYSTEM_BUS_NAME (subject),
-                                                         NULL,
-                                                         &error);
-      if (process == NULL)
-        {
-          g_warning ("Error getting process for system bus name `%s': %s",
-                     polkit_system_bus_name_get_name (POLKIT_SYSTEM_BUS_NAME (subject)),
-                     error->message);
-          g_error_free (error);
-          goto out;
-        }
-    }
-  else
-    {
-      g_warning ("Unknown subject type passed to guess_program_name()");
-      goto out;
-    }
-
-  *pid = polkit_unix_process_get_pid (POLKIT_UNIX_PROCESS (process));
-  *uid = polkit_unix_process_get_uid (POLKIT_UNIX_PROCESS (process));
-
-  filename = g_strdup_printf ("/proc/%d/cmdline", *pid);
+  filename = g_strdup_printf ("/proc/%d/cmdline", (int) pid);
 
   if (!g_file_get_contents (filename,
                             &contents,
@@ -108,9 +70,47 @@ _polkit_subject_get_cmdline (PolkitSubject *subject, gint *pid, gint *uid)
  out:
   g_free (filename);
   g_free (contents);
-  if (process != NULL)
-    g_object_unref (process);
+
   return ret;
+}
+
+static gboolean
+get_caller_pid (GDBusMethodInvocation *context,
+                GPid                  *pid)
+{
+        GVariant      *reply;
+        GError        *error;
+        guint32        pid_as_int;
+
+        error = NULL;
+        reply = g_dbus_connection_call_sync (g_dbus_method_invocation_get_connection (context),
+                                             "org.freedesktop.DBus",
+                                             "/org/freedesktop/DBus",
+                                             "org.freedesktop.DBus",
+                                             "GetConnectionUnixProcessID",
+                                             g_variant_new ("(s)",
+                                                            g_dbus_method_invocation_get_sender (context)),
+                                             G_VARIANT_TYPE ("(u)"),
+                                             G_DBUS_CALL_FLAGS_NONE,
+                                             -1,
+                                             NULL,
+                                             &error);
+
+        if (reply == NULL) {
+                g_warning ("Could not talk to message bus to find uid of sender %s: %s",
+                           g_dbus_method_invocation_get_sender (context),
+                           error->message);
+                g_error_free (error);
+
+                return FALSE;
+        }
+
+        g_variant_get (reply, "(u)", &pid_as_int);
+        *pid = pid_as_int;
+
+        g_variant_unref (reply);
+
+        return TRUE;
 }
 
 void
@@ -127,21 +127,36 @@ sys_log (GDBusMethodInvocation *context,
 
         if (context) {
                 PolkitSubject *subject;
-                gchar *cmdline;
+                gchar *cmdline = NULL;
                 gchar *id;
-                gint pid = 0;
-                gint uid = 0;
+                GPid pid = 0;
+                gint uid = -1;
                 gchar *tmp;
 
                 subject = polkit_system_bus_name_new (g_dbus_method_invocation_get_sender (context));
                 id = polkit_subject_to_string (subject);
-                cmdline = _polkit_subject_get_cmdline (subject, &pid, &uid);
 
-                if (cmdline == NULL) {
-                        tmp = g_strdup_printf ("request by %s: %s", id, msg);
+                if (get_caller_pid (context, &pid)) {
+                        cmdline = get_cmdline_of_pid (pid);
+                } else {
+                        pid = 0;
+                        cmdline = NULL;
                 }
-                else {
-                        tmp = g_strdup_printf ("request by %s [%s pid:%d uid:%d]: %s", id, cmdline, pid, uid, msg);
+
+                if (cmdline != NULL) {
+                        if (get_caller_uid (context, &uid)) {
+                                tmp = g_strdup_printf ("request by %s [%s pid:%d uid:%d]: %s", id, cmdline, (int) pid, uid, msg);
+                        } else {
+                                tmp = g_strdup_printf ("request by %s [%s pid:%d]: %s", id, cmdline, (int) pid, msg);
+                        }
+                } else {
+                        if (get_caller_uid (context, &uid) && pid != 0) {
+                                tmp = g_strdup_printf ("request by %s [pid:%d uid:%d]: %s", id, (int) pid, uid, msg);
+                        } else if (pid != 0) {
+                                tmp = g_strdup_printf ("request by %s [pid:%d]: %s", id, (int) pid, msg);
+                        } else {
+                                tmp = g_strdup_printf ("request by %s: %s", id, msg);
+                        }
                 }
 
                 g_free (msg);
@@ -160,20 +175,22 @@ sys_log (GDBusMethodInvocation *context,
 static void
 get_caller_loginuid (GDBusMethodInvocation *context, gchar *loginuid, gint size)
 {
-        PolkitSubject *subject;
-        gchar *cmdline;
-        gint pid;
+        GPid pid;
         gint uid;
         gchar *path;
         gchar *buf;
 
-        subject = polkit_system_bus_name_new (g_dbus_method_invocation_get_sender (context));
-        cmdline = _polkit_subject_get_cmdline (subject, &pid, &uid);
-        g_free (cmdline);
-        g_object_unref (subject);
+        if (!get_caller_uid (context, &uid)) {
+                uid = getuid ();
+        }
 
-        path = g_strdup_printf ("/proc/%d/loginuid", pid);
-        if (g_file_get_contents (path, &buf, NULL, NULL)) {
+        if (get_caller_pid (context, &pid)) {
+                path = g_strdup_printf ("/proc/%d/loginuid", (int) pid);
+        } else {
+                path = NULL;
+        }
+
+        if (path != NULL && g_file_get_contents (path, &buf, NULL, NULL)) {
                 strncpy (loginuid, buf, size);
                 g_free (buf);
         }
