@@ -552,35 +552,21 @@ user_change_real_name_authorized_cb (Daemon                *daemon,
         accounts_user_complete_set_real_name (ACCOUNTS_USER (user), context);
 }
 
-static uid_t
-method_invocation_get_uid (GDBusMethodInvocation *context)
-{
-  const gchar *sender;
-  PolkitSubject *busname;
-  PolkitSubject *process;
-  uid_t uid;
-
-  sender = g_dbus_method_invocation_get_sender (context);
-  busname = polkit_system_bus_name_new (sender);
-  process = polkit_system_bus_name_get_process_sync (POLKIT_SYSTEM_BUS_NAME (busname), NULL, NULL);
-  uid = polkit_unix_process_get_uid (POLKIT_UNIX_PROCESS (process));
-  g_object_unref (busname);
-  g_object_unref (process);
-
-  return uid;
-}
-
 static gboolean
 user_set_real_name (AccountsUser          *auser,
                     GDBusMethodInvocation *context,
                     const gchar           *real_name)
 {
         User *user = (User*)auser;
-        uid_t uid;
+        int uid;
         const gchar *action_id;
 
-        uid = method_invocation_get_uid (context);
-        if (user->uid == uid)
+        if (!get_caller_uid (context, &uid)) {
+                throw_error (context, ERROR_FAILED, "identifying caller failed");
+                return FALSE;
+        }
+
+        if (user->uid == (uid_t) uid)
                 action_id = "org.freedesktop.accounts.change-own-user-data";
         else
                 action_id = "org.freedesktop.accounts.user-administration";
@@ -692,11 +678,15 @@ user_set_email (AccountsUser          *auser,
                 const gchar           *email)
 {
         User *user = (User*)auser;
-        uid_t uid;
+        int uid;
         const gchar *action_id;
 
-        uid = method_invocation_get_uid (context);
-        if (user->uid == uid)
+        if (!get_caller_uid (context, &uid)) {
+                throw_error (context, ERROR_FAILED, "identifying caller failed");
+                return FALSE;
+        }
+
+        if (user->uid == (uid_t) uid)
                 action_id = "org.freedesktop.accounts.change-own-user-data";
         else
                 action_id = "org.freedesktop.accounts.user-administration";
@@ -744,11 +734,15 @@ user_set_language (AccountsUser          *auser,
                    const gchar           *language)
 {
         User *user = (User*)auser;
-        uid_t uid;
+        int uid;
         const gchar *action_id;
 
-        uid = method_invocation_get_uid (context);
-        if (user->uid == uid)
+        if (!get_caller_uid (context, &uid)) {
+                throw_error (context, ERROR_FAILED, "identifying caller failed");
+                return FALSE;
+        }
+
+        if (user->uid == (uid_t) uid)
                 action_id = "org.freedesktop.accounts.change-own-user-data";
         else
                 action_id = "org.freedesktop.accounts.user-administration";
@@ -794,11 +788,15 @@ user_set_x_session (AccountsUser          *auser,
                     const gchar           *x_session)
 {
         User *user = (User*)auser;
-        uid_t uid;
+        int uid;
         const gchar *action_id;
 
-        uid = method_invocation_get_uid (context);
-        if (user->uid == uid)
+        if (!get_caller_uid (context, &uid)) {
+                throw_error (context, ERROR_FAILED, "identifying caller failed");
+                return FALSE;
+        }
+
+        if (user->uid == (uid_t) uid)
                 action_id = "org.freedesktop.accounts.change-own-user-data";
         else
                 action_id = "org.freedesktop.accounts.user-administration";
@@ -844,11 +842,15 @@ user_set_location (AccountsUser          *auser,
                    const gchar           *location)
 {
         User *user = (User*)auser;
-        uid_t uid;
+        int uid;
         const gchar *action_id;
 
-        uid = method_invocation_get_uid (context);
-        if (user->uid == uid)
+        if (!get_caller_uid (context, &uid)) {
+                throw_error (context, ERROR_FAILED, "identifying caller failed");
+                return FALSE;
+        }
+
+        if (user->uid == (uid_t) uid)
                 action_id = "org.freedesktop.accounts.change-own-user-data";
         else
                 action_id = "org.freedesktop.accounts.user-administration";
@@ -1163,11 +1165,15 @@ user_set_icon_file (AccountsUser          *auser,
                     const gchar           *filename)
 {
         User *user = (User*)auser;
-        uid_t uid;
+        int uid;
         const gchar *action_id;
 
-        uid = method_invocation_get_uid (context);
-        if (user->uid == uid)
+        if (!get_caller_uid (context, &uid)) {
+                throw_error (context, ERROR_FAILED, "identifying caller failed");
+                return FALSE;
+        }
+
+        if (user->uid == (uid_t) uid)
                 action_id = "org.freedesktop.accounts.change-own-user-data";
         else
                 action_id = "org.freedesktop.accounts.user-administration";
