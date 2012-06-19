@@ -251,22 +251,37 @@ get_user_groups (const gchar  *user,
 
 
 gboolean
-get_caller_uid (GDBusMethodInvocation *context, gint *uid)
+get_caller_uid (GDBusMethodInvocation *context,
+                gint                  *uid)
 {
-        PolkitSubject *subject;
-        PolkitSubject *process;
+        GVariant      *reply;
+        GError        *error;
 
-        subject = polkit_system_bus_name_new (g_dbus_method_invocation_get_sender (context));
-        process = polkit_system_bus_name_get_process_sync (POLKIT_SYSTEM_BUS_NAME (subject), NULL, NULL);
-        if (!process) {
-                g_object_unref (subject);
+        error = NULL;
+        reply = g_dbus_connection_call_sync (g_dbus_method_invocation_get_connection (context),
+                                             "org.freedesktop.DBus",
+                                             "/org/freedesktop/DBus",
+                                             "org.freedesktop.DBus",
+                                             "GetConnectionUnixUser",
+                                             g_variant_new ("(s)",
+                                                            g_dbus_method_invocation_get_sender (context)),
+                                             G_VARIANT_TYPE ("(u)"),
+                                             G_DBUS_CALL_FLAGS_NONE,
+                                             -1,
+                                             NULL,
+                                             &error);
+
+        if (reply == NULL) {
+                g_warning ("Could not talk to message bus to find uid of sender %s: %s",
+                           g_dbus_method_invocation_get_sender (context),
+                           error->message);
+                g_error_free (error);
+
                 return FALSE;
         }
 
-        *uid = polkit_unix_process_get_uid (POLKIT_UNIX_PROCESS (process));
-
-        g_object_unref (subject);
-        g_object_unref (process);
+        g_variant_get (reply, "(u)", uid);
+        g_variant_unref (reply);
 
         return TRUE;
 }
