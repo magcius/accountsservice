@@ -1297,10 +1297,9 @@ _get_x11_display_for_new_systemd_session (ActUserManagerNewSession *new_session)
         }
 
         if (g_strcmp0 (session_type, "x11") != 0) {
-                g_debug ("ActUserManager: ignoring %s session '%s' since it's not graphical: %s",
+                g_debug ("ActUserManager: ignoring %s session '%s' since it's not graphical",
                          session_type,
-                         new_session->id,
-                         strerror (-res));
+                         new_session->id);
                 free (session_type);
                 unload_new_session (new_session);
                 return;
