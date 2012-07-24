@@ -1221,6 +1221,14 @@ daemon_delete_user_authorized_cb (Daemon                *daemon,
 
         sys_log (context, "delete user '%s' (%d)", pwent->pw_name, ud->uid);
 
+        filename = g_build_filename (USERDIR, pwent->pw_name, NULL);
+        g_remove (filename);
+        g_free (filename);
+
+        filename = g_build_filename (ICONDIR, pwent->pw_name, NULL);
+        g_remove (filename);
+        g_free (filename);
+
         argv[0] = "/usr/sbin/userdel";
         if (ud->remove_files) {
                 argv[1] = "-f";
@@ -1241,14 +1249,6 @@ daemon_delete_user_authorized_cb (Daemon                *daemon,
                 g_error_free (error);
                 return;
         }
-
-        filename = g_build_filename (USERDIR, pwent->pw_name, NULL);
-        g_remove (filename);
-        g_free (filename);
-
-        filename = g_build_filename (ICONDIR, pwent->pw_name, NULL);
-        g_remove (filename);
-        g_free (filename);
 
         accounts_accounts_complete_delete_user (NULL, context);
 }
