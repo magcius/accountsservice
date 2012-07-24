@@ -315,6 +315,75 @@ entry_generator_fgetpwent (GHashTable *users,
         return NULL;
 }
 
+static struct passwd *
+entry_generator_cachedir (GHashTable *users,
+                          gpointer   *state)
+{
+        struct passwd *pwent;
+        const gchar *name;
+        GError *error = NULL;
+        gchar *filename;
+        gboolean regular;
+        GHashTableIter iter;
+        GKeyFile *key_file;
+        User *user;
+        GDir *dir;
+
+        /* First iteration */
+        if (*state == NULL) {
+                *state = dir = g_dir_open (USERDIR, 0, &error);
+                if (error != NULL) {
+                        if (!g_error_matches (error, G_FILE_ERROR, G_FILE_ERROR_NOENT))
+                                g_warning ("couldn't list user cache directory: %s", USERDIR);
+                        g_error_free (error);
+                        return NULL;
+                }
+        }
+
+        /* Every iteration */
+
+        /*
+         * Use names of files of regular type to lookup information
+         * about each user. Loop until we find something valid.
+         */
+        dir = *state;
+        while (TRUE) {
+                name = g_dir_read_name (dir);
+                if (name == NULL)
+                        break;
+
+                /* Only load files in this directory */
+                filename = g_build_filename (USERDIR, name, NULL);
+                regular = g_file_test (filename, G_FILE_TEST_IS_REGULAR);
+                g_free (filename);
+
+                if (regular) {
+                        pwent = getpwnam (name);
+                        if (pwent == NULL)
+                                g_debug ("user '%s' in cache dir but not presen on system", name);
+                        else
+                                return pwent;
+                }
+        }
+
+        /* Last iteration */
+        g_dir_close (dir);
+
+        /* Update all the users from the files in the cache dir */
+        g_hash_table_iter_init (&iter, users);
+        while (g_hash_table_iter_next (&iter, (gpointer *)&name, (gpointer *)&user)) {
+                filename = g_build_filename (USERDIR, name, NULL);
+                key_file = g_key_file_new ();
+                if (g_key_file_load_from_file (key_file, filename, 0, NULL))
+                        user_local_update_from_keyfile (user, key_file);
+                g_key_file_free (key_file);
+                g_free (filename);
+        }
+
+        *state = NULL;
+        return NULL;
+}
+
 static void
 load_entries (Daemon             *daemon,
               GHashTable         *users,
@@ -387,6 +456,7 @@ reload_users (Daemon *daemon)
 #ifdef HAVE_UTMPX_H
         load_entries (daemon, users, entry_generator_wtmp);
 #endif
+        load_entries (daemon, users, entry_generator_cachedir);
 
         /* Swap out the users */
         old_users = daemon->priv->users;
