@@ -17,10 +17,18 @@ BUILT_SOURCES = 			\
 	accounts-user-generated.h
 
 accounts-generated.c accounts-generated.h: $(top_srcdir)/data/org.freedesktop.Accounts.xml Makefile
-	$(AM_VGEN)gdbus-codegen --generate-c-code accounts-generated --c-namespace Accounts --interface-prefix=org.freedesktop. $(top_srcdir)/data/org.freedesktop.Accounts.xml
+	$(AM_VGEN)gdbus-codegen				\
+	--generate-c-code accounts-generated		\
+	--c-namespace Accounts				\
+	--interface-prefix=org.freedesktop.		\
+	$(top_srcdir)/data/org.freedesktop.Accounts.xml
 
 accounts-user-generated.c accounts-user-generated.h: $(top_srcdir)/data/org.freedesktop.Accounts.User.xml Makefile
-	$(AM_VGEN)gdbus-codegen --generate-c-code accounts-user-generated --c-namespace Accounts --interface-prefix=org.freedesktop.Accounts. $(top_srcdir)/data/org.freedesktop.Accounts.User.xml
+	$(AM_VGEN)gdbus-codegen				\
+	--generate-c-code accounts-user-generated 	\
+	--c-namespace Accounts				\
+	--interface-prefix=org.freedesktop.Accounts.	\
+	 $(top_srcdir)/data/org.freedesktop.Accounts.User.xml
 
 libexec_PROGRAMS = accounts-daemon
 

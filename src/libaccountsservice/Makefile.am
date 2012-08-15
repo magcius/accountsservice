@@ -36,10 +36,18 @@ act-user-enum-types.c: act-user.h act-user-manager.h act-user-enum-types.h
 	         $^ ) > $@
 
 accounts-generated.c accounts-generated.h: $(top_srcdir)/data/org.freedesktop.Accounts.xml Makefile
-	$(AM_V_GEN) gdbus-codegen --generate-c-code accounts-generated --c-namespace Accounts --interface-prefix=org.freedesktop. $(top_srcdir)/data/org.freedesktop.Accounts.xml
+	$(AM_V_GEN)gdbus-codegen			\
+	 --generate-c-code accounts-generated		\
+	--c-namespace Accounts				\
+	--interface-prefix=org.freedesktop.		\
+	$(top_srcdir)/data/org.freedesktop.Accounts.xml
 
 accounts-user-generated.c accounts-user-generated.h: $(top_srcdir)/data/org.freedesktop.Accounts.User.xml Makefile
-	$(AM_V_GEN) gdbus-codegen --generate-c-code accounts-user-generated --c-namespace Accounts --interface-prefix=org.freedesktop.Accounts. $(top_srcdir)/data/org.freedesktop.Accounts.User.xml
+	$(AM_V_GEN) gdbus-codegen			\
+	--generate-c-code accounts-user-generated	\
+	--c-namespace Accounts				\
+	--interface-prefix=org.freedesktop.Accounts.	\
+	$(top_srcdir)/data/org.freedesktop.Accounts.User.xml
 
 ck-manager-generated.c ck-manager-generated.h: org.freedesktop.ConsoleKit.Manager.xml Makefile
 	$(AM_V_GEN) gdbus-codegen --generate-c-code ck-manager-generated --c-namespace ConsoleKit --interface-prefix=org.freedesktop.ConsoleKit $(srcdir)/org.freedesktop.ConsoleKit.Manager.xml
