@@ -64,7 +64,6 @@ enum {
 
 enum {
         CHANGED,
-        SESSIONS_CHANGED,
         LAST_SIGNAL
 };
 
@@ -88,7 +87,6 @@ struct _ActUser {
         char           *icon_file;
         char           *language;
         char           *x_session;
-        GList          *sessions;
         int             login_frequency;
 
         ActUserAccountType  account_type;
@@ -110,64 +108,6 @@ static void act_user_finalize     (GObject      *object);
 static guint signals[LAST_SIGNAL] = { 0 };
 
 G_DEFINE_TYPE (ActUser, act_user, G_TYPE_OBJECT)
-
-static int
-session_compare (const char *a,
-                 const char *b)
-{
-        if (a == NULL) {
-                return 1;
-        } else if (b == NULL) {
-                return -1;
-        }
-
-        return strcmp (a, b);
-}
-
-void
-_act_user_add_session (ActUser    *user,
-                       const char *ssid)
-{
-        GList *li;
-
-        g_return_if_fail (ACT_IS_USER (user));
-        g_return_if_fail (ssid != NULL);
-
-        li = g_list_find_custom (user->sessions, ssid, (GCompareFunc)session_compare);
-        if (li == NULL) {
-                g_debug ("ActUser: adding session %s", ssid);
-                user->sessions = g_list_prepend (user->sessions, g_strdup (ssid));
-                g_signal_emit (user, signals[SESSIONS_CHANGED], 0);
-        } else {
-                g_debug ("ActUser: session already present: %s", ssid);
-        }
-}
-
-void
-_act_user_remove_session (ActUser    *user,
-                          const char *ssid)
-{
-        GList *li;
-
-        g_return_if_fail (ACT_IS_USER (user));
-        g_return_if_fail (ssid != NULL);
-
-        li = g_list_find_custom (user->sessions, ssid, (GCompareFunc)session_compare);
-        if (li != NULL) {
-                g_debug ("ActUser: removing session %s", ssid);
-                g_free (li->data);
-                user->sessions = g_list_delete_link (user->sessions, li);
-                g_signal_emit (user, signals[SESSIONS_CHANGED], 0);
-        } else {
-                g_debug ("ActUser: session not found: %s", ssid);
-        }
-}
-
-guint
-act_user_get_num_sessions (ActUser    *user)
-{
-        return g_list_length (user->sessions);
-}
 
 static void
 act_user_set_property (GObject      *object,
@@ -416,14 +356,6 @@ act_user_class_init (ActUserClass *class)
                               NULL, NULL,
                               g_cclosure_marshal_VOID__VOID,
                               G_TYPE_NONE, 0);
-        signals [SESSIONS_CHANGED] =
-                g_signal_new ("sessions-changed",
-                              G_TYPE_FROM_CLASS (class),
-                              G_SIGNAL_RUN_LAST,
-                              0,
-                              NULL, NULL,
-                              g_cclosure_marshal_VOID__VOID,
-                              G_TYPE_NONE, 0);
 }
 
 static void
@@ -433,7 +365,6 @@ act_user_init (ActUser *user)
 
         user->user_name = NULL;
         user->real_name = NULL;
-        user->sessions = NULL;
 
         user->connection = g_bus_get_sync (G_BUS_TYPE_SYSTEM, NULL, &error);
         if (user->connection == NULL) {
@@ -706,18 +637,6 @@ act_user_collate (ActUser *user1,
                 return 1;
         }
 
-
-        len1 = g_list_length (user1->sessions);
-        len2 = g_list_length (user2->sessions);
-
-        if (len1 > len2) {
-                return -1;
-        }
-
-        if (len1 < len2) {
-                return 1;
-        }
-
         /* if login frequency is equal try names */
         if (user1->real_name != NULL) {
                 str1 = user1->real_name;
@@ -744,20 +663,6 @@ act_user_collate (ActUser *user1,
         }
 
         return g_utf8_collate (str1, str2);
-}
-
-/**
- * act_user_is_logged_in:
- * @user: a #ActUser
- *
- * Returns whether or not #ActUser is currently logged in.
- *
- * Returns: %TRUE or %FALSE
- */
-gboolean
-act_user_is_logged_in (ActUser *user)
-{
-        return user->sessions != NULL;
 }
 
 /**
@@ -867,28 +772,6 @@ act_user_get_object_path (ActUser *user)
         g_return_val_if_fail (ACT_IS_USER (user), NULL);
 
         return user->object_path;
-}
-
-/**
- * act_user_get_primary_session_id:
- * @user: a #ActUser
- *
- * Returns the primary ConsoleKit session id of @user, or %NULL if @user isn't
- * logged in.
- *
- * Returns: (transfer none): the primary ConsoleKit session id of the user
- */
-const char *
-act_user_get_primary_session_id (ActUser *user)
-{
-        if (!act_user_is_logged_in (user)) {
-                g_debug ("User %s is not logged in, so has no primary session",
-                         act_user_get_user_name (user));
-                return NULL;
-        }
-
-        /* FIXME: better way to choose? */
-        return user->sessions->data;
 }
 
 static void

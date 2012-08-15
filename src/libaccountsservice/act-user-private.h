@@ -35,11 +35,6 @@ void           _act_user_update_from_object_path   (ActUser    *user,
 void           _act_user_update_login_frequency    (ActUser    *user,
                                                     int         login_frequency);
 
-void           _act_user_add_session      (ActUser             *user,
-                                           const char          *session_id);
-void           _act_user_remove_session   (ActUser             *user,
-                                           const char          *session_id);
-
 G_END_DECLS
 
 #endif /* !__ACT_USER_PRIVATE_H_ */

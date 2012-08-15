@@ -49,28 +49,13 @@ accounts-user-generated.c accounts-user-generated.h: $(top_srcdir)/data/org.free
 	--interface-prefix=org.freedesktop.Accounts.	\
 	$(top_srcdir)/data/org.freedesktop.Accounts.User.xml
 
-ck-manager-generated.c ck-manager-generated.h: org.freedesktop.ConsoleKit.Manager.xml Makefile
-	$(AM_V_GEN) gdbus-codegen --generate-c-code ck-manager-generated --c-namespace ConsoleKit --interface-prefix=org.freedesktop.ConsoleKit $(srcdir)/org.freedesktop.ConsoleKit.Manager.xml
-
-ck-seat-generated.c ck-seat-generated.h: org.freedesktop.ConsoleKit.Seat.xml Makefile
-	$(AM_V_GEN) gdbus-codegen --generate-c-code ck-seat-generated --c-namespace ConsoleKit --interface-prefix=org.freedesktop.ConsoleKit $(srcdir)/org.freedesktop.ConsoleKit.Seat.xml
-
-ck-session-generated.c ck-session-generated.h: org.freedesktop.ConsoleKit.Session.xml Makefile
-	$(AM_V_GEN) gdbus-codegen --generate-c-code ck-session-generated --c-namespace ConsoleKit --interface-prefix=org.freedesktop.ConsoleKit $(srcdir)/org.freedesktop.ConsoleKit.Session.xml
-
 BUILT_SOURCES += \
 	accounts-generated.c			\
 	accounts-generated.h			\
 	accounts-user-generated.c	\
 	accounts-user-generated.h	\
 	act-user-enum-types.c	\
-	act-user-enum-types.h	\
-	ck-manager-generated.c		\
-	ck-manager-generated.h		\
-	ck-seat-generated.c			\
-	ck-seat-generated.h			\
-	ck-session-generated.c		\
-	ck-session-generated.h
+	act-user-enum-types.h
 
 CLEANFILES += $(BUILT_SOURCES)
 
@@ -147,7 +132,7 @@ CLEANFILES += $(gir_DATA) $(typelibs_DATA)
 endif
 
 MAINTAINERCLEANFILES = Makefile.in
-EXTRA_DIST = org.freedesktop.ConsoleKit.Manager.xml org.freedesktop.ConsoleKit.Seat.xml org.freedesktop.ConsoleKit.Session.xml
+EXTRA_DIST =
 
 if ENABLE_VAPIGEN
 -include $(VAPIGEN_MAKEFILE)
@@ -164,6 +149,5 @@ vapi_DATA = $(VAPIGEN_VAPIS) $(VAPIGEN_VAPIS:.vapi=.deps)
 
 EXTRA_DIST += accountsservice.deps accountsservice.vapi
 CLEANFILES += accountsservice.vapi
-
 
 endif
