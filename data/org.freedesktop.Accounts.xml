@@ -7,7 +7,6 @@
     <!-- ************************************************************ -->
 
     <method name="ListCachedUsers">
-      <annotation name="org.freedesktop.DBus.GLib.Async" value=""/>
       <arg name="users" direction="out" type="ao">
         <doc:doc><doc:summary>Object paths of cached users</doc:summary></doc:doc>
       </arg>
@@ -25,7 +24,6 @@
     </method>
 
     <method name="FindUserById">
-      <annotation name="org.freedesktop.DBus.GLib.Async" value=""/>
       <arg name="id" direction="in" type="x">
         <doc:doc><doc:summary>The uid to look up</doc:summary></doc:doc>
       </arg>
@@ -46,7 +44,6 @@
     </method>
 
     <method name="FindUserByName">
-      <annotation name="org.freedesktop.DBus.GLib.Async" value=""/>
       <arg name="name" direction="in" type="s">
         <doc:doc><doc:summary>The username to look up</doc:summary></doc:doc>
       </arg>
@@ -67,11 +64,9 @@
     </method>
 
     <method name="CreateUser">
-      <annotation name="org.freedesktop.DBus.GLib.Async" value=""/>
       <arg name="name" direction="in" type="s">
         <doc:doc><doc:summary>The username for the new user</doc:summary></doc:doc>
       </arg>
-      <annotation name="org.freedesktop.DBus.GLib.Async" value=""/>
       <arg name="fullname" direction="in" type="s">
         <doc:doc><doc:summary>The real name for the new user</doc:summary></doc:doc>
       </arg>
@@ -113,7 +108,6 @@
     </method>
 
     <method name="CacheUser">
-      <annotation name="org.freedesktop.DBus.GLib.Async" value=""/>
       <arg name="name" direction="in" type="s">
         <doc:doc><doc:summary>The username for the user</doc:summary></doc:doc>
       </arg>
@@ -140,7 +134,6 @@
     </method>
 
     <method name="UncacheUser">
-      <annotation name="org.freedesktop.DBus.GLib.Async" value=""/>
       <arg name="name" direction="in" type="s">
         <doc:doc><doc:summary>The username for the user</doc:summary></doc:doc>
       </arg>
@@ -164,7 +157,6 @@
     </method>
 
     <method name="DeleteUser">
-      <annotation name="org.freedesktop.DBus.GLib.Async" value=""/>
       <arg name="id" direction="in" type="x">
         <doc:doc><doc:summary>The uid to delete</doc:summary></doc:doc>
       </arg>
