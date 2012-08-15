@@ -23,7 +23,8 @@
 
 #include <glib-object.h>
 
-#include "act-user.h"
+#include "act-types.h"
+#include "act-user-generated.h"
 
 G_BEGIN_DECLS
 

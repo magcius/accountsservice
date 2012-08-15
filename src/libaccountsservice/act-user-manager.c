@@ -42,7 +42,7 @@
 #include <gio/gunixinputstream.h>
 
 #include "act-user-manager.h"
-#include "act-user-private.h"
+#include "act-user-utils.h"
 #include "accounts-generated.h"
 
 #define ACT_USER_MANAGER_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), ACT_TYPE_USER_MANAGER, ActUserManagerPrivate))

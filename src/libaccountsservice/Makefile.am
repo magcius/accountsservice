@@ -13,21 +13,20 @@ lib_LTLIBRARIES =                                                             \
         libaccountsservice.la                                                 \
         $(END_OF_LIST)
 
-act-user-enum-types.h: act-user.h act-user-manager.h
+act-enum-types.h: act-types.h
 	$(AM_V_GEN) (cd $(srcdir) && \
 	         glib-mkenums \
-	          --fhead "#ifndef __ACT_USER_ENUM_TYPES_H__\n#define __ACT_USER_ENUM_TYPES_H__\n\n#include <glib-object.h>\n\nG_BEGIN_DECLS\n" \
+	          --fhead "#ifndef __ACT_ENUM_TYPES_H__\n#define __ACT_ENUM_TYPES_H__\n\n#include <glib-object.h>\n\nG_BEGIN_DECLS\n" \
 	          --fprod "/* enumerations from \"@filename@\" */\n" \
-	          --vhead "GType @enum_name@_get_type (void);\n#define ACT_USER_TYPE_@ENUMSHORT@ (@enum_name@_get_type())\n"    \
-	          --ftail "G_END_DECLS\n\n#endif /* __ACT_USER_ENUM_TYPES_H__ */" \
+	          --vhead "GType @enum_name@_get_type (void);\n#define ACT_TYPE_@ENUMSHORT@ (@enum_name@_get_type())\n"    \
+	          --ftail "G_END_DECLS\n\n#endif /* __ACT_ENUM_TYPES_H__ */" \
 	          $^ ) > $@
 
-act-user-enum-types.c: act-user.h act-user-manager.h act-user-enum-types.h
+act-enum-types.c: act-types.h act-enum-types.h
 	$(AM_V_GEN) (cd $(srcdir) && \
 	         glib-mkenums \
-	          --fhead "#include \"act-user.h\"\n" \
-	          --fhead "#include \"act-user-manager.h\"\n" \
-	          --fhead "#include \"act-user-enum-types.h\"\n" \
+	          --fhead "#include \"act-types.h\"\n" \
+	          --fhead "#include \"act-enum-types.h\"\n" \
 	          --fhead "#include <glib-object.h>" \
 	          --fprod "\n/* enumerations from \"@filename@\" */" \
 	          --vhead "GType\n@enum_name@_get_type (void)\n{\n  static GType etype = 0;\n  if (etype == 0) {\n    static const G@Type@Value values[] = {"    \
@@ -42,28 +41,29 @@ accounts-generated.c accounts-generated.h: $(top_srcdir)/data/org.freedesktop.Ac
 	--interface-prefix=org.freedesktop.		\
 	$(top_srcdir)/data/org.freedesktop.Accounts.xml
 
-accounts-user-generated.c accounts-user-generated.h: $(top_srcdir)/data/org.freedesktop.Accounts.User.xml Makefile
+act-user-generated.c act-user-generated.h: $(top_srcdir)/data/org.freedesktop.Accounts.User.xml Makefile
 	$(AM_V_GEN) gdbus-codegen			\
-	--generate-c-code accounts-user-generated	\
-	--c-namespace Accounts				\
+	--generate-c-code act-user-generated		\
+	--c-namespace Act				\
+	--annotate "org.freedesktop.Accounts.User"	\
+	"org.gtk.GDBus.C.Name" User			\
 	--interface-prefix=org.freedesktop.Accounts.	\
 	$(top_srcdir)/data/org.freedesktop.Accounts.User.xml
 
 BUILT_SOURCES += \
-	accounts-generated.c			\
-	accounts-generated.h			\
-	accounts-user-generated.c	\
-	accounts-user-generated.h	\
-	act-user-enum-types.c	\
-	act-user-enum-types.h
+	accounts-generated.c		\
+	accounts-generated.h		\
+	act-user-generated.c		\
+	act-user-generated.h
 
 CLEANFILES += $(BUILT_SOURCES)
 
 libaccountsservicedir = $(includedir)/accountsservice-1.0/act
 libaccountsservice_headers =                                                  \
-        act-user.h                                                            \
+        act-user-generated.h                                                  \
         act-user-manager.h                                                    \
-        act-user-enum-types.h                                                 \
+	act-user-utils.h                                                      \
+	act-types.h                                                           \
         $(END_OF_LIST)
 
 libaccountsservice_HEADERS =                                                  \
@@ -86,13 +86,12 @@ libaccountsservice_la_LIBADD =                                                \
 
 libaccountsservice_la_sources =                                               \
         $(libaccountsservice_headers)                                         \
-        act-user.c                                                            \
         act-user-manager.c                                                    \
+	act-user-utils.c                                                      \
         $(END_OF_LIST)
 
 libaccountsservice_la_SOURCES =                                               \
         $(libaccountsservice_la_sources)                                      \
-        act-user-private.h                                                    \
         $(BUILT_SOURCES)                                                      \
         $(END_OF_LIST)
 

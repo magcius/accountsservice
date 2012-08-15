@@ -1,7 +1,6 @@
 /* -*- Mode: C; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 8 -*-
  *
- * Copyright (C) 2004-2005 James M. Cape <jcape@ignore-your.tv>.
- * Copyright (C) 2007-2008 William Jon McCann <mccann@jhu.edu>
+ * Copyright (C) 2007 William Jon McCann <mccann@jhu.edu>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,15 +14,25 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ *
  */
 
-#ifndef __ACT_H__
-#define __ACT_H__
+#ifndef __ACT_USER_UTILS_H__
+#define __ACT_USER_UTILS_H__
 
-#include <act/act-user-generated.h>
-#include <act/act-user-manager.h>
-#include <act/act-user-utils.h>
-#include <act/act-types.h>
+#include <glib-object.h>
 
-#endif /* __ACT_H__ */
+#include "act-types.h"
+#include "act-user-generated.h"
+
+G_BEGIN_DECLS
+
+int act_user_collate (ActUser *user1,
+                      ActUser *user2);
+
+char * act_user_get_display_name (ActUser *user);
+
+G_END_DECLS
+
+#endif /* __ACT_USER_UTILS_H__ */
