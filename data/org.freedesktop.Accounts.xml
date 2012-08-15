@@ -2,26 +2,10 @@
 "-//freedesktop//DTD D-BUS Object Introspection 1.0//EN"
 "http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd" >
 <node name="/" xmlns:doc="http://www.freedesktop.org/dbus/1.0/doc.dtd">
-  <interface name="org.freedesktop.Accounts">
+  <interface name="org.freedesktop.Accounts.Manager">
+    <annotation name="org.gtk.GDBus.C.Name" value="UserManagerGlue" />
 
     <!-- ************************************************************ -->
-
-    <method name="ListCachedUsers">
-      <arg name="users" direction="out" type="ao">
-        <doc:doc><doc:summary>Object paths of cached users</doc:summary></doc:doc>
-      </arg>
-
-      <doc:doc>
-        <doc:description>
-          <doc:para>
-            Lists users which have logged into the system locally before.
-            This is not meant to return an exhaustive list of all users.
-            It is possible for <doc:ref type="method" to="Accounts.FindUserByName">FindUserByName()</doc:ref>
-            to return a user that's not on the list.
-          </doc:para>
-        </doc:description>
-      </doc:doc>
-    </method>
 
     <method name="FindUserById">
       <arg name="id" direction="in" type="x">
@@ -179,32 +163,6 @@
         </doc:errors>
       </doc:doc>
     </method>
-
-    <signal name="UserAdded">
-      <arg name="user" type="o">
-        <doc:doc><doc:summary>Object path of the user that was added.</doc:summary></doc:doc>
-      </arg>
-      <doc:doc>
-        <doc:description>
-          <doc:para>
-            Emitted when a user is added.
-          </doc:para>
-        </doc:description>
-      </doc:doc>
-    </signal>
-
-    <signal name="UserDeleted">
-      <arg name="user" type="o">
-        <doc:doc><doc:summary>Object path of the user that was deleted.</doc:summary></doc:doc>
-      </arg>
-      <doc:doc>
-        <doc:description>
-          <doc:para>
-            Emitted when a user is deleted.
-          </doc:para>
-        </doc:description>
-      </doc:doc>
-    </signal>
 
    <property name="DaemonVersion" type="s" access="read">
      <doc:doc>

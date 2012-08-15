@@ -87,7 +87,7 @@ enum {
 
 struct DaemonPrivate {
         GDBusConnection *bus_connection;
-        GDBusProxy *bus_proxy;
+        GDBusObjectManagerServer *manager;
 
         GHashTable *users;
         GHashTable *exclusions;
@@ -106,9 +106,9 @@ struct DaemonPrivate {
 
 typedef struct passwd * (* EntryGeneratorFunc) (GHashTable *, gpointer *);
 
-static void daemon_accounts_accounts_iface_init (AccountsAccountsIface *iface);
+static void daemon_act_user_manager_glue_iface_init (ActUserManagerGlueIface *iface);
 
-G_DEFINE_TYPE_WITH_CODE (Daemon, daemon, ACCOUNTS_TYPE_ACCOUNTS_SKELETON, G_IMPLEMENT_INTERFACE (ACCOUNTS_TYPE_ACCOUNTS, daemon_accounts_accounts_iface_init));
+G_DEFINE_TYPE_WITH_CODE (Daemon, daemon, ACT_TYPE_USER_MANAGER_GLUE_SKELETON, G_IMPLEMENT_INTERFACE (ACT_TYPE_USER_MANAGER_GLUE, daemon_act_user_manager_glue_iface_init));
 
 #define DAEMON_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), TYPE_DAEMON, DaemonPrivate))
 
@@ -439,6 +439,35 @@ create_users_hash_table (void)
                                       g_object_unref);
 }
 
+static char *
+create_object_path (User *user)
+{
+        return g_strdup_printf ("/org/freedesktop/Accounts/User%ld",
+                                (long) user_local_get_uid (user));
+}
+
+static void
+export_user (Daemon *daemon, User *user)
+{
+        ActObjectSkeleton *object;
+        char *object_path = create_object_path (user);
+
+        object = act_object_skeleton_new (object_path);
+        act_object_skeleton_set_user (object, ACT_USER (user));
+        g_dbus_object_manager_server_export (daemon->priv->manager,
+                                             G_DBUS_OBJECT_SKELETON (object));
+        g_free (object_path);
+}
+
+static void
+unexport_user (Daemon *daemon, User *user)
+{
+        char *object_path = create_object_path (user);
+        g_dbus_object_manager_server_unexport (daemon->priv->manager,
+                                               object_path);
+        g_free (object_path);
+}
+
 static void
 reload_users (Daemon *daemon)
 {
@@ -466,9 +495,7 @@ reload_users (Daemon *daemon)
         g_hash_table_iter_init (&iter, old_users);
         while (g_hash_table_iter_next (&iter, &name, (gpointer *)&user)) {
                 if (!g_hash_table_lookup (users, name)) {
-                        user_local_unregister (user);
-                        accounts_accounts_emit_user_deleted (ACCOUNTS_ACCOUNTS (daemon),
-                                                             user_local_get_object_path (user));
+                        unexport_user (daemon, user);
                 }
         }
 
@@ -476,9 +503,7 @@ reload_users (Daemon *daemon)
         g_hash_table_iter_init (&iter, users);
         while (g_hash_table_iter_next (&iter, &name, (gpointer *)&user)) {
                 if (!g_hash_table_lookup (old_users, name)) {
-                        user_local_register (user);
-                        accounts_accounts_emit_user_added (ACCOUNTS_ACCOUNTS (daemon),
-                                                           user_local_get_object_path (user));
+                        export_user (daemon, user);
                 }
                 g_object_thaw_notify (G_OBJECT (user));
         }
@@ -690,8 +715,8 @@ daemon_finalize (GObject *object)
 
         daemon = DAEMON (object);
 
-        if (daemon->priv->bus_proxy != NULL)
-                g_object_unref (daemon->priv->bus_proxy);
+        if (daemon->priv->manager != NULL)
+                g_object_unref (daemon->priv->manager);
 
         if (daemon->priv->bus_connection != NULL)
                 g_object_unref (daemon->priv->bus_connection);
@@ -725,9 +750,11 @@ register_accounts_daemon (Daemon *daemon)
                 goto error;
         }
 
+        daemon->priv->manager = g_dbus_object_manager_server_new ("/org/freedesktop/Accounts");
+
         if (!g_dbus_interface_skeleton_export (G_DBUS_INTERFACE_SKELETON (daemon),
                                                daemon->priv->bus_connection,
-                                               "/org/freedesktop/Accounts",
+                                               "/org/freedesktop/Accounts/Manager",
                                                &error)) {
                 if (error != NULL) {
                         g_critical ("error exporting interface: %s", error->message);
@@ -786,13 +813,11 @@ add_new_user_for_pwent (Daemon        *daemon,
 
         user = user_local_new (daemon, pwent->pw_uid);
         user_local_update_from_pwent (user, pwent);
-        user_local_register (user);
+        export_user (daemon, user);
 
         g_hash_table_insert (daemon->priv->users,
                              g_strdup (user_local_get_user_name (user)),
                              user);
-
-        accounts_accounts_emit_user_added (ACCOUNTS_ACCOUNTS (daemon), user_local_get_object_path (user));
 
         return user;
 }
@@ -840,7 +865,7 @@ daemon_local_find_user_by_name (Daemon      *daemon,
 }
 
 static gboolean
-daemon_find_user_by_id (AccountsAccounts      *accounts,
+daemon_find_user_by_id (ActUserManagerGlue      *accounts,
                         GDBusMethodInvocation *context,
                         gint64                 uid)
 {
@@ -850,7 +875,7 @@ daemon_find_user_by_id (AccountsAccounts      *accounts,
         user = daemon_local_find_user_by_id (daemon, uid);
 
         if (user) {
-                accounts_accounts_complete_find_user_by_id (NULL, context, user_local_get_object_path (user));
+                act_user_manager_glue_complete_find_user_by_id (NULL, context, user_local_get_object_path (user));
         }
         else {
                 throw_error (context, ERROR_FAILED, "Failed to look up user with uid %d.", (int)uid);
@@ -860,7 +885,7 @@ daemon_find_user_by_id (AccountsAccounts      *accounts,
 }
 
 static gboolean
-daemon_find_user_by_name (AccountsAccounts      *accounts,
+daemon_find_user_by_name (ActUserManagerGlue      *accounts,
                           GDBusMethodInvocation *context,
                           const gchar           *name)
 {
@@ -870,7 +895,7 @@ daemon_find_user_by_name (AccountsAccounts      *accounts,
         user = daemon_local_find_user_by_name (daemon, name);
 
         if (user) {
-                accounts_accounts_complete_find_user_by_name (NULL, context, user_local_get_object_path (user));
+                act_user_manager_glue_complete_find_user_by_name (NULL, context, user_local_get_object_path (user));
         }
         else {
                 throw_error (context, ERROR_FAILED, "Failed to look up user with name %s.", name);
@@ -879,97 +904,8 @@ daemon_find_user_by_name (AccountsAccounts      *accounts,
         return TRUE;
 }
 
-typedef struct {
-        Daemon *daemon;
-        GDBusMethodInvocation *context;
-} ListUserData;
-
-
-static ListUserData *
-list_user_data_new (Daemon                *daemon,
-                    GDBusMethodInvocation *context)
-{
-        ListUserData *data;
-
-        data = g_new0 (ListUserData, 1);
-
-        data->daemon = g_object_ref (daemon);
-        data->context = context;
-
-        return data;
-}
-
-static void
-list_user_data_free (ListUserData *data)
-{
-        g_object_unref (data->daemon);
-        g_free (data);
-}
-
-static gboolean
-finish_list_cached_users (gpointer user_data)
-{
-        ListUserData *data = user_data;
-        GPtrArray *object_paths;
-        GHashTableIter iter;
-        const gchar *name;
-        User *user;
-        uid_t uid;
-        const gchar *shell;
-
-        object_paths = g_ptr_array_new ();
-
-        g_hash_table_iter_init (&iter, data->daemon->priv->users);
-        while (g_hash_table_iter_next (&iter, (gpointer *)&name, (gpointer *)&user)) {
-                uid = user_local_get_uid (user);
-                shell = user_local_get_shell (user);
-
-                if (user_local_get_system_account (user)) {
-                        g_debug ("user %s %ld is system account, so excluded\n", name, (long) uid);
-                        continue;
-                }
-
-                if (daemon_local_user_is_excluded (data->daemon, name, shell)) {
-                        g_debug ("user %s %ld excluded\n", name, (long) uid);
-                        continue;
-                }
-
-                g_debug ("user %s %ld not excluded\n", name, (long) uid);
-                g_ptr_array_add (object_paths, (gpointer) user_local_get_object_path (user));
-        }
-        g_ptr_array_add (object_paths, NULL);
-
-        accounts_accounts_complete_list_cached_users (NULL, data->context, (const gchar * const *) object_paths->pdata);
-
-        g_ptr_array_free (object_paths, TRUE);
-
-        list_user_data_free (data);
-
-        return FALSE;
-}
-
-static gboolean
-daemon_list_cached_users (AccountsAccounts      *accounts,
-                          GDBusMethodInvocation *context)
-{
-        Daemon *daemon = (Daemon*)accounts;
-        ListUserData *data;
-
-        data = list_user_data_new (daemon, context);
-
-        if (daemon->priv->reload_id > 0) {
-                /* reload in progress, wait a bit */
-                g_idle_add (finish_list_cached_users, data);
-        }
-        else {
-                finish_list_cached_users (data);
-        }
-
-        return TRUE;
-}
-
 static const gchar *
-daemon_get_daemon_version (AccountsAccounts *object)
+daemon_get_daemon_version (ActUserManagerGlue *object)
 {
     return VERSION;
 }
@@ -1040,11 +976,11 @@ daemon_create_user_authorized_cb (Daemon                *daemon,
 
         user = daemon_local_find_user_by_name (daemon, cd->user_name);
 
-        accounts_accounts_complete_create_user (NULL, context, user_local_get_object_path (user));
+        act_user_manager_glue_complete_create_user (NULL, context, user_local_get_object_path (user));
 }
 
 static gboolean
-daemon_create_user (AccountsAccounts      *accounts,
+daemon_create_user (ActUserManagerGlue      *accounts,
                     GDBusMethodInvocation *context,
                     const gchar           *user_name,
                     const gchar           *real_name,
@@ -1109,11 +1045,11 @@ daemon_cache_user_authorized_cb (Daemon                *daemon,
 
         g_free (filename);
 
-        accounts_accounts_complete_cache_user (NULL, context, user_local_get_object_path (user));
+        act_user_manager_glue_complete_cache_user (NULL, context, user_local_get_object_path (user));
 }
 
 static gboolean
-daemon_cache_user (AccountsAccounts      *accounts,
+daemon_cache_user (ActUserManagerGlue      *accounts,
                    GDBusMethodInvocation *context,
                    const gchar           *user_name)
 {
@@ -1169,13 +1105,13 @@ daemon_uncache_user_authorized_cb (Daemon                *daemon,
         g_remove (filename);
         g_free (filename);
 
-        accounts_accounts_complete_uncache_user (NULL, context);
+        act_user_manager_glue_complete_uncache_user (NULL, context);
 
         queue_reload_users (daemon);
 }
 
 static gboolean
-daemon_uncache_user (AccountsAccounts      *accounts,
+daemon_uncache_user (ActUserManagerGlue      *accounts,
                      GDBusMethodInvocation *context,
                      const gchar           *user_name)
 {
@@ -1250,12 +1186,12 @@ daemon_delete_user_authorized_cb (Daemon                *daemon,
                 return;
         }
 
-        accounts_accounts_complete_delete_user (NULL, context);
+        act_user_manager_glue_complete_delete_user (NULL, context);
 }
 
 
 static gboolean
-daemon_delete_user (AccountsAccounts      *accounts,
+daemon_delete_user (ActUserManagerGlue      *accounts,
                     GDBusMethodInvocation *context,
                     gint64                 uid,
                     gboolean               remove_files)
@@ -1548,13 +1484,12 @@ daemon_class_init (DaemonClass *klass)
 }
 
 static void
-daemon_accounts_accounts_iface_init (AccountsAccountsIface *iface)
+daemon_act_user_manager_glue_iface_init (ActUserManagerGlueIface *iface)
 {
         iface->handle_create_user = daemon_create_user;
         iface->handle_delete_user = daemon_delete_user;
         iface->handle_find_user_by_id = daemon_find_user_by_id;
         iface->handle_find_user_by_name = daemon_find_user_by_name;
-        iface->handle_list_cached_users = daemon_list_cached_users;
         iface->get_daemon_version = daemon_get_daemon_version;
         iface->handle_cache_user = daemon_cache_user;
         iface->handle_uncache_user = daemon_uncache_user;

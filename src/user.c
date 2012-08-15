@@ -43,7 +43,6 @@
 
 #include "daemon.h"
 #include "user.h"
-#include "accounts-user-generated.h"
 #include "util.h"
 
 enum {
@@ -68,9 +67,8 @@ enum {
 };
 
 struct User {
-        AccountsUserSkeleton parent;
+        ActUserSkeleton parent;
 
-        GDBusConnection *system_bus_connection;
         gchar *object_path;
 
         Daemon       *daemon;
@@ -98,12 +96,12 @@ struct User {
 
 typedef struct UserClass
 {
-        AccountsUserSkeletonClass parent_class;
+        ActUserSkeletonClass parent_class;
 } UserClass;
 
-static void user_accounts_user_iface_init (AccountsUserIface *iface);
+static void user_act_user_iface_init (ActUserIface *iface);
 
-G_DEFINE_TYPE_WITH_CODE (User, user, ACCOUNTS_TYPE_USER_SKELETON, G_IMPLEMENT_INTERFACE (ACCOUNTS_TYPE_USER, user_accounts_user_iface_init));
+G_DEFINE_TYPE_WITH_CODE (User, user, ACT_TYPE_USER_SKELETON, G_IMPLEMENT_INTERFACE (ACT_TYPE_USER, user_act_user_iface_init));
 
 static gint
 account_type_from_pwent (struct passwd *pwent)
@@ -286,7 +284,7 @@ user_local_update_from_pwent (User          *user,
         g_object_thaw_notify (G_OBJECT (user));
 
         if (changed)
-                accounts_user_emit_changed (ACCOUNTS_USER (user));
+                act_user_emit_changed (ACT_USER (user));
 }
 
 void
@@ -406,51 +404,6 @@ move_extra_data (const gchar *old_name,
         g_free (new_filename);
 }
 
-static gchar *
-compute_object_path (User *user)
-{
-        gchar *object_path;
-
-        object_path = g_strdup_printf ("/org/freedesktop/Accounts/User%ld",
-                                       (long) user->uid);
-
-        return object_path;
-}
-
-void
-user_local_register (User *user)
-{
-        GError *error = NULL;
-
-        user->system_bus_connection = g_bus_get_sync (G_BUS_TYPE_SYSTEM, NULL, &error);
-        if (user->system_bus_connection == NULL) {
-                if (error != NULL) {
-                        g_critical ("error getting system bus: %s", error->message);
-                        g_error_free (error);
-                }
-                return;
-        }
-
-        user->object_path = compute_object_path (user);
-
-        if (!g_dbus_interface_skeleton_export (G_DBUS_INTERFACE_SKELETON (user),
-                                               user->system_bus_connection,
-                                               user->object_path,
-                                               &error)) {
-                if (error != NULL) {
-                        g_critical ("error exporting user object: %s", error->message);
-                        g_error_free (error);
-                }
-                return;
-        }
-}
-
-void
-user_local_unregister (User *user)
-{
-        g_dbus_interface_skeleton_unexport (G_DBUS_INTERFACE_SKELETON (user));
-}
-
 User *
 user_local_new (Daemon *daemon, uid_t uid)
 {
@@ -544,16 +497,16 @@ user_change_real_name_authorized_cb (Daemon                *daemon,
                 g_free (user->real_name);
                 user->real_name = g_strdup (name);
 
-                accounts_user_emit_changed (ACCOUNTS_USER (user));
+                act_user_emit_changed (ACT_USER (user));
 
                 g_object_notify (G_OBJECT (user), "real-name");
         }
 
-        accounts_user_complete_set_real_name (ACCOUNTS_USER (user), context);
+        act_user_complete_set_real_name (ACT_USER (user), context);
 }
 
 static gboolean
-user_set_real_name (AccountsUser          *auser,
+user_set_real_name (ActUser          *auser,
                     GDBusMethodInvocation *context,
                     const gchar           *real_name)
 {
@@ -620,17 +573,17 @@ user_change_user_name_authorized_cb (Daemon                *daemon,
 
                 move_extra_data (old_name, name);
 
-                accounts_user_emit_changed (ACCOUNTS_USER (user));
+                act_user_emit_changed (ACT_USER (user));
 
                 g_object_notify (G_OBJECT (user), "user-name");
         }
 
-        accounts_user_complete_set_user_name (ACCOUNTS_USER (user), context);
+        act_user_complete_set_user_name (ACT_USER (user), context);
 }
 
 
 static gboolean
-user_set_user_name (AccountsUser          *auser,
+user_set_user_name (ActUser          *auser,
                     GDBusMethodInvocation *context,
                     const gchar           *user_name)
 {
@@ -662,18 +615,18 @@ user_change_email_authorized_cb (Daemon                *daemon,
 
                 save_extra_data (user);
 
-                accounts_user_emit_changed (ACCOUNTS_USER (user));
+                act_user_emit_changed (ACT_USER (user));
 
                 g_object_notify (G_OBJECT (user), "email");
         }
 
-        accounts_user_complete_set_email (ACCOUNTS_USER (user), context);  
+        act_user_complete_set_email (ACT_USER (user), context);  
 }
 
 
 
 static gboolean
-user_set_email (AccountsUser          *auser,
+user_set_email (ActUser          *auser,
                 GDBusMethodInvocation *context,
                 const gchar           *email)
 {
@@ -718,18 +671,18 @@ user_change_language_authorized_cb (Daemon                *daemon,
 
                 save_extra_data (user);
 
-                accounts_user_emit_changed (ACCOUNTS_USER (user));
+                act_user_emit_changed (ACT_USER (user));
 
                 g_object_notify (G_OBJECT (user), "language");
         }
 
-        accounts_user_complete_set_language (ACCOUNTS_USER (user), context);
+        act_user_complete_set_language (ACT_USER (user), context);
 }
 
 
 
 static gboolean
-user_set_language (AccountsUser          *auser,
+user_set_language (ActUser          *auser,
                    GDBusMethodInvocation *context,
                    const gchar           *language)
 {
@@ -774,16 +727,16 @@ user_change_x_session_authorized_cb (Daemon                *daemon,
 
                 save_extra_data (user);
 
-                accounts_user_emit_changed (ACCOUNTS_USER (user));
+                act_user_emit_changed (ACT_USER (user));
 
                 g_object_notify (G_OBJECT (user), "xsession");
         }
 
-        accounts_user_complete_set_xsession (ACCOUNTS_USER (user), context);
+        act_user_complete_set_xsession (ACT_USER (user), context);
 }
 
 static gboolean
-user_set_x_session (AccountsUser          *auser,
+user_set_x_session (ActUser          *auser,
                     GDBusMethodInvocation *context,
                     const gchar           *x_session)
 {
@@ -828,16 +781,16 @@ user_change_location_authorized_cb (Daemon                *daemon,
 
                 save_extra_data (user);
 
-                accounts_user_emit_changed (ACCOUNTS_USER (user));
+                act_user_emit_changed (ACT_USER (user));
 
                 g_object_notify (G_OBJECT (user), "location");
         }
 
-        accounts_user_complete_set_location (ACCOUNTS_USER (user), context);
+        act_user_complete_set_location (ACT_USER (user), context);
 }
 
 static gboolean
-user_set_location (AccountsUser          *auser,
+user_set_location (ActUser          *auser,
                    GDBusMethodInvocation *context,
                    const gchar           *location)
 {
@@ -903,16 +856,16 @@ user_change_home_dir_authorized_cb (Daemon                *daemon,
                 g_free (user->default_icon_file);
                 user->default_icon_file = g_build_filename (user->home_dir, ".face", NULL);
 
-                accounts_user_emit_changed (ACCOUNTS_USER (user));
+                act_user_emit_changed (ACT_USER (user));
 
                 g_object_notify (G_OBJECT (user), "home-directory");
         }
 
-        accounts_user_complete_set_home_directory (ACCOUNTS_USER (user), context);
+        act_user_complete_set_home_directory (ACT_USER (user), context);
 }
 
 static gboolean
-user_set_home_directory (AccountsUser          *auser,
+user_set_home_directory (ActUser          *auser,
                          GDBusMethodInvocation *context,
                          const gchar           *home_dir)
 {
@@ -962,16 +915,16 @@ user_change_shell_authorized_cb (Daemon                *daemon,
                 g_free (user->shell);
                 user->shell = g_strdup (shell);
 
-                accounts_user_emit_changed (ACCOUNTS_USER (user));
+                act_user_emit_changed (ACT_USER (user));
 
                 g_object_notify (G_OBJECT (user), "shell");
         }
 
-        accounts_user_complete_set_shell (ACCOUNTS_USER (user), context);
+        act_user_complete_set_shell (ACT_USER (user), context);
 }
 
 static gboolean
-user_set_shell (AccountsUser          *auser,
+user_set_shell (ActUser          *auser,
                 GDBusMethodInvocation *context,
                 const gchar           *shell)
 {
@@ -1152,15 +1105,15 @@ icon_saved:
 
         save_extra_data (user);
 
-        accounts_user_emit_changed (ACCOUNTS_USER (user));
+        act_user_emit_changed (ACT_USER (user));
 
         g_object_notify (G_OBJECT (user), "icon-file");
 
-        accounts_user_complete_set_icon_file (ACCOUNTS_USER (user), context);
+        act_user_complete_set_icon_file (ACT_USER (user), context);
 }
 
 static gboolean
-user_set_icon_file (AccountsUser          *auser,
+user_set_icon_file (ActUser          *auser,
                     GDBusMethodInvocation *context,
                     const gchar           *filename)
 {
@@ -1220,16 +1173,16 @@ user_change_locked_authorized_cb (Daemon                *daemon,
 
                 user->locked = locked;
 
-                accounts_user_emit_changed (ACCOUNTS_USER (user));
+                act_user_emit_changed (ACT_USER (user));
 
                 g_object_notify (G_OBJECT (user), "locked");
         }
 
-        accounts_user_complete_set_locked (ACCOUNTS_USER (user), context);
+        act_user_complete_set_locked (ACT_USER (user), context);
 }
 
 static gboolean
-user_set_locked (AccountsUser          *auser,
+user_set_locked (ActUser          *auser,
                  GDBusMethodInvocation *context,
                  gboolean               locked)
 {
@@ -1314,16 +1267,16 @@ user_change_account_type_authorized_cb (Daemon                *daemon,
 
                 user->account_type = account_type;
 
-                accounts_user_emit_changed (ACCOUNTS_USER (user));
+                act_user_emit_changed (ACT_USER (user));
 
                 g_object_notify (G_OBJECT (user), "account-type");
         }
 
-        accounts_user_complete_set_account_type (ACCOUNTS_USER (user), context);
+        act_user_complete_set_account_type (ACT_USER (user), context);
 }
 
 static gboolean
-user_set_account_type (AccountsUser          *auser,
+user_set_account_type (ActUser          *auser,
                        GDBusMethodInvocation *context,
                        gint                   account_type)
 {
@@ -1434,14 +1387,14 @@ user_change_password_mode_authorized_cb (Daemon                *daemon,
 
                 g_object_thaw_notify (G_OBJECT (user));
 
-                accounts_user_emit_changed (ACCOUNTS_USER (user));
+                act_user_emit_changed (ACT_USER (user));
         }
 
-        accounts_user_complete_set_password_mode (ACCOUNTS_USER (user), context);
+        act_user_complete_set_password_mode (ACT_USER (user), context);
 }
 
 static gboolean
-user_set_password_mode (AccountsUser          *auser,
+user_set_password_mode (ActUser          *auser,
                         GDBusMethodInvocation *context,
                         gint                   mode)
 {
@@ -1518,9 +1471,9 @@ user_change_password_authorized_cb (Daemon                *daemon,
 
         g_object_thaw_notify (G_OBJECT (user));
 
-        accounts_user_emit_changed (ACCOUNTS_USER (user));
+        act_user_emit_changed (ACT_USER (user));
 
-        accounts_user_complete_set_password (ACCOUNTS_USER (user), context);
+        act_user_complete_set_password (ACT_USER (user), context);
 }
 
 static void
@@ -1531,7 +1484,7 @@ free_passwords (gchar **strings)
 }
 
 static gboolean
-user_set_password (AccountsUser          *auser,
+user_set_password (ActUser          *auser,
                    GDBusMethodInvocation *context,
                    const gchar           *password,
                    const gchar           *hint)
@@ -1577,11 +1530,11 @@ user_change_automatic_login_authorized_cb (Daemon                *daemon,
                 return;
         }
 
-        accounts_user_complete_set_automatic_login (ACCOUNTS_USER (user), context);
+        act_user_complete_set_automatic_login (ACT_USER (user), context);
 }
 
 static gboolean
-user_set_automatic_login (AccountsUser          *auser,
+user_set_automatic_login (ActUser          *auser,
                           GDBusMethodInvocation *context,
                           gboolean               enabled)
 {
@@ -1599,73 +1552,73 @@ user_set_automatic_login (AccountsUser          *auser,
 }
 
 static guint64
-user_get_uid (AccountsUser *user)
+user_get_uid (ActUser *user)
 {
         return (guint64) USER (user)->uid;
 }
 
 static const gchar *
-user_get_user_name (AccountsUser *user)
+user_get_user_name (ActUser *user)
 {
         return USER (user)->user_name;
 }
 
 static const gchar *
-user_get_real_name (AccountsUser *user)
+user_get_real_name (ActUser *user)
 {
         return USER (user)->real_name;
 }
 
 static gint
-user_get_account_type (AccountsUser *user)
+user_get_account_type (ActUser *user)
 {
         return (gint) USER (user)->account_type;
 }
 
 static const gchar *
-user_get_home_directory (AccountsUser *user)
+user_get_home_directory (ActUser *user)
 {
         return USER (user)->home_dir;
 }
 
 static const gchar *
-user_get_shell (AccountsUser *user)
+user_get_shell (ActUser *user)
 {
         return USER (user)->shell;
 }
 
 static const gchar *
-user_get_email (AccountsUser *user)
+user_get_email (ActUser *user)
 {
         return USER (user)->email;
 }
 
 static const gchar *
-user_get_language (AccountsUser *user)
+user_get_language (ActUser *user)
 {
         return USER (user)->language;
 }
 
 static const gchar *
-user_get_xsession (AccountsUser *user)
+user_get_xsession (ActUser *user)
 {
         return USER (user)->x_session;
 }
 
 static const gchar *
-user_get_location (AccountsUser *user)
+user_get_location (ActUser *user)
 {
         return USER (user)->location;
 }
 
 static guint64
-user_get_login_frequency (AccountsUser *user)
+user_get_login_frequency (ActUser *user)
 {
         return USER (user)->login_frequency;
 }
 
 static const gchar *
-user_get_icon_file (AccountsUser *user)
+user_get_icon_file (ActUser *user)
 {
         if (USER (user)->icon_file)
                 return USER (user)->icon_file;
@@ -1674,31 +1627,31 @@ user_get_icon_file (AccountsUser *user)
 }
 
 static gboolean
-user_get_locked (AccountsUser *user)
+user_get_locked (ActUser *user)
 {
         return USER (user)->locked;
 }
 
 static gint
-user_get_password_mode (AccountsUser *user)
+user_get_password_mode (ActUser *user)
 {
         return USER (user)->password_mode;
 }
 
 static const gchar *
-user_get_password_hint (AccountsUser *user)
+user_get_password_hint (ActUser *user)
 {
         return USER (user)->password_hint;
 }
 
 static gboolean
-user_get_automatic_login (AccountsUser *user)
+user_get_automatic_login (ActUser *user)
 {
         return USER (user)->automatic_login;
 }
 
 static gboolean
-user_get_system_account (AccountsUser *user)
+user_get_system_account (ActUser *user)
 {
         return USER (user)->system_account;
 }
@@ -1847,11 +1800,11 @@ user_class_init (UserClass *class)
         gobject_class->set_property = user_set_property;
         gobject_class->finalize = user_finalize;
 
-        accounts_user_override_properties (gobject_class, 1);
+        act_user_override_properties (gobject_class, 1);
 }
 
 static void
-user_accounts_user_iface_init (AccountsUserIface *iface)
+user_act_user_iface_init (ActUserIface *iface)
 {
         iface->handle_set_account_type = user_set_account_type;
         iface->handle_set_automatic_login = user_set_automatic_login;
@@ -1889,7 +1842,6 @@ user_accounts_user_iface_init (AccountsUserIface *iface)
 static void
 user_init (User *user)
 {
-        user->system_bus_connection = NULL;
         user->object_path = NULL;
         user->user_name = NULL;
         user->real_name = NULL;

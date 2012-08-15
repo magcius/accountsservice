@@ -28,7 +28,7 @@
 
 #include "types.h"
 #include "user.h"
-#include "accounts-generated.h"
+#include "act-user-manager-generated.h"
 
 G_BEGIN_DECLS
 
@@ -43,12 +43,12 @@ typedef struct DaemonClass DaemonClass;
 typedef struct DaemonPrivate DaemonPrivate;
 
 struct Daemon {
-        AccountsAccountsSkeleton parent;
+        ActUserManagerGlueSkeleton parent;
         DaemonPrivate *priv;
 };
 
 struct DaemonClass {
-        AccountsAccountsSkeletonClass parent_class;
+        ActUserManagerGlueSkeletonClass parent_class;
 };
 
 typedef enum {

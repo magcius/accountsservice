@@ -1,3 +1,5 @@
+END_OF_LIST =
+
 SUBDIRS = . libaccountsservice
 INCLUDES = 			\
 	-DLOCALSTATEDIR=\""$(localstatedir)"\" \
@@ -10,30 +12,31 @@ INCLUDES = 			\
 	$(POLKIT_CFLAGS)	\
 	$(WARN_CFLAGS)
 
-BUILT_SOURCES = 			\
-	accounts-generated.c			\
-	accounts-generated.h			\
-	accounts-user-generated.c	\
-	accounts-user-generated.h
+BUILT_SOURCES =					\
+	act-user-manager-generated.c		\
+	act-user-manager-generated.h		\
+	act-user-generated.c			\
+	act-user-generated.h			\
+	$(END_OF_LIST)
 
-accounts-generated.c accounts-generated.h: $(top_srcdir)/data/org.freedesktop.Accounts.xml Makefile
-	$(AM_VGEN)gdbus-codegen				\
-	--generate-c-code accounts-generated		\
-	--c-namespace Accounts				\
+act-user-manager-generated.c act-user-manager-generated.h: $(top_srcdir)/data/org.freedesktop.Accounts.xml Makefile
+	$(AM_V_GEN)gdbus-codegen			\
+	 --generate-c-code act-user-manager-generated	\
+	--c-namespace Act				\
 	--interface-prefix=org.freedesktop.		\
 	$(top_srcdir)/data/org.freedesktop.Accounts.xml
 
-accounts-user-generated.c accounts-user-generated.h: $(top_srcdir)/data/org.freedesktop.Accounts.User.xml Makefile
-	$(AM_VGEN)gdbus-codegen				\
-	--generate-c-code accounts-user-generated 	\
-	--c-namespace Accounts				\
+act-user-generated.c act-user-generated.h: $(top_srcdir)/data/org.freedesktop.Accounts.User.xml Makefile
+	$(AM_V_GEN) gdbus-codegen			\
+	--generate-c-code act-user-generated		\
+	--c-generate-object-manager			\
+	--c-namespace Act				\
 	--interface-prefix=org.freedesktop.Accounts.	\
-	 $(top_srcdir)/data/org.freedesktop.Accounts.User.xml
+	$(top_srcdir)/data/org.freedesktop.Accounts.User.xml
 
 libexec_PROGRAMS = accounts-daemon
 
 accounts_daemon_SOURCES = 	\
-	$(enums_h_sources)	\
 	$(BUILT_SOURCES)	\
 	types.h			\
 	daemon.h		\

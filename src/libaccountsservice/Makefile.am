@@ -34,33 +34,34 @@ act-enum-types.c: act-types.h act-enum-types.h
 	          --vtail "      { 0, NULL, NULL }\n    };\n    etype = g_@type@_register_static (\"@EnumName@\", values);\n  }\n  return etype;\n}\n" \
 	         $^ ) > $@
 
-accounts-generated.c accounts-generated.h: $(top_srcdir)/data/org.freedesktop.Accounts.xml Makefile
+act-user-manager-generated.c act-user-manager-generated.h: $(top_srcdir)/data/org.freedesktop.Accounts.xml Makefile
 	$(AM_V_GEN)gdbus-codegen			\
-	 --generate-c-code accounts-generated		\
-	--c-namespace Accounts				\
+	 --generate-c-code act-user-manager-generated	\
+	--c-namespace Act				\
 	--interface-prefix=org.freedesktop.		\
 	$(top_srcdir)/data/org.freedesktop.Accounts.xml
 
 act-user-generated.c act-user-generated.h: $(top_srcdir)/data/org.freedesktop.Accounts.User.xml Makefile
 	$(AM_V_GEN) gdbus-codegen			\
 	--generate-c-code act-user-generated		\
+	--c-generate-object-manager			\
 	--c-namespace Act				\
-	--annotate "org.freedesktop.Accounts.User"	\
-	"org.gtk.GDBus.C.Name" User			\
 	--interface-prefix=org.freedesktop.Accounts.	\
 	$(top_srcdir)/data/org.freedesktop.Accounts.User.xml
 
 BUILT_SOURCES += \
-	accounts-generated.c		\
-	accounts-generated.h		\
-	act-user-generated.c		\
-	act-user-generated.h
+	act-user-manager-generated.c		\
+	act-user-manager-generated.h		\
+	act-user-generated.c			\
+	act-user-generated.h			\
+	$(END_OF_LIST)
 
 CLEANFILES += $(BUILT_SOURCES)
 
 libaccountsservicedir = $(includedir)/accountsservice-1.0/act
 libaccountsservice_headers =                                                  \
         act-user-generated.h                                                  \
+        act-user-manager-generated.h                                          \
         act-user-manager.h                                                    \
 	act-user-utils.h                                                      \
 	act-types.h                                                           \

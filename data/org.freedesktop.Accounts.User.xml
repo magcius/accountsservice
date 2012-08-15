@@ -3,6 +3,7 @@
 "http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd" >
 <node name="/" xmlns:doc="http://www.freedesktop.org/dbus/1.0/doc.dtd">
   <interface name="org.freedesktop.Accounts.User">
+  <annotation name="org.gtk.GDBus.C.Name" value="User" />
 
   <method name="SetUserName">
     <annotation name="org.freedesktop.DBus.GLib.Async" value=""/>

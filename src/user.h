@@ -27,6 +27,7 @@
 #include <gio/gio.h>
 
 #include "types.h"
+#include "act-user-generated.h"
 
 G_BEGIN_DECLS
 
@@ -57,9 +58,6 @@ void         user_local_update_from_pwent   (User          *user,
                                              struct passwd *pwent);
 void         user_local_update_from_keyfile (User          *user,
                                              GKeyFile      *keyfile);
-
-void         user_local_register            (User          *user);
-void         user_local_unregister          (User          *user);
 
 const gchar *user_local_get_user_name       (User          *user);
 gboolean     user_local_get_system_account  (User          *user);
