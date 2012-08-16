@@ -122,7 +122,7 @@ AccountsService_1_0_gir_SCANNERFLAGS =                                        \
         $(libaccountsservice_la_CFLAGS)                                       \
         $(END_OF_LIST)
 
-AccountsService_1_0_gir_INCLUDES = $(LIBACCOUNTSSERVICE_GIR_INCLUDES)
+AccountsService_1_0_gir_INCLUDES = Gio-2.0
 AccountsService_1_0_gir_LIBS = libaccountsservice.la
 AccountsService_1_0_gir_FILES =                                               \
         $(libaccountsservice_la_sources)                                      \
