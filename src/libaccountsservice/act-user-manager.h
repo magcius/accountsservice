@@ -87,6 +87,7 @@ ActUser *           act_user_manager_create_user           (ActUserManager     *
                                                             const char         *username,
                                                             const char         *fullname,
                                                             ActUserAccountType  accounttype,
+                                                            uid_t               uid,
                                                             GError             **error);
 
 ActUser *           act_user_manager_cache_user            (ActUserManager     *manager,

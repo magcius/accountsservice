@@ -91,6 +91,55 @@
       </doc:doc>
     </method>
 
+    <method name="CreateUserEx">
+      <arg name="name" direction="in" type="s">
+        <doc:doc><doc:summary>The username for the new user</doc:summary></doc:doc>
+      </arg>
+      <arg name="fullname" direction="in" type="s">
+        <doc:doc><doc:summary>The real name for the new user</doc:summary></doc:doc>
+      </arg>
+      <arg name="user" direction="out" type="o">
+        <doc:doc><doc:summary>Object path of the new user</doc:summary></doc:doc>
+      </arg>
+      <arg name="accountType" direction="in" type="i">
+        <doc:doc>
+          <doc:summary>The account type, encoded as an integer</doc:summary>
+        </doc:doc>
+      </arg>
+      <arg name="uid" direction="in" type="u">
+        <doc:doc>
+          <doc:summary>The user id, encoded as an integer</doc:summary>
+        </doc:doc>
+      </arg>
+      <doc:doc>
+        <doc:description>
+          <doc:para>
+            Creates a new user account.
+          </doc:para>
+          <doc:para>
+          The accountType argument can take the following values:
+          </doc:para>
+            <doc:list>
+              <doc:item>
+                <doc:term>0</doc:term>
+                <doc:definition>Standard user</doc:definition>
+              </doc:item>
+              <doc:item>
+                <doc:term>1</doc:term>
+                <doc:definition>Administrator</doc:definition>
+              </doc:item>
+            </doc:list>
+        </doc:description>
+        <doc:permission>
+          The caller needs the org.freedesktop.accounts.user-administration PolicyKit authorization.
+        </doc:permission>
+        <doc:errors>
+          <doc:error name="org.freedesktop.Accounts.Error.PermissionDenied">if the caller lacks the appropriate PolicyKit authorization</doc:error>
+          <doc:error name="org.freedesktop.Accounts.Error.Failed">if the operation failed</doc:error>
+        </doc:errors>
+      </doc:doc>
+    </method>
+
     <method name="CacheUser">
       <arg name="name" direction="in" type="s">
         <doc:doc><doc:summary>The username for the user</doc:summary></doc:doc>
