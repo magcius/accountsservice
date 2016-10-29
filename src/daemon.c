@@ -113,7 +113,7 @@ G_DEFINE_TYPE_WITH_CODE (Daemon, daemon, ACT_TYPE_USER_MANAGER_GLUE_SKELETON, G_
 #define DAEMON_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), TYPE_DAEMON, DaemonPrivate))
 
 static const GDBusErrorEntry accounts_error_entries[] =
-{ 
+{
         { ERROR_FAILED, "org.freedesktop.Accounts.Error.Failed" },
         { ERROR_USER_EXISTS, "org.freedesktop.Accounts.Error.UserExists" },
         { ERROR_USER_DOES_NOT_EXIST, "org.freedesktop.Accounts.Error.UserDoesNotExist" },
@@ -760,7 +760,7 @@ register_accounts_daemon (Daemon *daemon)
                         g_critical ("error exporting interface: %s", error->message);
                         g_error_free (error);
                 }
-                goto error;     
+                goto error;
         }
 
         return TRUE;
@@ -914,6 +914,7 @@ typedef struct {
         gchar *user_name;
         gchar *real_name;
         gint account_type;
+        guint uid;
 } CreateUserData;
 
 static void
@@ -936,7 +937,8 @@ daemon_create_user_authorized_cb (Daemon                *daemon,
         CreateUserData *cd = data;
         User *user;
         GError *error;
-        const gchar *argv[9];
+        const gchar *argv[11];
+        gchar *uid_s = NULL;
 
         if (getpwnam (cd->user_name) != NULL) {
                 throw_error (context, ERROR_USER_EXISTS, "A user with name '%s' already exists", cd->user_name);
@@ -950,29 +952,44 @@ daemon_create_user_authorized_cb (Daemon                *daemon,
         argv[1] = "-m";
         argv[2] = "-c";
         argv[3] = cd->real_name;
+        if (cd->uid != 0) {
+                uid_s = g_strdup_printf("%i", cd->uid);
+                argv[4] = "-u";
+                argv[5] = uid_s;
+        }
+        else {
+                argv[4] = "";
+                argv[5] = "";
+        }
         if (cd->account_type == ACCOUNT_TYPE_ADMINISTRATOR) {
-                argv[4] = "-G";
-                argv[5] = "wheel";
+                argv[6] = "-G";
+                argv[7] = "wheel";
+                argv[8] = "--";
+                argv[9] = cd->user_name;
+                argv[10] = NULL;
+        }
+        else if (cd->account_type == ACCOUNT_TYPE_STANDARD) {
                 argv[6] = "--";
                 argv[7] = cd->user_name;
                 argv[8] = NULL;
         }
-        else if (cd->account_type == ACCOUNT_TYPE_STANDARD) {
-                argv[4] = "--";
-                argv[5] = cd->user_name;
-                argv[6] = NULL;
-        }
         else {
+                if (uid_s != NULL)
+                        g_free(uid_s);
                 throw_error (context, ERROR_FAILED, "Don't know how to add user of type %d", cd->account_type);
                 return;
         }
 
         error = NULL;
         if (!spawn_with_login_uid (context, argv, &error)) {
+                if (uid_s != NULL)
+                        g_free(uid_s);
                 throw_error (context, ERROR_FAILED, "running '%s' failed: %s", argv[0], error->message);
                 g_error_free (error);
                 return;
         }
+        if (uid_s != NULL)
+                g_free(uid_s);
 
         user = daemon_local_find_user_by_name (daemon, cd->user_name);
 
@@ -980,11 +997,12 @@ daemon_create_user_authorized_cb (Daemon                *daemon,
 }
 
 static gboolean
-daemon_create_user (ActUserManagerGlue      *accounts,
-                    GDBusMethodInvocation *context,
-                    const gchar           *user_name,
-                    const gchar           *real_name,
-                    gint                   account_type)
+daemon_create_user_ex (ActUserManagerGlue      *accounts,
+                       GDBusMethodInvocation *context,
+                       const gchar           *user_name,
+                       const gchar           *real_name,
+                       gint                   account_type,
+                       uid_t                  uid)
 {
         Daemon *daemon = (Daemon*)accounts;
         CreateUserData *data;
@@ -993,6 +1011,7 @@ daemon_create_user (ActUserManagerGlue      *accounts,
         data->user_name = g_strdup (user_name);
         data->real_name = g_strdup (real_name);
         data->account_type = account_type;
+        data->uid = uid;
 
         daemon_local_check_auth (daemon,
                                  NULL,
@@ -1004,6 +1023,16 @@ daemon_create_user (ActUserManagerGlue      *accounts,
                                  (GDestroyNotify)create_data_free);
 
         return TRUE;
+}
+
+static gboolean
+daemon_create_user (ActUserManagerGlue      *accounts,
+                    GDBusMethodInvocation *context,
+                    const gchar           *user_name,
+                    const gchar           *real_name,
+                    gint                   account_type)
+{
+        return daemon_create_user_ex(accounts, context, user_name, real_name, account_type, 0);
 }
 
 static void
@@ -1487,6 +1516,7 @@ static void
 daemon_act_user_manager_glue_iface_init (ActUserManagerGlueIface *iface)
 {
         iface->handle_create_user = daemon_create_user;
+        iface->handle_create_user_ex = daemon_create_user_ex;
         iface->handle_delete_user = daemon_delete_user;
         iface->handle_find_user_by_id = daemon_find_user_by_id;
         iface->handle_find_user_by_name = daemon_find_user_by_name;
