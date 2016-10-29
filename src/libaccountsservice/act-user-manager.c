@@ -668,6 +668,7 @@ act_user_manager_create_user (ActUserManager      *manager,
                               const char          *username,
                               const char          *fullname,
                               ActUserAccountType   accounttype,
+                              uid_t                uid,
                               GError             **error)
 {
         GError *local_error = NULL;
@@ -681,13 +682,14 @@ act_user_manager_create_user (ActUserManager      *manager,
         g_assert (manager->priv->accounts_proxy != NULL);
 
         local_error = NULL;
-        res = act_user_manager_glue_call_create_user_sync (manager->priv->accounts_proxy,
-                                                           username,
-                                                           fullname,
-                                                           accounttype,
-                                                           &path,
-                                                           NULL,
-                                                           &local_error);
+        res = act_user_manager_glue_call_create_user_ex_sync (manager->priv->accounts_proxy,
+                                                              username,
+                                                              fullname,
+                                                              accounttype,
+                                                              uid,
+                                                              &path,
+                                                              NULL,
+                                                              &local_error);
         if (! res) {
                 g_propagate_error (error, local_error);
                 return NULL;
